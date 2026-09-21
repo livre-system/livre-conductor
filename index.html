@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#e8003d">
+  <title>Livre · Conductor</title>
+  <style>
+    :root{font-family:Inter,system-ui,sans-serif;color:#171717;background:#f4f4f4;--brand:#e8003d;--line:#e4e4e4}
+    *{box-sizing:border-box}body{margin:0}main{max-width:560px;margin:auto;padding:20px 16px 36px}.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px;margin:8px 0 28px}.brand img{width:34px;height:34px;object-fit:contain}.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:0 5px 18px #0000000b}h1{font-size:25px;line-height:1.1;margin:0 0 8px;letter-spacing:-.04em}h2{font-size:17px;margin:0 0 14px}.muted{color:#707070;font-size:13px;line-height:1.45}label{display:block;color:#555;font-size:12px;font-weight:600;margin:13px 0 5px}input,button{font:inherit;width:100%;min-height:46px;border-radius:8px}input{border:1px solid #ccc;padding:0 12px;font-size:16px}button{border:0;background:var(--brand);color:#fff;font-weight:700;cursor:pointer;padding:10px 14px}button.secondary{background:#fff;color:#222;border:1px solid #ccc}button:disabled{opacity:.5;cursor:not-allowed}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.trip{border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:10px}.trip.selected{border:2px solid var(--brand)}.trip-head{display:flex;justify-content:space-between;gap:12px}.trip strong{font-size:14px}.badge{font-size:11px;font-weight:700;color:#a0002b;background:#fff0f3;padding:5px 8px;border-radius:99px;white-space:nowrap}.route{margin:12px 0;color:#333;font-size:13px;line-height:1.6}.route b{color:#888;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.notice{padding:11px;border-radius:8px;background:#fff5dc;color:#755800;font-size:12px;line-height:1.4;margin-top:12px}.hidden{display:none}.gps{color:#16845f;font-size:12px;margin-top:12px}.logout{margin-top:10px}.empty{text-align:center;color:#777;font-size:13px;padding:20px 0}@media(min-width:560px){main{padding-top:35px}}
+  </style>
+</head>
+<body>
+<main>
+  <div class="brand"><img src="./logo_livre.png" alt="Livre"><span>Livre Conductor</span></div>
+  <section id="loginCard" class="card">
+    <h1>Ingresar</h1><p class="muted">Usá la cuenta de conductor asociada por Livre Cloud.</p>
+    <form id="loginForm"><label for="username">Usuario</label><input id="username" autocomplete="username" required><label for="password">Contraseña</label><input id="password" type="password" autocomplete="current-password" required><button style="margin-top:16px">Entrar</button></form>
+  </section>
+  <section id="app" class="hidden">
+    <section class="card"><h1 id="greeting">Mis viajes</h1><p class="muted">Elegí un viaje para enviar estado y ubicación al núcleo Livre.</p><button id="refresh" class="secondary">Actualizar viajes</button><div id="trips"></div><div id="notice" class="notice hidden"></div></section>
+    <section id="selectedCard" class="card hidden"><h2>Viaje seleccionado</h2><div id="selected"></div><div class="actions"><button data-status="arriving">Voy en camino</button><button data-status="in_progress">Iniciar viaje</button><button data-status="completed" class="secondary">Finalizar viaje</button></div><div id="gps" class="gps">GPS detenido</div><button id="stopGps" class="secondary logout">Detener ubicación</button></section>
+    <button id="logout" class="secondary">Cerrar sesión</button>
+  </section>
+</main>
+<script>
+const API=new URLSearchParams(location.search).get('api')||'https://livre-cloud-production.up.railway.app';
+let token=localStorage.getItem('livre_driver_token'), trips=[], selected=null, watchId=null;
+const $=id=>document.getElementById(id), headers=()=>({'Authorization':`Bearer ${token}`,'Content-Type':'application/json'});
+function notice(text){$('notice').textContent=text;$('notice').classList.remove('hidden')}
+function clearNotice(){$('notice').classList.add('hidden')}
+function statusLabel(s){return {pending:'Pendiente',searching:'Buscando',assigned:'Asignado',arriving:'En camino',in_progress:'En viaje',completed:'Finalizado',cancelled:'Cancelado'}[s]||s}
+function render(){
+  $('trips').innerHTML=trips.length?trips.map(t=>`<article class="trip ${selected?.id===t.id?'selected':''}" data-id="${t.id}"><div class="trip-head"><strong>Viaje #${t.id}</strong><span class="badge">${statusLabel(t.status)}</span></div><div class="route"><b>Origen</b><br>${escapeHtml(t.origin)}<br><b>Destino</b><br>${escapeHtml(t.destination)}</div><button class="secondary choose">Seleccionar</button></article>`).join(''):'<div class="empty">No hay viajes asignados.</div>';
+  document.querySelectorAll('.choose').forEach((b,i)=>b.onclick=()=>select(trips[i]));
+  if(selected){$('selectedCard').classList.remove('hidden');$('selected').innerHTML=`<div class="route"><b>Origen</b><br>${escapeHtml(selected.origin)}<br><b>Destino</b><br>${escapeHtml(selected.destination)}</div>`}
+}
+function escapeHtml(v){return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+async function loadTrips(){clearNotice();try{let r=await fetch(API+'/mobility/driver/trips',{headers:headers()});if(r.status===401){logout();return}if(!r.ok)throw Error();trips=await r.json();if(selected)selected=trips.find(t=>t.id===selected.id)||null;render()}catch(e){notice('No se pudieron cargar los viajes. Verificá la conexión y la asociación de tu cuenta.')}}
+function select(t){selected=t;render();startGps()}
+async function login(e){e.preventDefault();clearNotice();try{let r=await fetch(API+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('username').value,password:$('password').value})});if(!r.ok)throw Error();let data=await r.json();token=data.token;localStorage.setItem('livre_driver_token',token);$('loginCard').classList.add('hidden');$('app').classList.remove('hidden');$('greeting').textContent=`Hola, ${data.user?.name||'conductor'}`;await loadTrips()}catch(e){notice('Usuario o contraseña inválidos.')}}
+async function changeStatus(status){if(!selected)return;try{let r=await fetch(`${API}/mobility/driver/trips/${selected.id}/status`,{method:'POST',headers:headers(),body:JSON.stringify({status})});if(!r.ok)throw Error();selected=await r.json();trips=trips.map(t=>t.id===selected.id?selected:t);render()}catch(e){notice('No se pudo actualizar el estado.')}}
+function startGps(){if(!navigator.geolocation){$('gps').textContent='Este dispositivo no tiene GPS disponible';return}if(watchId!==null)return;watchId=navigator.geolocation.watchPosition(async p=>{if(!selected)return;try{let r=await fetch(`${API}/mobility/driver/trips/${selected.id}/location`,{method:'POST',headers:headers(),body:JSON.stringify({latitude:p.coords.latitude,longitude:p.coords.longitude})});if(!r.ok)throw Error();$('gps').textContent='Ubicación enviada ahora'}catch(e){$('gps').textContent='No se pudo enviar la ubicación'}},()=>{$('gps').textContent='Permiso de ubicación no concedido'},{enableHighAccuracy:true,maximumAge:10000,timeout:15000})}
+function logout(){if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null;token=null;localStorage.removeItem('livre_driver_token');location.reload()}
+$('loginForm').onsubmit=login;$('refresh').onclick=loadTrips;$('logout').onclick=logout;$('stopGps').onclick=()=>{if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null;$('gps').textContent='GPS detenido'};document.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>changeStatus(b.dataset.status));
+if(token){$('loginCard').classList.add('hidden');$('app').classList.remove('hidden');loadTrips()}
+setInterval(()=>token&&loadTrips(),15000);
+</script>
+</body>
+</html>
