@@ -1,6 +1,6 @@
 # Livre Conductor
 
-Primera versión web móvil de la app del conductor.
+Panel web móvil del conductor: login, viajes asignados, estados, mapa y GPS obligatorio durante el viaje.
 
 ## Ejecutar localmente
 
@@ -11,6 +11,14 @@ python3 -m http.server 4174
 Abrir `http://localhost:4174`.
 
 La API se puede cambiar con `?api=https://...`.
+
+## Flujo de prueba
+
+1. Pedir un viaje desde `livre-pasajeros`.
+2. Asignar ese viaje a un conductor desde el CRM, usando el `magiis_driver_id` real asociado a la cuenta.
+3. Ingresar en esta app con la cuenta Livre del conductor.
+4. Seleccionar el viaje: la app solicita permiso de GPS y comienza a enviar ubicación.
+5. Avanzar `Voy en camino`, `Iniciar viaje` y `Finalizar viaje`.
 
 ## Contrato usado
 
