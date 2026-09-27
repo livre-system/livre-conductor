@@ -15,7 +15,7 @@ La API se puede cambiar con `?api=https://...`.
 ## Flujo de prueba
 
 1. Pedir un viaje desde `livre-pasajeros`.
-2. Asignar ese viaje a un conductor desde el CRM, usando el `magiis_driver_id` real asociado a la cuenta.
+2. El backend de Livre asigna un conductor habilitado de la base local.
 3. Ingresar en esta app con la cuenta Livre del conductor.
 4. Seleccionar el viaje: la app solicita permiso de GPS y comienza a enviar ubicación.
 5. Avanzar `Voy en camino`, `Iniciar viaje` y `Finalizar viaje`.
@@ -27,8 +27,7 @@ La API se puede cambiar con `?api=https://...`.
 - `POST /mobility/driver/trips/{id}/status`
 - `POST /mobility/driver/trips/{id}/location`
 
-El backend vincula el usuario de Livre con `magiis_driver_id` mediante
-`livre_driver_accounts`. La app nunca llama directamente a MAGIIS.
+El backend vincula el usuario de Livre con una cuenta de conductor local mediante `livre_driver_accounts`. La app nunca llama directamente a MAGIIS y no necesita ningún identificador externo.
 
 La ubicación enviada por el conductor queda en Livre Cloud y el pasajero la
 recibe mediante `GET /mobility/tracking/{tracking_token}`.
