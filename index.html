@@ -118,7 +118,8 @@ const originalSelect=select;select=t=>{originalSelect(t);refreshDriverMessages()
 function offerFare(t){const value=t?.fare??t?.price??t?.amount??t?.total??t?.rate;if(value===null||value===undefined||value==='')return 'No informada';if(typeof value==='number')return new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(value);return escapeHtml(value)}
 function announceTrip(t){if(!t||t.status!=='assigned'||lastAnnouncedId===t.id)return;lastAnnouncedId=t.id;alertSound();$('tripAlertText').textContent=`${t.origin} → ${t.destination}`}
 render=function(){
- const t=selected||trips.find(x=>x.status==='assigned');
+ const current=selected?.status==='cancelled'?null:selected;
+ const t=current||trips.find(x=>x.status==='assigned');
  if(!t){$('trips').innerHTML='<div class="empty single-offer-empty"><b>Esperando una oferta</b><span>Cuando la central envíe un viaje, va a aparecer acá.</span></div>';return}
  selected=t;
  const active=t.status==='assigned';
