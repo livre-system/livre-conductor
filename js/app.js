@@ -17,6 +17,7 @@ let watchId     = null;
 let marker      = null;
 let map         = null;
 let lastAlerted = null;
+let initialTripsLoaded = false;
 let authMode    = 'login';
 
 /* ══════════════════════════════════════════════════════════════
@@ -328,7 +329,7 @@ async function loadTrips() {
     trips   = [{ ...DEMO_TRIP }];
     selected = trips[0];
     render();
-    announceNewTrip(selected);
+    initialTripsLoaded = true;
     return;
   }
   // ── REAL ────────────────────────────────────────────────────
@@ -343,7 +344,8 @@ async function loadTrips() {
       selected = trips.find(t => t.status === 'assigned') || trips[0];
     render();
     const fresh = trips.find(t => t.status === 'assigned');
-    if (fresh) announceNewTrip(fresh);
+    if (initialTripsLoaded && fresh) announceNewTrip(fresh);
+    initialTripsLoaded = true;
   } catch(e) {
     showNotice('No se pudieron cargar los viajes. Revisá la conexión.');
   }
