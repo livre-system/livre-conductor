@@ -101,20 +101,20 @@ function speak(text) {
 function beep() {
   try {
     const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
+    const now = ctx.currentTime;
     const gain = ctx.createGain();
-    osc.type = 'square';
-    osc.frequency.value = 900;
-    gain.gain.value = .09;
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(260, now);
+    osc.frequency.exponentialRampToValueAtTime(170, now + .28);
+    gain.gain.setValueAtTime(.001, now);
+    gain.gain.exponentialRampToValueAtTime(.42, now + .015);
+    gain.gain.exponentialRampToValueAtTime(.001, now + .3);
     osc.connect(gain);
     gain.connect(ctx.destination);
-    osc.start();
-    let n = 0;
-    const iv = setInterval(() => {
-      n++;
-      if (n < 6) osc.frequency.value = n % 2 ? 640 : 960;
-      else { osc.stop(); ctx.close(); clearInterval(iv); }
-    }, 190);
+    osc.start(now);
+    osc.stop(now + .31);
+    osc.addEventListener('ended', () => ctx.close(), { once: true });
   } catch(e) {}
 }
 
