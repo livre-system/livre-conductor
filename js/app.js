@@ -211,7 +211,11 @@ function render() {
         </div>
 
         <div class="fare-row">
-          <span class="fare-label">${serviceTypeLabel(t) ? `Servicio ${esc(serviceTypeLabel(t))}` : 'Servicio'}</span>
+          <span class="fare-label">Tipo de servicio</span>
+          <span class="fare-value">${serviceTypeLabel(t) ? esc(serviceTypeLabel(t)) : 'No informado'}</span>
+        </div>
+        <div class="fare-row">
+          <span class="fare-label">Tarifa del viaje</span>
           ${fare
             ? `<span class="fare-value">${fare}</span>`
             : `<span class="fare-value unknown">No informada</span>`}
