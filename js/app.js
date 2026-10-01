@@ -120,11 +120,14 @@ function beep() {
 
 /* ── Formatear tarifa ───────────────────────────────────────── */
 function formatFare(t) {
-  const v = t?.fare ?? t?.price ?? t?.amount ?? t?.total ?? t?.rate;
+  const v = t?.fare;
   if (v == null || v === '') return null;
-  if (typeof v === 'number')
-    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(v);
-  return esc(v);
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(v));
+}
+
+function serviceTypeLabel(t) {
+  if (t?.service_type_name) return t.service_type_name;
+  return String(t?.service_type_id) === '1' ? 'Premium' : String(t?.service_type_id) === '2' ? 'Ahorro' : null;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -208,7 +211,7 @@ function render() {
         </div>
 
         <div class="fare-row">
-          <span class="fare-label">Tarifa estimada</span>
+          <span class="fare-label">${serviceTypeLabel(t) ? `Servicio ${esc(serviceTypeLabel(t))}` : 'Servicio'}</span>
           ${fare
             ? `<span class="fare-value">${fare}</span>`
             : `<span class="fare-value unknown">No informada</span>`}
