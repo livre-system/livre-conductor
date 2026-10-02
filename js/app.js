@@ -561,14 +561,14 @@ function announceNewTrip(t) {
    AUTH
 ══════════════════════════════════════════════════════════════ */
 function setAuthMode(mode) {
-  authMode = mode;
-  const reg = mode === 'register';
-  $('authTitle').textContent    = reg ? 'Registro' : 'Hola de nuevo';
-  $('authSub').textContent      = reg ? 'Creá tu cuenta Livre para recibir viajes.' : 'Ingresá con tu cuenta de conductor Livre.';
-  $('nameField').classList.toggle('hidden', !reg);
-  $('nameInput').required       = reg;
-  $('submitBtn').textContent    = reg ? 'Crear cuenta' : 'Ingresar';
-  $('toggleAuth').textContent   = reg ? 'Ya tengo cuenta' : '¿No tenés cuenta? Registrate';
+  // Las cuentas las crea Livre a partir del padrón de choferes.
+  authMode = 'login';
+  $('authTitle').textContent  = 'Hola de nuevo';
+  $('authSub').textContent    = 'Ingresá con tu cuenta de conductor Livre.';
+  $('nameField').classList.add('hidden');
+  $('nameInput').required     = false;
+  $('submitBtn').textContent  = 'Ingresar';
+  $('toggleAuth').classList.add('hidden');
   $('loginError').classList.add('hidden');
 }
 
@@ -586,7 +586,7 @@ async function login(e) {
     return;
   }
   // ── REAL ────────────────────────────────────────────────────
-  const reg = authMode === 'register';
+  const reg = false;
   try {
     const body = { username: user, password: pass };
     if (reg) body.name = $('nameInput').value.trim();
