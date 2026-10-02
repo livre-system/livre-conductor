@@ -14,6 +14,8 @@ let token       = localStorage.getItem('livre_driver_token');
 let trips       = [];
 let selected    = null;
 let watchId     = null;
+let wakeLock    = null;
+let gpsRecoveryTimer = null;
 let marker      = null;
 let map         = null;
 let lastAlerted = null;
@@ -416,6 +418,29 @@ async function sendLocation(lat, lng) {
 /* ══════════════════════════════════════════════════════════════
    GPS
 ══════════════════════════════════════════════════════════════ */
+async function requestGpsWakeLock() {
+  if (DEMO || document.visibilityState !== 'visible' || !('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (_) {
+    wakeLock = null;
+  }
+}
+
+function restartGpsAfterBackground() {
+  if (DEMO || !token || !$('appView') || $('appView').classList.contains('hidden')) return;
+  requestGpsWakeLock();
+  if (watchId === null) startGps();
+  else if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      p => sendLocation(p.coords.latitude, p.coords.longitude),
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
+    );
+  }
+}
+
 function startGps() {
   // ── DEMO ────────────────────────────────────────────────────
   if (DEMO) { demoStartGps(); return; }
@@ -426,6 +451,7 @@ function startGps() {
     showNotice('Este navegador no permite GPS. Habilitá la ubicación del navegador.');
     return;
   }
+  requestGpsWakeLock();
   const opts = { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 };
   const onPos = p => sendLocation(p.coords.latitude, p.coords.longitude);
   const onErr = e => {
@@ -438,12 +464,20 @@ function startGps() {
   };
   navigator.geolocation.getCurrentPosition(onPos, onErr, opts);
   watchId = navigator.geolocation.watchPosition(onPos, onErr, opts);
+  if (!gpsRecoveryTimer) {
+    gpsRecoveryTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') restartGpsAfterBackground();
+    }, 60000);
+  }
 }
 
 function stopGps() {
   if (DEMO) { updateGpsPill(false); return; }
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   watchId = null;
+  if (gpsRecoveryTimer) clearInterval(gpsRecoveryTimer);
+  gpsRecoveryTimer = null;
+  if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
   updateGpsPill(false);
 }
 
@@ -568,6 +602,12 @@ function logout() {
 $('loginForm').onsubmit  = login;
 $('toggleAuth').onclick  = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
 $('logoutBtn').onclick   = logout;
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') restartGpsAfterBackground();
+});
+window.addEventListener('pageshow', restartGpsAfterBackground);
+window.addEventListener('online', restartGpsAfterBackground);
 
 if (token) openApp();
 
