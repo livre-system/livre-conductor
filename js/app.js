@@ -383,7 +383,19 @@ async function changeStatus(status) {
       headers: h(),
       body: JSON.stringify({ status }),
     });
-    if (!r.ok) throw Error(r.status);
+    const statusCode = r.status;
+    if (!r.ok) {
+      if (statusCode === 409) {
+        const lostTripId = selected.id;
+        trips = trips.filter(t => t.id !== lostTripId);
+        selected = null;
+        render();
+        showNotice('Ese viaje ya fue tomado por otro conductor.');
+        loadTrips();
+        return false;
+      }
+      throw Error(statusCode);
+    }
     selected = await r.json();
     trips = trips.map(t => t.id === selected.id ? selected : t);
     render();
