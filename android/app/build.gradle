@@ -21,11 +21,3 @@ android {
         }
     }
 }
-
-tasks.register('syncWebAssets', Sync) {
-    from('../../index.html')
-    from('../../css')
-    from('../../js')
-    into("$projectDir/src/main/assets/www")
-}
-tasks.named('preBuild').configure { dependsOn tasks.named('syncWebAssets') }

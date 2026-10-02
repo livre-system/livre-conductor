@@ -34,7 +34,7 @@ public class MainActivity extends Activity {
             }
         });
         webView.addJavascriptInterface(new AndroidGpsBridge(), "AndroidGps");
-        webView.loadUrl("file:///android_asset/www/index.html");
+        webView.loadUrl("https://livre-conductor-production.up.railway.app/");
         setContentView(webView);
     }
 
