@@ -1,0 +1,6 @@
+# Android Studio / Gradle generated files
+.gradle/
+local.properties
+build/
+.cxx/
+*.iml

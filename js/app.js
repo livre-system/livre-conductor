@@ -583,16 +583,29 @@ async function login(e) {
   }
 }
 
+function startNativeBackgroundLocation() {
+  if (DEMO || !token || !window.AndroidGps) return;
+  try { window.AndroidGps.startLocation(token, API); } catch (e) { console.warn('native GPS unavailable', e); }
+}
+
+function stopNativeBackgroundLocation() {
+  if (window.AndroidGps) {
+    try { window.AndroidGps.stopLocation(); } catch (e) {}
+  }
+}
+
 function openApp(user = {}) {
   $('loginView').classList.add('hidden');
   $('appView').classList.remove('hidden');
   initMap();
+  startNativeBackgroundLocation();
   startGps();
   loadTrips();
 }
 
 function logout() {
   stopGps();
+  stopNativeBackgroundLocation();
   DEMO = false;
   localStorage.removeItem('livre_driver_token');
   location.reload();
