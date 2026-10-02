@@ -20,6 +20,7 @@ let marker      = null;
 let map         = null;
 let lastAlerted = null;
 let initialTripsLoaded = false;
+let tripsRequestInFlight = false;
 let authMode    = 'login';
 
 /* ══════════════════════════════════════════════════════════════
@@ -333,18 +334,23 @@ function demoReset() {
 
 /** Carga los viajes asignados al conductor */
 async function loadTrips() {
-  // ── DEMO ────────────────────────────────────────────────────
-  if (DEMO) {
-    trips   = [{ ...DEMO_TRIP }];
-    selected = trips[0];
-    render();
-    initialTripsLoaded = true;
-    return;
-  }
-  // ── REAL ────────────────────────────────────────────────────
-  clearNotice();
+  if (tripsRequestInFlight) return;
+  tripsRequestInFlight = true;
   try {
-    const r = await fetch(API + '/mobility/driver/trips', { headers: h() });
+    // ── DEMO ────────────────────────────────────────────────────
+    if (DEMO) {
+      trips   = [{ ...DEMO_TRIP }];
+      selected = trips[0];
+      render();
+      initialTripsLoaded = true;
+      return;
+    }
+    // ── REAL ────────────────────────────────────────────────────
+    clearNotice();
+    const r = await fetch(`${API}/mobility/driver/trips?_=${Date.now()}`, {
+      headers: h(),
+      cache: 'no-store',
+    });
     if (r.status === 401) { logout(); return; }
     if (!r.ok) throw Error(r.status);
     trips = await r.json();
@@ -357,6 +363,8 @@ async function loadTrips() {
     initialTripsLoaded = true;
   } catch(e) {
     showNotice('No se pudieron cargar los viajes. Revisá la conexión.');
+  } finally {
+    tripsRequestInFlight = false;
   }
 }
 
@@ -617,14 +625,23 @@ $('toggleAuth').onclick  = () => setAuthMode(authMode === 'login' ? 'register' :
 $('logoutBtn').onclick   = logout;
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') restartGpsAfterBackground();
+  if (document.visibilityState === 'visible') {
+    restartGpsAfterBackground();
+    loadTrips();
+  }
 });
-window.addEventListener('pageshow', restartGpsAfterBackground);
-window.addEventListener('online', restartGpsAfterBackground);
+window.addEventListener('pageshow', () => {
+  restartGpsAfterBackground();
+  loadTrips();
+});
+window.addEventListener('online', () => {
+  restartGpsAfterBackground();
+  loadTrips();
+});
 
 if (token) openApp();
 
-// Polling cada 10 segundos (en DEMO no hace llamadas al backend)
+// Polling cada 5 segundos (en DEMO no hace llamadas al backend)
 setInterval(() => {
   if (!DEMO && token && !$('appView').classList.contains('hidden')) loadTrips();
-}, 10000);
+}, 5000);
