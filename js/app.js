@@ -339,6 +339,8 @@ async function loadTrips() {
   if (!token || $('appView')?.classList.contains('hidden')) return;
   if (tripsRequestInFlight) return;
   tripsRequestInFlight = true;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 4500);
   try {
     // ── DEMO ────────────────────────────────────────────────────
     if (DEMO) {
@@ -353,6 +355,7 @@ async function loadTrips() {
     const r = await fetch(`${API}/mobility/driver/trips?_=${Date.now()}`, {
       headers: h(),
       cache: 'no-store',
+      signal: controller.signal,
     });
     if (r.status === 401) { logout(); return; }
     if (!r.ok) throw Error(r.status);
@@ -367,6 +370,7 @@ async function loadTrips() {
   } catch(e) {
     showNotice('No se pudieron cargar los viajes. Revisá la conexión.');
   } finally {
+    clearTimeout(timeoutId);
     tripsRequestInFlight = false;
   }
 }
