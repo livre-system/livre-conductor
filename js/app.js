@@ -6,8 +6,19 @@
 ═══════════════════════════════════════════════════════════════ */
 
 /* ── Config ─────────────────────────────────────────────────── */
-const API = new URLSearchParams(location.search).get('api')
-          || 'https://livre-cloud-production.up.railway.app';
+const DEFAULT_API = 'https://livre-cloud-production.up.railway.app';
+function validatedHttpsApi(value) {
+  if (!value) return DEFAULT_API;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || !url.hostname || url.username || url.password || url.hash)
+      return DEFAULT_API;
+    return url.href.replace(/\/$/, '');
+  } catch (_) {
+    return DEFAULT_API;
+  }
+}
+const API = validatedHttpsApi(new URLSearchParams(location.search).get('api'));
 
 /* ── Estado global ──────────────────────────────────────────── */
 let token       = localStorage.getItem('livre_driver_token');
@@ -21,7 +32,9 @@ let map         = null;
 let lastAlerted = null;
 let initialTripsLoaded = false;
 let tripsRequestInFlight = false;
+let pendingNativeTripId = null;
 let authMode    = 'login';
+const NATIVE_SHELL = !!window.AndroidGps;
 
 /* ══════════════════════════════════════════════════════════════
    MODO DEMO
@@ -336,8 +349,9 @@ function demoReset() {
 async function loadTrips() {
   // Nunca consultar viajes desde el login: sin token el API responde 401,
   // y logout() recarga la página, generando un ciclo de recargas.
-  if (!token || $('appView')?.classList.contains('hidden')) return;
-  if (tripsRequestInFlight) return;
+  if (!token || $('appView')?.classList.contains('hidden')) return false;
+  if (NATIVE_SHELL && document.visibilityState !== 'visible') return false;
+  if (tripsRequestInFlight) return false;
   tripsRequestInFlight = true;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 4500);
@@ -348,7 +362,8 @@ async function loadTrips() {
       selected = trips[0];
       render();
       initialTripsLoaded = true;
-      return;
+      resolvePendingNativeTrip();
+      return true;
     }
     // ── REAL ────────────────────────────────────────────────────
     clearNotice();
@@ -357,7 +372,7 @@ async function loadTrips() {
       cache: 'no-store',
       signal: controller.signal,
     });
-    if (r.status === 401) { logout(); return; }
+    if (r.status === 401) { logout(); return false; }
     if (!r.ok) throw Error(r.status);
     trips = await r.json();
     if (selected) selected = trips.find(t => t.id === selected.id) || null;
@@ -367,8 +382,11 @@ async function loadTrips() {
     const fresh = trips.find(t => t.status === 'assigned');
     if (initialTripsLoaded && fresh) announceNewTrip(fresh);
     initialTripsLoaded = true;
+    resolvePendingNativeTrip();
+    return true;
   } catch(e) {
     showNotice('No se pudieron cargar los viajes. Revisá la conexión.');
+    return false;
   } finally {
     clearTimeout(timeoutId);
     tripsRequestInFlight = false;
@@ -471,6 +489,7 @@ function restartGpsAfterBackground() {
 function startGps() {
   // ── DEMO ────────────────────────────────────────────────────
   if (DEMO) { demoStartGps(); return; }
+  if (NATIVE_SHELL) { updateGpsPill(true); return; }
   // ── REAL ────────────────────────────────────────────────────
   if (watchId !== null) return;
   updateGpsPill(null);
@@ -564,6 +583,55 @@ function announceNewTrip(t) {
   speak(`Nuevo viaje disponible. Origen: ${t.origin}. Destino: ${t.destination}.`);
 }
 
+function onNativeTripNotification(tripId) {
+  if (!tripId) return false;
+  const id = String(tripId);
+  if (applyNativeTrip(id)) return true;
+  pendingNativeTripId = id;
+  loadTrips();
+  return false;
+}
+
+function applyNativeTrip(tripId) {
+  const found = trips.find(t => String(t.id) === String(tripId));
+  if (!found) return false;
+  if (found.status === 'cancelled' || found.status === 'completed') {
+    showNotice('Ese viaje ya no está disponible.');
+    window.AndroidGps?.confirmTripUnavailable?.(String(tripId));
+    return true;
+  }
+  selected = found;
+  render();
+  lastAlerted = found.id;
+  window.AndroidGps?.confirmTripOpened?.(String(tripId));
+  return true;
+}
+
+function resolvePendingNativeTrip() {
+  if (!pendingNativeTripId) return;
+  const id = pendingNativeTripId;
+  pendingNativeTripId = null;
+  if (applyNativeTrip(id)) return;
+  showNotice('Ese viaje ya fue tomado por otro conductor.');
+  window.AndroidGps?.confirmTripUnavailable?.(id);
+}
+
+function onNativeSessionExpired() {
+  logout();
+  return true;
+}
+
+function onNativePermissionState(state) {
+  const messages = {
+    NEED_PRECISE_LOCATION: 'Habilitá la ubicación precisa para compartir tu posición.',
+    NEED_BACKGROUND_LOCATION: 'Habilitá ubicación “Permitir todo el tiempo” para operar en segundo plano.',
+    NEED_NOTIFICATIONS: 'Habilitá las notificaciones para recibir nuevos viajes.',
+    LOCATION_DISABLED: 'Activá el GPS del dispositivo para compartir tu posición.',
+  };
+  if (messages[state]) showNotice(messages[state]);
+  return true;
+}
+
 /* ══════════════════════════════════════════════════════════════
    AUTH
 ══════════════════════════════════════════════════════════════ */
@@ -621,18 +689,27 @@ function stopNativeBackgroundLocation() {
   }
 }
 
+function setNativeAppVisible(visible) {
+  if (!NATIVE_SHELL || !window.AndroidGps?.setAppVisible) return;
+  try { window.AndroidGps.setAppVisible(visible); } catch (e) {}
+}
+
 function openApp(user = {}) {
   $('loginView').classList.add('hidden');
   $('appView').classList.remove('hidden');
   initMap();
   startNativeBackgroundLocation();
-  startGps();
+  if (!NATIVE_SHELL) startGps();
+  else updateGpsPill(true);
   loadTrips();
 }
 
 function logout() {
   stopGps();
   stopNativeBackgroundLocation();
+  if (window.AndroidGps?.clearSession) {
+    try { window.AndroidGps.clearSession(); } catch (e) {}
+  }
   DEMO = false;
   localStorage.removeItem('livre_driver_token');
   location.reload();
@@ -644,6 +721,7 @@ $('toggleAuth').onclick  = () => setAuthMode(authMode === 'login' ? 'register' :
 $('logoutBtn').onclick   = logout;
 
 document.addEventListener('visibilitychange', () => {
+  setNativeAppVisible(document.visibilityState === 'visible');
   if (document.visibilityState === 'visible') {
     restartGpsAfterBackground();
     loadTrips();
@@ -662,5 +740,6 @@ if (token) openApp();
 
 // Polling cada 5 segundos (en DEMO no hace llamadas al backend)
 setInterval(() => {
-  if (!DEMO && token && !$('appView').classList.contains('hidden')) loadTrips();
+  if (!DEMO && token && !$('appView').classList.contains('hidden') &&
+      (!NATIVE_SHELL || document.visibilityState === 'visible')) loadTrips();
 }, 5000);
