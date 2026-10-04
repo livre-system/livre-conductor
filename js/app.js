@@ -29,6 +29,10 @@ let wakeLock    = null;
 let gpsRecoveryTimer = null;
 let marker      = null;
 let map         = null;
+let otherDriversLayer = null;
+let otherDriversRequestInFlight = false;
+let otherDriversTimer = null;
+let currentDriverUserId = '';
 let lastAlerted = null;
 let initialTripsLoaded = false;
 let tripsRequestInFlight = false;
@@ -561,6 +565,9 @@ function initMap() {
     attribution: '© OpenStreetMap',
     maxZoom: 19,
   }).addTo(map);
+  loadOtherDrivers();
+  otherDriversTimer = setInterval(loadOtherDrivers, 15000);
+  setTimeout(() => map?.invalidateSize(), 0);
 }
 
 function setMapMarker(lat, lng) {
@@ -578,6 +585,56 @@ function setMapMarker(lat, lng) {
     marker.setLatLng(pos);
   }
   map.setView(pos, Math.max(map.getZoom(), 15));
+}
+
+function tokenUserId() {
+  try {
+    const payload = token?.split('.')[1];
+    if (!payload) return '';
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const data = JSON.parse(atob(normalized + '='.repeat((4 - normalized.length % 4) % 4)));
+    return String(data.id ?? data.sub ?? data.user_id ?? '');
+  } catch (_) { return ''; }
+}
+
+function otherDriverIcon() {
+  return L.divIcon({
+    className: '',
+    html: '<span class="driver-other-marker"><span>•</span></span>',
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -28],
+  });
+}
+
+async function loadOtherDrivers() {
+  if (!token || DEMO || !map || otherDriversRequestInFlight) return false;
+  otherDriversRequestInFlight = true;
+  try {
+    const r = await fetch(`${API}/crm/operational?_=${Date.now()}`, { headers: h(), cache: 'no-store' });
+    if (r.status === 401) { logout(); return false; }
+    if (!r.ok) throw Error(r.status);
+    const data = await r.json();
+    if (!otherDriversLayer) otherDriversLayer = L.layerGroup().addTo(map);
+    otherDriversLayer.clearLayers();
+    const ownId = String(currentDriverUserId || tokenUserId());
+    const icon = otherDriverIcon();
+    (Array.isArray(data.drivers) ? data.drivers : []).forEach(driver => {
+      if (ownId && String(driver.driverUserId) === ownId) return;
+      const lat = Number(driver.lastPlace?.latitude);
+      const lng = Number(driver.lastPlace?.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      const status = esc(driver.operationalLabel || driver.operationalState || 'Estado no informado');
+      L.marker([lat, lng], { icon, keyboard: false })
+        .bindPopup(`<strong>Conductor Livre</strong><br>${status}`)
+        .addTo(otherDriversLayer);
+    });
+    return true;
+  } catch (_) {
+    return false;
+  } finally {
+    otherDriversRequestInFlight = false;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -748,6 +805,7 @@ function setNativeAppVisible(visible) {
 }
 
 function openApp(user = {}) {
+  currentDriverUserId = String(user.id ?? user.userId ?? user.user_id ?? tokenUserId() ?? '');
   $('loginView').classList.add('hidden');
   $('appView').classList.remove('hidden');
   initMap();
