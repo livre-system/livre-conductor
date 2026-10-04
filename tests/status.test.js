@@ -26,4 +26,15 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /operationalStatus === 'out_of_service' \|\| !t/);
     assert.match(source, /selected = trips\.find\(t => t\.status === 'assigned'\) \|\| trips\[0\]/);
   });
+
+  it('renders demo trips without requiring a JWT token', () => {
+    assert.match(source, /if \(\(!token && !DEMO\) \|\|/);
+    assert.match(source, /if \(DEMO\) \{[\s\S]*?trips\s*=\s*\[\{ \.\.\.DEMO_TRIP \}\]/);
+  });
+
+  it('uses the CRM operational snapshot for peer locations', () => {
+    assert.match(source, /fetch\(`\$\{API\}\/crm\/operational\?_=/);
+    assert.match(source, /driver\.lastPlace\?\.latitude/);
+    assert.match(source, /otherDriversTimer = setInterval\(loadOtherDrivers, 15000\)/);
+  });
 });

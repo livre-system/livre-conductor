@@ -186,7 +186,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -686,15 +686,24 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 }
 
 @media (max-width: 430px) {
-  .topbar { align-items: flex-start; padding-left: 12px; padding-right: 12px; }
-  .topbar-logo { padding-top: 4px; }
-  .topbar-right { max-width: calc(100% - 80px); row-gap: 5px; }
+  .topbar { padding-left: 12px; padding-right: 12px; }
+  .topbar-logo { flex-shrink: 0; }
+  .topbar-right { max-width: calc(100% - 76px); flex-wrap: nowrap; gap: 4px; }
   .gps-pill { font-size: 10px; }
-  .operational-status-button { max-width: 145px; }
+  .operational-status-button { max-width: 132px; padding-left: 8px; padding-right: 8px; }
   .gps-pill #gpsLabel { display: none; }
   .gps-pill { padding-left: 7px; padding-right: 7px; }
-  .btn-logout { padding-left: 5px; padding-right: 0; }
+  .btn-logout { padding-left: 4px; padding-right: 0; }
   .sheet-inner { padding-left: 16px; padding-right: 16px; }
+}
+
+@media (max-width: 350px) {
+  .topbar { padding-left: 8px; padding-right: 8px; }
+  .topbar-logo { gap: 6px; font-size: 14px; }
+  .topbar-logo .logo-mark { width: 32px; height: 32px; }
+  .topbar-right { max-width: calc(100% - 68px); }
+  .operational-status-button { max-width: 112px; font-size: 10px; }
+  .btn-logout { font-size: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

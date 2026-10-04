@@ -360,7 +360,8 @@ function demoReset() {
 async function loadTrips() {
   // Nunca consultar viajes desde el login: sin token el API responde 401,
   // y logout() recarga la página, generando un ciclo de recargas.
-  if (!token || $('appView')?.classList.contains('hidden')) return false;
+  // DEMO no tiene JWT, pero debe renderizar el sheet igual que una sesión real.
+  if ((!token && !DEMO) || $('appView')?.classList.contains('hidden')) return false;
   if (NATIVE_SHELL && document.visibilityState !== 'visible') return false;
   if (tripsRequestInFlight) return false;
   tripsRequestInFlight = true;
