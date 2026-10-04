@@ -39,6 +39,10 @@ let tripsRequestInFlight = false;
 let pendingNativeTripId = null;
 let authMode    = 'login';
 let operationalStatus = 'available';
+let currentDriverSnapshot = null;
+const PREFS_KEY = 'livre_driver_preferences';
+const DEFAULT_PREFS = { theme: 'dark', tone: 'classic', volume: 70, fontScale: '1' };
+let preferences = { ...DEFAULT_PREFS };
 
 const OPERATIONAL_STATUS_LABELS = {
   available: '🟢 Disponible',
@@ -127,22 +131,37 @@ function speak(text) {
 
 function beep() {
   try {
-    const ctx = new AudioContext();
-    const now = ctx.currentTime;
-    const gain = ctx.createGain();
-    const osc = ctx.createOscillator();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(260, now);
-    osc.frequency.exponentialRampToValueAtTime(170, now + .28);
+    const ctx = new AudioContext(); const now = ctx.currentTime;
+    const gain = ctx.createGain(); const osc = ctx.createOscillator();
+    const frequencies = { classic: [260, 170], double: [360, 240], high: [620, 440], soft: [220, 180], pulse: [300, 300] }[preferences.tone] || [260, 170];
+    osc.type = preferences.tone === 'soft' ? 'sine' : 'sawtooth';
+    osc.frequency.setValueAtTime(frequencies[0], now);
+    osc.frequency.exponentialRampToValueAtTime(frequencies[1], now + .28);
     gain.gain.setValueAtTime(.001, now);
-    gain.gain.exponentialRampToValueAtTime(.42, now + .015);
+    gain.gain.exponentialRampToValueAtTime(.42 * Number(preferences.volume) / 100, now + .015);
     gain.gain.exponentialRampToValueAtTime(.001, now + .3);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + .31);
+    osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + .31);
     osc.addEventListener('ended', () => ctx.close(), { once: true });
   } catch(e) {}
+}
+
+function loadPreferences() {
+  try { preferences = { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') }; } catch (_) {}
+  document.documentElement.style.setProperty('--font-scale', preferences.fontScale);
+  document.body.dataset.theme = preferences.theme;
+  if ($('themeToggle')) $('themeToggle').textContent = preferences.theme === 'light' ? '☾' : '☼';
+  if ($('arrivalTone')) $('arrivalTone').value = preferences.tone;
+  if ($('volumeRange')) { $('volumeRange').value = preferences.volume; $('volumeValue').textContent = `${preferences.volume}%`; }
+  if ($('fontSizeSelect')) $('fontSizeSelect').value = preferences.fontScale;
+}
+function savePreferences() { localStorage.setItem(PREFS_KEY, JSON.stringify(preferences)); }
+function toggleTheme() { preferences.theme = preferences.theme === 'light' ? 'dark' : 'light'; savePreferences(); loadPreferences(); }
+function operationalControlsHtml() {
+  return `<div class="operational-panel" aria-label="Estado operativo"><div class="operational-panel-title">Estado operativo</div><div class="operational-panel-buttons">
+    <button type="button" class="operational-panel-button" data-operational-status="available">Disponible</button>
+    <button type="button" class="operational-panel-button" data-operational-status="unavailable">No disponible</button>
+    <button type="button" class="operational-panel-button" data-operational-status="out_of_service">Fuera de servicio</button>
+  </div></div>`;
 }
 
 /* ── Formatear tarifa ───────────────────────────────────────── */
@@ -188,15 +207,13 @@ function render() {
   if (!t) {
     sheet.className = 'sheet';
     inner.innerHTML = `
-      <div class="idle-state">
-        <div class="idle-icon">🚕</div>
-        <div class="idle-title">Esperando un viaje</div>
-        <p class="idle-sub">Cuando la central te asigne un viaje aparece acá automáticamente.</p>
-        ${DEMO
-          ? `<button class="btn-refresh" onclick="demoReset()">↩ Reiniciar demo</button>`
-          : `<button class="btn-refresh" onclick="loadTrips()">Actualizar</button>`}
+      ${operationalControlsHtml()}
+      <div class="idle-state compact-idle">
+        <div class="idle-sub">GPS activo · Buscando viajes asignados</div>
+        ${DEMO ? `<button class="btn-refresh" onclick="demoReset()">↩ Reiniciar demo</button>` : `<button class="btn-refresh" onclick="loadTrips()">Actualizar viajes</button>`}
       </div>
       <div id="notice" class="notice hidden"></div>`;
+    renderOperationalStatus();
     return;
   }
 
@@ -208,6 +225,7 @@ function render() {
     sheet.className = 'sheet alert-mode';
     const fare = formatFare(t);
     inner.innerHTML = `
+      ${operationalControlsHtml()}
       <div class="trip-alert">
         <div class="alert-badge">
           <span class="alert-pulse"></span>
@@ -306,6 +324,7 @@ function render() {
         </button>
       </div>
     </div>
+    ${operationalControlsHtml()}
     <div id="notice" class="notice hidden"></div>`;
 
   // Botones secundarios — UI lista, lógica para Hermes
@@ -598,6 +617,16 @@ function tokenUserId() {
   } catch (_) { return ''; }
 }
 
+function driverPopupHtml(driver, current = false) {
+  const vehicle = driver?.vehicle || {};
+  const trip = ['assigned', 'arriving', 'in_progress'].includes(driver?.tripStatus) ? 'En viaje' : 'Sin viaje';
+  return `<div class="driver-popup ${current ? 'driver-popup-current' : ''}"><strong>${current ? 'Tu ubicación · ' : ''}${esc(driver?.driverName || 'Conductor')}</strong>
+    <div><b>Vehículo:</b> ${esc(vehicle.model || 'No informado')}</div>
+    <div><b>Patente:</b> ${esc(vehicle.plate || 'No informada')}</div>
+    <div><b>Estado operativo:</b> ${esc(driver?.operationalLabel || 'No informado')}</div>
+    <div><b>Estado de viaje:</b> ${trip}</div></div>`;
+}
+
 function otherDriverIcon() {
   return L.divIcon({
     className: '',
@@ -618,16 +647,18 @@ async function loadOtherDrivers() {
     const data = await r.json();
     if (!otherDriversLayer) otherDriversLayer = L.layerGroup().addTo(map);
     otherDriversLayer.clearLayers();
+    const drivers = Array.isArray(data.drivers) ? data.drivers : [];
     const ownId = String(currentDriverUserId || tokenUserId());
     const icon = otherDriverIcon();
-    (Array.isArray(data.drivers) ? data.drivers : []).forEach(driver => {
+    currentDriverSnapshot = drivers.find(driver => ownId && String(driver.driverUserId) === ownId) || null;
+    if (marker && currentDriverSnapshot) marker.bindPopup(driverPopupHtml(currentDriverSnapshot, true));
+    drivers.forEach(driver => {
       if (ownId && String(driver.driverUserId) === ownId) return;
       const lat = Number(driver.lastPlace?.latitude);
       const lng = Number(driver.lastPlace?.longitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-      const status = esc(driver.operationalLabel || driver.operationalState || 'Estado no informado');
       L.marker([lat, lng], { icon, keyboard: false })
-        .bindPopup(`<strong>Conductor Livre</strong><br>${status}`)
+        .bindPopup(driverPopupHtml(driver))
         .addTo(otherDriversLayer);
     });
     return true;
@@ -649,10 +680,9 @@ function announceNewTrip(t) {
 }
 
 function renderOperationalStatus() {
-  const button = $('operationalStatusButton');
-  if (button) button.textContent = OPERATIONAL_STATUS_LABELS[operationalStatus];
   document.querySelectorAll('[data-operational-status]').forEach(item => {
     item.classList.toggle('selected', item.dataset.operationalStatus === operationalStatus);
+    item.onclick = async () => await changeOperationalStatus(item.dataset.operationalStatus);
   });
 }
 
@@ -827,18 +857,18 @@ function logout() {
 }
 
 /* ── Bootstrap ──────────────────────────────────────────────── */
-$('loginForm').onsubmit  = login;
-$('toggleAuth').onclick  = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
-$('logoutBtn').onclick   = logout;
-$('operationalStatusButton').onclick = () => {
-  $('operationalStatusMenu').classList.toggle('hidden');
-};
-document.querySelectorAll('[data-operational-status]').forEach(item => {
-  item.onclick = async () => {
-    $('operationalStatusMenu').classList.add('hidden');
-    await changeOperationalStatus(item.dataset.operationalStatus);
-  };
-});
+loadPreferences();
+$('loginForm').onsubmit = login;
+$('toggleAuth').onclick = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
+$('logoutBtn').onclick = logout;
+$('themeToggle').onclick = toggleTheme;
+$('settingsButton').onclick = () => $('settingsModal').classList.remove('hidden');
+$('settingsClose').onclick = () => $('settingsModal').classList.add('hidden');
+$('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') settingsClose(); };
+$('tonePreview').onclick = beep;
+$('arrivalTone').onchange = e => { preferences.tone = e.target.value; savePreferences(); };
+$('volumeRange').oninput = e => { preferences.volume = Number(e.target.value); $('volumeValue').textContent = `${preferences.volume}%`; savePreferences(); };
+$('fontSizeSelect').onchange = e => { preferences.fontScale = e.target.value; savePreferences(); loadPreferences(); };
 
 document.addEventListener('visibilitychange', () => {
   setNativeAppVisible(document.visibilityState === 'visible');

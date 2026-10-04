@@ -37,4 +37,24 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /driver\.lastPlace\?\.latitude/);
     assert.match(source, /otherDriversTimer = setInterval\(loadOtherDrivers, 15000\)/);
   });
+
+  it('uses real CRM driver fields in marker popups', () => {
+    assert.match(source, /driver\?\.driverName/);
+    assert.match(source, /vehicle\.model/);
+    assert.match(source, /vehicle\.plate/);
+    assert.match(source, /Estado de viaje/);
+    assert.ok(!source.includes('<strong>Conductor Livre</strong>'));
+  });
+
+  it('provides persistent theme and driver preferences', () => {
+    assert.match(source, /PREFS_KEY = 'livre_driver_preferences'/);
+    assert.match(source, /localStorage\.setItem\(PREFS_KEY/);
+    assert.match(source, /tonePreview/);
+    assert.match(source, /fontSizeSelect/);
+  });
+
+  it('renders operational actions in the bottom panel', () => {
+    assert.match(source, /operationalControlsHtml/);
+    assert.doesNotMatch(source, /Esperando un viaje/);
+  });
 });

@@ -49,22 +49,15 @@
   <!-- Topbar -->
   <header class="topbar">
     <div class="topbar-logo">
-      <span class="logo-mark">L</span>
-      Livre
+      <img src="assets/logo_livre.png" alt="Livre" class="topbar-logo-image">
     </div>
     <div class="topbar-right">
       <div id="gpsPill" class="gps-pill inactive">
         <span class="gps-dot"></span>
         <span id="gpsLabel">GPS inactivo</span>
       </div>
-      <div class="operational-control">
-        <button id="operationalStatusButton" class="operational-status-button" type="button" aria-expanded="false">🟢 Disponible</button>
-        <div id="operationalStatusMenu" class="operational-status-menu hidden" role="menu">
-          <button type="button" data-operational-status="available">🟢 Disponible</button>
-          <button type="button" data-operational-status="unavailable">⚪ No disponible</button>
-          <button type="button" data-operational-status="out_of_service">🔴 Fuera de servicio</button>
-        </div>
-      </div>
+      <button id="themeToggle" class="header-icon-button" type="button" aria-label="Cambiar tema">☼</button>
+      <button id="settingsButton" class="header-icon-button" type="button" aria-label="Abrir configuración">⚙️</button>
       <button id="logoutBtn" class="btn-logout">Salir</button>
     </div>
   </header>
@@ -83,6 +76,22 @@
   </div>
 
 </section>
+
+<div id="settingsModal" class="settings-modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="settings-card">
+    <div class="settings-heading"><h2 id="settingsTitle">Configuración</h2><button id="settingsClose" class="settings-close" type="button" aria-label="Cerrar">×</button></div>
+    <label class="settings-field" for="arrivalTone">Tono de llegada de viaje
+      <select id="arrivalTone"><option value="classic">Clásico</option><option value="double">Doble</option><option value="high">Agudo</option><option value="soft">Suave</option><option value="pulse">Pulso</option></select>
+    </label>
+    <button id="tonePreview" class="settings-preview" type="button">▶ Escuchar tono</button>
+    <label class="settings-field" for="volumeRange">Volumen <output id="volumeValue">70%</output>
+      <input id="volumeRange" type="range" min="0" max="100" step="1">
+    </label>
+    <label class="settings-field" for="fontSizeSelect">Tamaño de fuente
+      <select id="fontSizeSelect"><option value="0.9">Pequeño</option><option value="1">Normal</option><option value="1.1">Grande</option><option value="1.2">Muy grande</option></select>
+    </label>
+  </div>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="js/app.js?v=b6b51db"></script>
