@@ -299,6 +299,9 @@ public class MainActivity extends Activity {
     }
 
     public class AndroidBridge {
+        @JavascriptInterface public String getDeviceId() {
+            return SessionStore.getDeviceId(MainActivity.this);
+        }
         @JavascriptInterface public void startLocation(String token, String api) {
             if (!SessionStore.save(MainActivity.this, token, api)) return;
             pendingToken = token;

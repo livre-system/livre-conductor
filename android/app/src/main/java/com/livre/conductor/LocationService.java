@@ -116,7 +116,7 @@ public class LocationService extends Service {
             String activeTripId = null;
             try {
                 if (!SessionStore.hasCurrentSession(this, currentToken, currentApi)) return;
-                postLocation(currentApi, currentToken, "/mobility/driver/location", location);
+                postLocation(currentApi, currentToken, sessionDeviceId(), "/mobility/driver/location", location);
                 if (!SessionStore.hasCurrentSession(this, currentToken, currentApi)) return;
                 JSONArray trips = getTrips(currentApi, currentToken);
                 if (trips != null) {
@@ -124,7 +124,7 @@ public class LocationService extends Service {
                     if (!appVisible) notifyNewAssignedTrips(trips);
                 }
                 if (activeTripId != null && SessionStore.hasCurrentSession(this, currentToken, currentApi)) {
-                    postLocation(currentApi, currentToken, "/mobility/driver/trips/" + encodePath(activeTripId) + "/location", location);
+                    postLocation(currentApi, currentToken, sessionDeviceId(), "/mobility/driver/trips/" + encodePath(activeTripId) + "/location", location);
                 }
             } catch (RequestFailure e) {
                 handleRequestFailure(e);
@@ -266,7 +266,11 @@ public class LocationService extends Service {
         } finally { if (connection != null) connection.disconnect(); }
     }
 
-    private void postLocation(String currentApi, String currentToken, String path, Location location) throws RequestFailure {
+    private String sessionDeviceId() {
+        return SessionStore.getDeviceId(this);
+    }
+
+    private void postLocation(String currentApi, String currentToken, String deviceId, String path, Location location) throws RequestFailure {
         HttpURLConnection connection = null;
         try {
             URL url = new URL(trimApi(currentApi) + path);
@@ -277,7 +281,7 @@ public class LocationService extends Service {
             connection.setDoOutput(true);
             connection.setRequestProperty("Authorization", "Bearer " + currentToken);
             connection.setRequestProperty("Content-Type", "application/json");
-            String body = String.format(Locale.US, "{\"latitude\":%.7f,\"longitude\":%.7f,\"accuracy\":%.2f}", location.getLatitude(), location.getLongitude(), location.getAccuracy());
+            String body = String.format(Locale.US, "{\"latitude\":%.7f,\"longitude\":%.7f,\"accuracy\":%.2f,\"device_id\":\"%s\"}", location.getLatitude(), location.getLongitude(), location.getAccuracy(), deviceId);
             try (OutputStream out = connection.getOutputStream()) { out.write(body.getBytes(StandardCharsets.UTF_8)); }
             int status = connection.getResponseCode();
             if (status == 401) throw new RequestFailure(RequestFailure.Kind.UNAUTHORIZED);

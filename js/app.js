@@ -20,6 +20,34 @@ function validatedHttpsApi(value) {
 }
 const API = validatedHttpsApi(new URLSearchParams(location.search).get('api'));
 
+function validDeviceId(value) {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+function stableDeviceId() {
+  const key = 'livre_driver_device_id';
+  if (window.AndroidGps) {
+    const nativeValue = window.AndroidGps.getDeviceId?.();
+    if (!validDeviceId(nativeValue)) throw new Error('Android device identity unavailable');
+    try { localStorage.setItem(key, nativeValue); } catch (_) {}
+    return nativeValue;
+  }
+  let value = localStorage.getItem(key);
+  if (!validDeviceId(value)) {
+    value = crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    localStorage.setItem(key, value);
+  }
+  return value;
+}
+
+const deviceId = stableDeviceId();
+
 /* ── Estado global ──────────────────────────────────────────── */
 let token       = localStorage.getItem('livre_driver_token');
 let authEpoch   = 0;
@@ -110,7 +138,11 @@ function demoStartGps() {
 
 /* ── Utils ──────────────────────────────────────────────────── */
 const $  = id => document.getElementById(id);
-const h  = ()  => ({ 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' });
+const h  = ()  => ({
+  'Authorization': `Bearer ${token}`,
+  'Content-Type': 'application/json',
+  'X-Device-ID': deviceId,
+});
 const esc = v  => String(v || '').replace(/[&<>"']/g,
   c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[c]));
 
@@ -476,7 +508,7 @@ async function sendLocation(lat, lng) {
     return;
   }
   // ── REAL ────────────────────────────────────────────────────
-  const body = JSON.stringify({ latitude: lat, longitude: lng });
+  const body = JSON.stringify({ latitude: lat, longitude: lng, device_id: deviceId });
   try {
     const liveResponse = await fetch(`${API}/mobility/driver/location`, {
       method: 'POST', headers: h(), body,
@@ -662,10 +694,11 @@ async function loadOtherDrivers() {
     const drivers = Array.isArray(data.drivers) ? data.drivers : [];
     const ownId = String(currentDriverUserId || tokenUserId());
     const icon = otherDriverIcon();
-    currentDriverSnapshot = drivers.find(driver => ownId && String(driver.driverUserId) === ownId) || null;
+    currentDriverSnapshot = drivers.find(driver => driver.sessionActive && ownId && String(driver.driverUserId) === ownId) || null;
 
     if (marker && currentDriverSnapshot) marker.bindPopup(driverPopupHtml(currentDriverSnapshot, true));
     drivers.forEach(driver => {
+      if (!driver.sessionActive) return;
       if (ownId && String(driver.driverUserId) === ownId) return;
       const lat = Number(driver.lastPlace?.latitude);
       const lng = Number(driver.lastPlace?.longitude);
@@ -820,7 +853,7 @@ async function login(e) {
   // ── REAL ────────────────────────────────────────────────────
   const reg = false;
   try {
-    const body = { username: user, password: pass };
+    const body = { username: user, password: pass, device_id: deviceId };
     if (reg) body.name = $('nameInput').value.trim();
     const endpoint = reg ? '/auth/driver/register' : '/auth/driver/login';
     const r    = await fetch(API + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -892,7 +925,7 @@ async function logout() {
     try {
       await fetch(`${API}/mobility/driver/location`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${sessionToken}` },
+        headers: { 'Authorization': `Bearer ${sessionToken}`, 'X-Device-ID': deviceId },
         keepalive: true,
       });
     } catch (_) {}
