@@ -845,14 +845,25 @@ function openApp(user = {}) {
   else updateGpsPill(true);
   loadOperationalStatus().then(() => loadTrips());
 }
+
+function clearWebSession() {
+  // El JWT es la única credencial web persistida. También limpiamos la sesión
+  // de la pestaña para no dejar estado de autenticación en un WebView.
+  token = null;
+  DEMO = false;
+  try {
+    localStorage.removeItem('livre_driver_token');
+    sessionStorage.clear();
+  } catch (e) {}
+}
+
 function logout() {
   stopGps();
   stopNativeBackgroundLocation();
   if (window.AndroidGps?.clearSession) {
     try { window.AndroidGps.clearSession(); } catch (e) {}
   }
-  DEMO = false;
-  localStorage.removeItem('livre_driver_token');
+  clearWebSession();
   location.reload();
 }
 

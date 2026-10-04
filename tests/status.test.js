@@ -53,6 +53,14 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /fontSizeSelect/);
   });
 
+  it('clears web authentication state before reloading after logout', () => {
+    assert.match(source, /function clearWebSession\(\)/);
+    assert.match(source, /token = null/);
+    assert.match(source, /localStorage\.removeItem\('livre_driver_token'\)/);
+    assert.match(source, /sessionStorage\.clear\(\)/);
+    assert.match(source, /clearWebSession\(\);[\s\S]*location\.reload\(\)/);
+  });
+
   it('renders operational actions in the bottom panel', () => {
     assert.match(source, /operationalControlsHtml/);
     assert.doesNotMatch(source, /Esperando un viaje/);
