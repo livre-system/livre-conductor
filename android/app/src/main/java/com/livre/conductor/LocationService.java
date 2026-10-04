@@ -16,6 +16,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.Looper;
+
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -82,6 +83,7 @@ public class LocationService extends Service {
         }
         token = session.token;
         api = session.api;
+
         if (tripPoll == null) {
             startForeground(FOREGROUND_ID, notification());
             networkAvailable = hasValidatedNetwork();
@@ -104,20 +106,26 @@ public class LocationService extends Service {
     private void sendLocation(Location location) {
         final String currentToken = token;
         final String currentApi = api;
-        if (currentToken == null || currentApi == null || !PermissionGate.operational(this)) {
+        if (currentToken == null || currentApi == null || !PermissionGate.operational(this)
+                || !SessionStore.hasCurrentSession(this, currentToken, currentApi)) {
             if (!PermissionGate.operational(this)) stopSelf();
             return;
         }
         network.execute(() -> {
+
             String activeTripId = null;
             try {
+                if (!SessionStore.hasCurrentSession(this, currentToken, currentApi)) return;
                 postLocation(currentApi, currentToken, "/mobility/driver/location", location);
+                if (!SessionStore.hasCurrentSession(this, currentToken, currentApi)) return;
                 JSONArray trips = getTrips(currentApi, currentToken);
                 if (trips != null) {
                     activeTripId = findActiveTripId(trips);
                     if (!appVisible) notifyNewAssignedTrips(trips);
                 }
-                if (activeTripId != null) postLocation(currentApi, currentToken, "/mobility/driver/trips/" + encodePath(activeTripId) + "/location", location);
+                if (activeTripId != null && SessionStore.hasCurrentSession(this, currentToken, currentApi)) {
+                    postLocation(currentApi, currentToken, "/mobility/driver/trips/" + encodePath(activeTripId) + "/location", location);
+                }
             } catch (RequestFailure e) {
                 handleRequestFailure(e);
             } catch (Exception ignored) {
@@ -125,16 +133,22 @@ public class LocationService extends Service {
         });
     }
 
+
+
     private void pollTripsIfBackground() {
-        if (!PermissionGate.operational(this)) {
+        if (!PermissionGate.operational(this) || !SessionStore.isValid(this)) {
             stopSelf();
             return;
         }
-        if (appVisible || token == null || api == null || !networkAvailable) return;
+        if (appVisible || token == null || api == null || !networkAvailable
+                || !SessionStore.hasCurrentSession(this, token, api)) return;
         if (System.currentTimeMillis() < retryNotBefore) return;
         if (!pollRunning.compareAndSet(false, true)) return;
         try {
-            JSONArray trips = getTrips(api, token);
+            final String currentToken = token;
+            final String currentApi = api;
+            if (!SessionStore.hasCurrentSession(this, currentToken, currentApi)) return;
+            JSONArray trips = getTrips(currentApi, currentToken);
             if (trips != null) {
                 notifyNewAssignedTrips(trips);
                 resetRetryBackoff();

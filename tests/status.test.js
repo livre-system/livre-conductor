@@ -2,6 +2,8 @@ const { describe, it } = require('node:test');
 const assert = require('assert');
 const fs = require('fs');
 const source = fs.readFileSync('js/app.js', 'utf8');
+const nativeSource = fs.readFileSync('android/app/src/main/java/com/livre/conductor/MainActivity.java', 'utf8');
+const sessionStoreSource = fs.readFileSync('android/app/src/main/java/com/livre/conductor/SessionStore.java', 'utf8');
 
 describe('driver operational status synchronization', () => {
   it('fetches the backend status before rendering the control', () => {
@@ -59,6 +61,29 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /localStorage\.removeItem\('livre_driver_token'\)/);
     assert.match(source, /sessionStorage\.clear\(\)/);
     assert.match(source, /clearWebSession\(\);[\s\S]*location\.reload\(\)/);
+    assert.match(source, /method: 'DELETE'/);
+    assert.match(source, /\/mobility\/driver\/location/);
+  });
+
+  it('clears the native session synchronously without bridge recursion', () => {
+    assert.match(nativeSource, /SessionStore\.clear\(MainActivity\.this\);[\s\S]*MainActivity\.this\.clearSession\(\)/);
+    assert.match(sessionStoreSource, /edit\(\)\.clear\(\)\.commit\(\)/);
+    assert.doesNotMatch(nativeSource, /runOnUiThread\(\(\) => clearSession\(\)\)/);
+  });
+
+  it('derives the active driver identity from the new JWT, not the login response cache', () => {
+    assert.match(source, /function tokenClaims\(\)/);
+    assert.match(source, /const claims = tokenClaims\(\);/);
+    assert.match(source, /currentDriverUserId = String\(claims\.sub \|\| ''\)/);
+  });
+
+  it('prevents stale web requests and native GPS work from crossing sessions', () => {
+    assert.match(source, /let authEpoch\s*=\s*0;/);
+    assert.match(source, /const requestEpoch = authEpoch;/);
+    assert.match(source, /requestEpoch !== authEpoch/);
+    assert.match(nativeSource, /SessionStore\.save\(MainActivity\.this, token, api\)/);
+    const locationSource = fs.readFileSync('android/app/src/main/java/com/livre/conductor/LocationService.java', 'utf8');
+    assert.match(locationSource, /SessionStore\.hasCurrentSession\(this, currentToken, currentApi\)/);
   });
 
   it('renders operational actions in the bottom panel', () => {

@@ -15,6 +15,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -66,6 +67,7 @@ public class MainActivity extends Activity {
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.setWebViewClient(new ResilientWebViewClient());
         webView.setWebChromeClient(new WebChromeClient() {
+
             @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 boolean trustedOrigin = "https://livre-conductor-production.up.railway.app".equals(origin);
                 callback.invoke(origin, trustedOrigin && PermissionGate.operational(MainActivity.this), false);
@@ -306,7 +308,12 @@ public class MainActivity extends Activity {
             serviceOperational = false;
             stopService(new Intent(MainActivity.this, LocationService.class));
         }
-        @JavascriptInterface public void clearSession() { runOnUiThread(() -> clearSession()); }
+        @JavascriptInterface public void clearSession() {
+            // Clear the native token before the WebView reloads. The explicit
+            // qualifier avoids recursively calling this bridge method.
+            SessionStore.clear(MainActivity.this);
+            runOnUiThread(() -> MainActivity.this.clearSession());
+        }
         @JavascriptInterface public void setAppVisible(boolean visible) {
             runOnUiThread(() -> setServiceAppVisible(visible));
         }

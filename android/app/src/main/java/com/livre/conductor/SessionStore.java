@@ -38,7 +38,7 @@ public final class SessionStore {
     }
 
     public static synchronized void clear(Context context) {
-        preferences(context).edit().clear().apply();
+        preferences(context).edit().clear().commit();
     }
 
     public static synchronized void invalidate(Context context) {
@@ -54,6 +54,11 @@ public final class SessionStore {
 
     public static synchronized boolean isValid(Context context) {
         return read(context) != null;
+    }
+
+    public static synchronized boolean hasCurrentSession(Context context, String token, String api) {
+        Session session = read(context);
+        return session != null && session.token.equals(token) && session.api.equals(normalizeApi(api));
     }
 
     private static SharedPreferences preferences(Context context) {

@@ -22,6 +22,7 @@ const API = validatedHttpsApi(new URLSearchParams(location.search).get('api'));
 
 /* ── Estado global ──────────────────────────────────────────── */
 let token       = localStorage.getItem('livre_driver_token');
+let authEpoch   = 0;
 let trips       = [];
 let selected    = null;
 let watchId     = null;
@@ -383,6 +384,8 @@ async function loadTrips() {
   if ((!token && !DEMO) || $('appView')?.classList.contains('hidden')) return false;
   if (NATIVE_SHELL && document.visibilityState !== 'visible') return false;
   if (tripsRequestInFlight) return false;
+  const requestEpoch = authEpoch;
+  const requestToken = token;
   tripsRequestInFlight = true;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 4500);
@@ -405,7 +408,9 @@ async function loadTrips() {
     });
     if (r.status === 401) { logout(); return false; }
     if (!r.ok) throw Error(r.status);
-    trips = await r.json();
+    const nextTrips = await r.json();
+    if (requestEpoch !== authEpoch || requestToken !== token) return false;
+    trips = nextTrips;
     if (selected) selected = trips.find(t => t.id === selected.id) || null;
     if (!selected && trips.length)
       selected = trips.find(t => t.status === 'assigned') || trips[0];
@@ -608,13 +613,17 @@ function setMapMarker(lat, lng) {
 }
 
 function tokenUserId() {
+  const claims = tokenClaims();
+  return String(claims.sub ?? claims.id ?? claims.user_id ?? '');
+}
+
+function tokenClaims() {
   try {
     const payload = token?.split('.')[1];
-    if (!payload) return '';
+    if (!payload) return {};
     const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const data = JSON.parse(atob(normalized + '='.repeat((4 - normalized.length % 4) % 4)));
-    return String(data.id ?? data.sub ?? data.user_id ?? '');
-  } catch (_) { return ''; }
+    return JSON.parse(atob(normalized + '='.repeat((4 - normalized.length % 4) % 4)));
+  } catch (_) { return {}; }
 }
 
 function driverPopupHtml(driver, current = false) {
@@ -639,18 +648,22 @@ function otherDriverIcon() {
 
 async function loadOtherDrivers() {
   if (!token || DEMO || !map || otherDriversRequestInFlight) return false;
+  const requestEpoch = authEpoch;
+  const requestToken = token;
   otherDriversRequestInFlight = true;
   try {
     const r = await fetch(`${API}/crm/operational?_=${Date.now()}`, { headers: h(), cache: 'no-store' });
     if (r.status === 401) { logout(); return false; }
     if (!r.ok) throw Error(r.status);
     const data = await r.json();
+    if (requestEpoch !== authEpoch || requestToken !== token) return false;
     if (!otherDriversLayer) otherDriversLayer = L.layerGroup().addTo(map);
     otherDriversLayer.clearLayers();
     const drivers = Array.isArray(data.drivers) ? data.drivers : [];
     const ownId = String(currentDriverUserId || tokenUserId());
     const icon = otherDriverIcon();
     currentDriverSnapshot = drivers.find(driver => ownId && String(driver.driverUserId) === ownId) || null;
+
     if (marker && currentDriverSnapshot) marker.bindPopup(driverPopupHtml(currentDriverSnapshot, true));
     drivers.forEach(driver => {
       if (ownId && String(driver.driverUserId) === ownId) return;
@@ -688,11 +701,14 @@ function renderOperationalStatus() {
 
 async function loadOperationalStatus() {
   if (!token || DEMO) { renderOperationalStatus(); return true; }
+  const requestEpoch = authEpoch;
+  const requestToken = token;
   try {
     const r = await fetch(`${API}/mobility/driver/operational-status`, { headers: h(), cache: 'no-store' });
     if (r.status === 401) { logout(); return false; }
     if (!r.ok) throw Error(r.status);
     const data = await r.json();
+    if (requestEpoch !== authEpoch || requestToken !== token) return false;
     if (!OPERATIONAL_STATUS_LABELS[data.status]) throw Error('invalid-status');
     operationalStatus = data.status;
     renderOperationalStatus();
@@ -811,8 +827,10 @@ async function login(e) {
     const data = await r.json();
     if (!r.ok) throw Error(data.detail || 'No se pudo completar la operación');
     token = data.token;
+    authEpoch += 1;
+
     localStorage.setItem('livre_driver_token', token);
-    openApp(data.user || {});
+    openApp();
   } catch(err) {
     $('loginError').textContent = err.message || 'Error de conexión';
     $('loginError').classList.remove('hidden');
@@ -835,8 +853,10 @@ function setNativeAppVisible(visible) {
   try { window.AndroidGps.setAppVisible(visible); } catch (e) {}
 }
 
-function openApp(user = {}) {
-  currentDriverUserId = String(user.id ?? user.userId ?? user.user_id ?? tokenUserId() ?? '');
+function openApp() {
+  const claims = tokenClaims();
+  currentDriverUserId = String(claims.sub || '');
+
   $('loginView').classList.add('hidden');
   $('appView').classList.remove('hidden');
   initMap();
@@ -850,6 +870,13 @@ function clearWebSession() {
   // El JWT es la única credencial web persistida. También limpiamos la sesión
   // de la pestaña para no dejar estado de autenticación en un WebView.
   token = null;
+  authEpoch += 1;
+  currentDriverUserId = '';
+  currentDriverSnapshot = null;
+  trips = [];
+  selected = null;
+  initialTripsLoaded = false;
+  lastAlerted = null;
   DEMO = false;
   try {
     localStorage.removeItem('livre_driver_token');
@@ -857,9 +884,19 @@ function clearWebSession() {
   } catch (e) {}
 }
 
-function logout() {
+async function logout() {
   stopGps();
   stopNativeBackgroundLocation();
+  const sessionToken = token;
+  if (sessionToken && !DEMO) {
+    try {
+      await fetch(`${API}/mobility/driver/location`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${sessionToken}` },
+        keepalive: true,
+      });
+    } catch (_) {}
+  }
   if (window.AndroidGps?.clearSession) {
     try { window.AndroidGps.clearSession(); } catch (e) {}
   }
