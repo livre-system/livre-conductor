@@ -34,6 +34,13 @@ let initialTripsLoaded = false;
 let tripsRequestInFlight = false;
 let pendingNativeTripId = null;
 let authMode    = 'login';
+let operationalStatus = 'available';
+
+const OPERATIONAL_STATUS_LABELS = {
+  available: '🟢 Disponible',
+  unavailable: '⚪ No disponible',
+  out_of_service: '🔴 Fuera de servicio',
+};
 const NATIVE_SHELL = !!window.AndroidGps;
 
 /* ══════════════════════════════════════════════════════════════
@@ -577,10 +584,56 @@ function setMapMarker(lat, lng) {
    NOTIFICACIÓN DE VIAJE NUEVO
 ══════════════════════════════════════════════════════════════ */
 function announceNewTrip(t) {
-  if (!t || lastAlerted === t.id) return;
+  if (operationalStatus === 'out_of_service' || !t || lastAlerted === t.id) return;
   lastAlerted = t.id;
   beep();
   speak(`Nuevo viaje disponible. Origen: ${t.origin}. Destino: ${t.destination}.`);
+}
+
+function renderOperationalStatus() {
+  const button = $('operationalStatusButton');
+  if (button) button.textContent = OPERATIONAL_STATUS_LABELS[operationalStatus];
+  document.querySelectorAll('[data-operational-status]').forEach(item => {
+    item.classList.toggle('selected', item.dataset.operationalStatus === operationalStatus);
+  });
+}
+
+async function loadOperationalStatus() {
+  if (!token || DEMO) { renderOperationalStatus(); return true; }
+  try {
+    const r = await fetch(`${API}/mobility/driver/operational-status`, { headers: h(), cache: 'no-store' });
+    if (r.status === 401) { logout(); return false; }
+    if (!r.ok) throw Error(r.status);
+    const data = await r.json();
+    if (!OPERATIONAL_STATUS_LABELS[data.status]) throw Error('invalid-status');
+    operationalStatus = data.status;
+    renderOperationalStatus();
+    return true;
+  } catch (e) {
+    showNotice('No se pudo sincronizar tu estado operativo.');
+    return false;
+  }
+}
+
+async function changeOperationalStatus(status) {
+  if (!OPERATIONAL_STATUS_LABELS[status]) return false;
+  if (DEMO) { operationalStatus = status; renderOperationalStatus(); return true; }
+  try {
+    const r = await fetch(`${API}/mobility/driver/operational-status`, {
+      method: 'PUT', headers: h(), body: JSON.stringify({ status }),
+    });
+    if (r.status === 401) { logout(); return false; }
+    if (!r.ok) throw Error(r.status);
+    const data = await r.json();
+    if (!OPERATIONAL_STATUS_LABELS[data.status]) throw Error('invalid-status');
+    operationalStatus = data.status;
+    renderOperationalStatus();
+    await loadTrips();
+    return true;
+  } catch (e) {
+    showNotice('No se pudo actualizar tu estado operativo.');
+    return false;
+  }
 }
 
 function onNativeTripNotification(tripId) {
@@ -701,9 +754,8 @@ function openApp(user = {}) {
   startNativeBackgroundLocation();
   if (!NATIVE_SHELL) startGps();
   else updateGpsPill(true);
-  loadTrips();
+  loadOperationalStatus().then(() => loadTrips());
 }
-
 function logout() {
   stopGps();
   stopNativeBackgroundLocation();
@@ -719,6 +771,15 @@ function logout() {
 $('loginForm').onsubmit  = login;
 $('toggleAuth').onclick  = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
 $('logoutBtn').onclick   = logout;
+$('operationalStatusButton').onclick = () => {
+  $('operationalStatusMenu').classList.toggle('hidden');
+};
+document.querySelectorAll('[data-operational-status]').forEach(item => {
+  item.onclick = async () => {
+    $('operationalStatusMenu').classList.add('hidden');
+    await changeOperationalStatus(item.dataset.operationalStatus);
+  };
+});
 
 document.addEventListener('visibilitychange', () => {
   setNativeAppVisible(document.visibilityState === 'visible');

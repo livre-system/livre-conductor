@@ -57,6 +57,14 @@
         <span class="gps-dot"></span>
         <span id="gpsLabel">GPS inactivo</span>
       </div>
+      <div class="operational-control">
+        <button id="operationalStatusButton" class="operational-status-button" type="button" aria-expanded="false">🟢 Disponible</button>
+        <div id="operationalStatusMenu" class="operational-status-menu hidden" role="menu">
+          <button type="button" data-operational-status="available">🟢 Disponible</button>
+          <button type="button" data-operational-status="unavailable">⚪ No disponible</button>
+          <button type="button" data-operational-status="out_of_service">🔴 Fuera de servicio</button>
+        </div>
+      </div>
       <button id="logoutBtn" class="btn-logout">Salir</button>
     </div>
   </header>
