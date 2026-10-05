@@ -773,6 +773,106 @@ async function changeOperationalStatus(status) {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   HISTORIAL, RECAUDACIÓN Y CIERRE DIARIO
+══════════════════════════════════════════════════════════════ */
+const money = value => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(value || 0));
+function localDateInput() { return new Date().toLocaleDateString('en-CA'); }
+function historyNotice(message) {
+  const el = $('historyNotice');
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle('hidden', !message);
+}
+function renderHistory(data) {
+  $('historySummary').innerHTML = `
+    <div class="history-stat"><small>Viajes</small><strong>${Number(data.total || 0)}</strong></div>
+    <div class="history-stat"><small>Total recaudado</small><strong>${money(data.total_revenue)}</strong></div>`;
+  $('historyList').innerHTML = data.items?.length
+    ? data.items.map(item => `<div class="history-item"><strong>${esc(item.origin)} → ${esc(item.destination)}</strong><br><span>${esc(item.status)} · ${esc(item.completed_at ? new Date(item.completed_at).toLocaleString('es-AR') : 'Sin fecha')}</span><br><b>${money(item.fare)}</b></div>`).join('')
+    : '<div class="history-item"><span>No hay viajes finalizados en el período.</span></div>';
+  $('historyClosure').innerHTML = `<button id="closeShiftButton" class="settings-preview" type="button">Finalizar turno y guardar cierre</button>`;
+  $('closeShiftButton').onclick = closeDriverShift;
+}
+async function loadDriverHistory() {
+  if (!token || DEMO) {
+    renderHistory({ total: DEMO ? 1 : 0, total_revenue: DEMO ? DEMO_TRIP.fare : 0, items: DEMO ? [{ ...DEMO_TRIP, origin: DEMO_TRIP.origin, destination: DEMO_TRIP.destination, completed_at: new Date().toISOString(), status: 'completed' }] : [] });
+    return true;
+  }
+  const from = $('historyFrom').value;
+  const to = $('historyTo').value;
+  historyNotice('Cargando…');
+  try {
+    const r = await fetch(`${API}/mobility/driver/history?date_from=${encodeURIComponent(from)}&date_to=${encodeURIComponent(to)}`, { headers: h(), cache: 'no-store' });
+    if (r.status === 401) { logout(); return false; }
+    if (!r.ok) throw Error(r.status);
+    renderHistory(await r.json());
+    historyNotice('');
+    await loadDriverClosures();
+    return true;
+  } catch (_) {
+    historyNotice('No se pudo cargar el historial. Revisá la conexión.');
+    return false;
+  }
+}
+async function loadDriverClosures() {
+  if (!token || DEMO) return;
+  try {
+    const r = await fetch(`${API}/mobility/driver/shift-closures`, { headers: h(), cache: 'no-store' });
+    if (!r.ok) return;
+    const closures = await r.json();
+    if (!closures.length) return;
+    $('historyClosure').insertAdjacentHTML('beforeend', `<div class="history-item"><strong>Cierres guardados</strong><br>${closures.slice(0, 5).map(c => `${esc(c.closure_date)} · ${c.trip_count} viajes · ${money(c.total_revenue)} <button class="settings-preview" type="button" data-pdf-id="${esc(c.id)}">PDF</button>`).join('<br>')}</div>`);
+    document.querySelectorAll('[data-pdf-id]').forEach(button => { button.onclick = () => downloadShiftPdf(button.dataset.pdfId); });
+  } catch (_) {}
+}
+async function closeDriverShift() {
+  const closureDate = $('historyTo').value || localDateInput();
+  if (!confirm(`¿Confirmar el cierre del turno del ${closureDate}?`)) return false;
+  if (DEMO) { historyNotice('Cierre demo no persistido.'); return false; }
+  try {
+    const r = await fetch(`${API}/mobility/driver/shift-closures`, { method: 'POST', headers: h(), body: JSON.stringify({ closure_date: closureDate }) });
+    const data = await r.json();
+    if (r.status === 409) { historyNotice('Este turno ya está cerrado.'); await loadDriverClosures(); return false; }
+    if (!r.ok) throw Error(data.detail || r.status);
+    $('historyClosure').innerHTML = `<div class="history-item"><strong>Turno cerrado</strong><br>${data.trip_count} viajes · ${money(data.total_revenue)}<button id="downloadNewPdf" class="settings-preview" type="button">Descargar / compartir PDF</button></div>`;
+    $('downloadNewPdf').onclick = () => downloadShiftPdf(data.id);
+    historyNotice('Cierre guardado en Livre.');
+    return true;
+  } catch (_) {
+    historyNotice('No se pudo guardar el cierre. Revisá la conexión.');
+    return false;
+  }
+}
+async function downloadShiftPdf(closureId) {
+  try {
+    const r = await fetch(`${API}/mobility/driver/shift-closures/${encodeURIComponent(closureId)}/pdf`, { headers: h(), cache: 'no-store' });
+    if (!r.ok) throw Error(r.status);
+    const blob = await r.blob();
+    if (blob.type !== 'application/pdf') throw Error('invalid-pdf');
+    const file = new File([blob], `livre-cierre-${closureId}.pdf`, { type: 'application/pdf' });
+    if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+      await navigator.share({ title: 'Resumen diario Livre', files: [file] });
+      return true;
+    }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = file.name; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return true;
+  } catch (_) {
+    historyNotice('No se pudo generar o compartir el PDF.');
+    return false;
+  }
+}
+function openHistory() {
+  $('historyModal').classList.remove('hidden');
+  const today = localDateInput();
+  if (!$('historyFrom').value) $('historyFrom').value = today;
+  if (!$('historyTo').value) $('historyTo').value = today;
+  loadDriverHistory();
+}
+
 function onNativeTripNotification(tripId) {
   if (!tripId) return false;
   const id = String(tripId);
@@ -943,6 +1043,10 @@ $('loginForm').onsubmit = login;
 $('toggleAuth').onclick = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
 $('logoutBtn').onclick = logout;
 $('themeToggle').onclick = toggleTheme;
+$('historyButton').onclick = openHistory;
+$('historyClose').onclick = () => $('historyModal').classList.add('hidden');
+$('historyRefresh').onclick = loadDriverHistory;
+$('historyModal').onclick = e => { if (e.target.id === 'historyModal') $('historyModal').classList.add('hidden'); };
 $('settingsButton').onclick = () => $('settingsModal').classList.remove('hidden');
 $('settingsClose').onclick = () => $('settingsModal').classList.add('hidden');
 $('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') settingsClose(); };
