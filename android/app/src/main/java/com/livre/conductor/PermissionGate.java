@@ -14,6 +14,7 @@ public final class PermissionGate {
         READY,
         NEED_PRECISE_LOCATION,
         NEED_BACKGROUND_LOCATION,
+        NEED_MICROPHONE,
         NEED_NOTIFICATIONS,
         LOCATION_DISABLED
     }
@@ -28,6 +29,10 @@ public final class PermissionGate {
         if (Build.VERSION.SDK_INT >= 29
                 && context.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return State.NEED_BACKGROUND_LOCATION;
+        }
+        if (Build.VERSION.SDK_INT >= 23
+                && context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            return State.NEED_MICROPHONE;
         }
         if (!notificationsEnabled(context)) return State.NEED_NOTIFICATIONS;
         if (!locationProviderEnabled(context)) return State.LOCATION_DISABLED;

@@ -31,6 +31,7 @@ public class MainActivity extends Activity {
     private static final int LOCATION_REQUEST = 41;
     private static final int BACKGROUND_LOCATION_REQUEST = 42;
     private static final int NOTIFICATION_REQUEST = 43;
+    private static final int MICROPHONE_REQUEST = 44;
     private WebView webView;
     private boolean backgroundSettingsOpened;
     private boolean notificationWarningShown;
@@ -132,6 +133,10 @@ public class MainActivity extends Activity {
             requestBackgroundLocation();
             return;
         }
+        if (state == PermissionGate.State.NEED_MICROPHONE) {
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MICROPHONE_REQUEST);
+            return;
+        }
         if (state == PermissionGate.State.NEED_NOTIFICATIONS) {
             if (Build.VERSION.SDK_INT >= 33) {
                 notificationPermissionRequestInFlight = true;
@@ -210,7 +215,7 @@ public class MainActivity extends Activity {
         super.onRequestPermissionsResult(request, permissions, results);
         if (request == NOTIFICATION_REQUEST) notificationPermissionRequestInFlight = false;
         if (request == NOTIFICATION_REQUEST) warnIfTripNotificationsDisabled();
-        if ((request == LOCATION_REQUEST || request == BACKGROUND_LOCATION_REQUEST || request == NOTIFICATION_REQUEST) && pendingToken != null) requestLocationAndStart();
+        if ((request == LOCATION_REQUEST || request == BACKGROUND_LOCATION_REQUEST || request == MICROPHONE_REQUEST || request == NOTIFICATION_REQUEST) && pendingToken != null) requestLocationAndStart();
         publishPermissionState();
     }
 
@@ -264,6 +269,15 @@ public class MainActivity extends Activity {
     }
 
     private void showPermissionState(PermissionGate.State state) {
+        if (state == PermissionGate.State.NEED_MICROPHONE) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Micrófono deshabilitado")
+                    .setMessage("Livre necesita este permiso preparado para funciones futuras. La aplicación no graba ni escucha.")
+                    .setPositiveButton("Conceder permiso", (dialog, which) -> requestLocationAndStart())
+                    .setNegativeButton("Ahora no", null)
+                    .show();
+            return;
+        }
         if (state == PermissionGate.State.NEED_NOTIFICATIONS) {
             warnIfTripNotificationsDisabled();
             return;
