@@ -20,6 +20,34 @@ function validatedHttpsApi(value) {
 }
 const API = validatedHttpsApi(new URLSearchParams(location.search).get('api'));
 
+function validDeviceId(value) {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+function stableDeviceId() {
+  const key = 'livre_driver_device_id';
+  if (window.AndroidGps) {
+    const nativeValue = window.AndroidGps.getDeviceId?.();
+    if (!validDeviceId(nativeValue)) throw new Error('Android device identity unavailable');
+    try { localStorage.setItem(key, nativeValue); } catch (_) {}
+    return nativeValue;
+  }
+  let value = localStorage.getItem(key);
+  if (!validDeviceId(value)) {
+    value = crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    localStorage.setItem(key, value);
+  }
+  return value;
+}
+
+const deviceId = stableDeviceId();
+
 /* ── Estado global ──────────────────────────────────────────── */
 let token       = localStorage.getItem('livre_driver_token');
 let authEpoch   = 0;
@@ -820,7 +848,7 @@ async function login(e) {
   // ── REAL ────────────────────────────────────────────────────
   const reg = false;
   try {
-    const body = { username: user, password: pass };
+    const body = { username: user, password: pass, device_id: deviceId };
     if (reg) body.name = $('nameInput').value.trim();
     const endpoint = reg ? '/auth/driver/register' : '/auth/driver/login';
     const r    = await fetch(API + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
