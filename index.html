@@ -57,6 +57,7 @@
         <span id="gpsLabel">GPS inactivo</span>
       </div>
       <button id="themeToggle" class="header-icon-button" type="button" aria-label="Cambiar tema">☼</button>
+      <button id="historyButton" class="header-icon-button" type="button" aria-label="Abrir historial">▤</button>
       <button id="settingsButton" class="header-icon-button" type="button" aria-label="Abrir configuración">⚙️</button>
       <button id="logoutBtn" class="btn-logout">Salir</button>
     </div>
@@ -76,6 +77,21 @@
   </div>
 
 </section>
+
+<div id="historyModal" class="settings-modal hidden" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+  <div class="settings-card history-card">
+    <div class="settings-heading"><h2 id="historyTitle">Historial y cierre</h2><button id="historyClose" class="settings-close" type="button" aria-label="Cerrar">×</button></div>
+    <div class="history-filters">
+      <label class="settings-field">Desde<input id="historyFrom" type="date"></label>
+      <label class="settings-field">Hasta<input id="historyTo" type="date"></label>
+    </div>
+    <button id="historyRefresh" class="settings-preview" type="button">Actualizar historial</button>
+    <div id="historySummary" class="history-summary"></div>
+    <div id="historyList" class="history-list"></div>
+    <div id="historyClosure" class="history-closure"></div>
+    <div id="historyNotice" class="notice hidden"></div>
+  </div>
+</div>
 
 <div id="settingsModal" class="settings-modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="settings-card">

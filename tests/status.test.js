@@ -67,7 +67,7 @@ describe('driver operational status synchronization', () => {
 
   it('clears the native session synchronously without bridge recursion', () => {
     assert.match(nativeSource, /SessionStore\.clear\(MainActivity\.this\);[\s\S]*MainActivity\.this\.clearSession\(\)/);
-    assert.match(sessionStoreSource, /edit\(\)\.clear\(\)\.commit\(\)/);
+    assert.match(sessionStoreSource, /remove\(TOKEN\)[\s\S]*remove\(API\)[\s\S]*commit\(\)/);
     assert.doesNotMatch(nativeSource, /runOnUiThread\(\(\) => clearSession\(\)\)/);
   });
 
@@ -82,8 +82,13 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /const requestEpoch = authEpoch;/);
     assert.match(source, /requestEpoch !== authEpoch/);
     assert.match(nativeSource, /SessionStore\.save\(MainActivity\.this, token, api\)/);
+    assert.match(nativeSource, /JavascriptInterface public String getDeviceId\(\)/);
+    assert.match(source, /window\.AndroidGps\.getDeviceId\?\.\(\)/);
+    assert.match(source, /window\.AndroidGps\.startLocation\(token, API\)/);
     const locationSource = fs.readFileSync('android/app/src/main/java/com/livre/conductor/LocationService.java', 'utf8');
     assert.match(locationSource, /SessionStore\.hasCurrentSession\(this, currentToken, currentApi\)/);
+    assert.match(locationSource, /device_id/);
+    assert.match(source, /device_id: deviceId/);
   });
 
   it('renders operational actions in the bottom panel', () => {

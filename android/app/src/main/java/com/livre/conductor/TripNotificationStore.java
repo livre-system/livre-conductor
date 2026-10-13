@@ -26,12 +26,22 @@ public final class TripNotificationStore {
             return false;
         }
         try {
-            entries.put(tripId, now);
+            entries.put(tripId, -now);
         } catch (JSONException ignored) {
             return false;
         }
         trimOldest(entries);
         return write(context, entries);
+    }
+
+    public static synchronized void markNotified(Context context, String tripId, long now) {
+        if (tripId == null || tripId.trim().isEmpty()) return;
+        JSONObject entries = read(context);
+        if (!entries.has(tripId)) return;
+        try {
+            entries.put(tripId, now);
+            write(context, entries);
+        } catch (JSONException ignored) {}
     }
 
     public static synchronized void clear(Context context) {

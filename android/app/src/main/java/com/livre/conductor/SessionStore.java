@@ -4,12 +4,15 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
 
-/** Persists only a validated HTTPS API session for the native service. */
+import java.util.UUID;
+
+/** Persists the validated API session and a stable per-installation device ID. */
 public final class SessionStore {
     private static final String PREFS = "livre";
     private static final String TOKEN = "token";
     private static final String API = "api";
     private static final String INVALIDATED = "session_invalidated";
+    private static final String DEVICE_ID = "device_id";
 
     private SessionStore() {}
 
@@ -21,6 +24,7 @@ public final class SessionStore {
         preferences(context).edit()
                 .putString(TOKEN, token)
                 .putString(API, normalizeApi(api))
+                .putString(DEVICE_ID, getDeviceId(context))
                 .remove(INVALIDATED)
                 .apply();
         return true;
@@ -31,18 +35,26 @@ public final class SessionStore {
         String token = prefs.getString(TOKEN, null);
         String api = prefs.getString(API, null);
         if (!isValid(token, api)) {
-            prefs.edit().clear().apply();
+            clear(context);
             return null;
         }
-        return new Session(token, normalizeApi(api));
+        return new Session(token, normalizeApi(api), getDeviceId(context));
     }
 
     public static synchronized void clear(Context context) {
-        preferences(context).edit().clear().commit();
+        preferences(context).edit()
+                .remove(TOKEN)
+                .remove(API)
+                .remove(INVALIDATED)
+                .commit();
     }
 
     public static synchronized void invalidate(Context context) {
-        preferences(context).edit().clear().putBoolean(INVALIDATED, true).commit();
+        preferences(context).edit()
+                .remove(TOKEN)
+                .remove(API)
+                .putBoolean(INVALIDATED, true)
+                .commit();
     }
 
     public static synchronized boolean consumeInvalidation(Context context) {
@@ -61,8 +73,27 @@ public final class SessionStore {
         return session != null && session.token.equals(token) && session.api.equals(normalizeApi(api));
     }
 
+    public static synchronized String getDeviceId(Context context) {
+        SharedPreferences prefs = preferences(context);
+        String existing = prefs.getString(DEVICE_ID, null);
+        if (validDeviceId(existing)) return existing;
+        String created = UUID.randomUUID().toString();
+        prefs.edit().putString(DEVICE_ID, created).commit();
+        return created;
+    }
+
     private static SharedPreferences preferences(Context context) {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
+    private static boolean validDeviceId(String value) {
+        if (value == null) return false;
+        try {
+            UUID.fromString(value);
+            return true;
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
     }
 
     private static boolean isValid(String token, String api) {
@@ -87,10 +118,12 @@ public final class SessionStore {
     public static final class Session {
         public final String token;
         public final String api;
+        public final String deviceId;
 
-        private Session(String token, String api) {
+        private Session(String token, String api, String deviceId) {
             this.token = token;
             this.api = api;
+            this.deviceId = deviceId;
         }
     }
 }

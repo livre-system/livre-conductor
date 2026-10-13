@@ -231,6 +231,20 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 }
 .btn-logout:hover { color: var(--white); }
 .btn-logout { white-space: nowrap; }
+.history-card { width: min(680px, calc(100vw - 28px)); max-height: min(88dvh, 760px); overflow: auto; }
+.history-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.history-filters input { width: 100%; margin-top: 6px; }
+.history-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
+.history-stat { padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.history-stat small { display: block; color: var(--muted); font-size: 11px; }
+.history-stat strong { display: block; margin-top: 4px; font-size: 18px; }
+.history-list { display: grid; gap: 8px; }
+.history-item { padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); font-size: 12px; line-height: 1.45; }
+.history-item strong { color: var(--white); }
+.history-item span { color: var(--muted); }
+.history-closure { margin-top: 14px; }
+.history-closure .settings-preview { width: 100%; margin-top: 8px; }
+@media (max-width: 420px) { .history-filters { grid-template-columns: 1fr; } }
 .operational-control { position: relative; flex-shrink: 0; }
 .operational-status-button {
   max-width: 168px;
