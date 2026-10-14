@@ -56,6 +56,7 @@ let selected    = null;
 let watchId     = null;
 let wakeLock    = null;
 let gpsRecoveryTimer = null;
+const gpsState = { provider: 'STOPPED', backend: 'UNKNOWN' };
 let marker      = null;
 let map         = null;
 let otherDriversLayer = null;
@@ -131,8 +132,9 @@ function demoStartGps() {
   const lat = -38.7183;
   const lng = -62.2663;
   setMapMarker(lat, lng);
-  updateGpsPill(true);
-  // Pequeño drift visual para que el marcador "se mueva"
+  gpsState.provider = 'ACTIVE';
+  gpsState.backend = 'SYNCED';
+  updateGpsPill();
   let tick = 0;
   const demoGpsInterval = setInterval(() => {
     if (!DEMO) { clearInterval(demoGpsInterval); return; }
@@ -174,12 +176,17 @@ const TONE_SOURCES = {
   truck_horn: 'assets/audio/truck-horn.ogg',
 };
 
-function beep() {
+async function beep() {
   try {
     const audio = new Audio(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn);
     audio.volume = Math.max(0, Math.min(1, Number(preferences.volume) / 100));
-    audio.play().catch(() => {});
-  } catch (e) {}
+    await audio.play();
+    console.info('[ALERT] web audio played', preferences.tone);
+    return true;
+  } catch (e) {
+    console.warn('[ALERT] web audio rejected', { tone: preferences.tone, error: String(e) });
+    return false;
+  }
 }
 
 function loadPreferences() {
@@ -502,9 +509,13 @@ async function changeStatus(status) {
 /** Envía una posición GPS al backend */
 async function sendLocation(lat, lng) {
   setMapMarker(lat, lng);
+  gpsState.provider = 'ACTIVE';
+  gpsState.backend = 'SENDING';
+  updateGpsPill();
   // ── DEMO ────────────────────────────────────────────────────
   if (DEMO) {
-    updateGpsPill(true);
+    gpsState.backend = 'SYNCED';
+    updateGpsPill();
     return;
   }
   // ── REAL ────────────────────────────────────────────────────
@@ -521,7 +532,8 @@ async function sendLocation(lat, lng) {
       });
       if (!tripResponse.ok) throw Error(`trip-location:${tripResponse.status}`);
     }
-    updateGpsPill(true);
+    gpsState.backend = 'SYNCED';
+    updateGpsPill();
   } catch(e) {
     if (String(e?.message || '').includes('driver-location:401')) {
       try { window.AndroidGps?.clearSession?.(); } catch (_) {}
@@ -532,7 +544,8 @@ async function sendLocation(lat, lng) {
       $('loginError').classList.remove('hidden');
       return;
     }
-    updateGpsPill(false);
+    gpsState.backend = 'FAILED';
+    updateGpsPill();
     showNotice('No se pudo enviar la ubicación GPS al backend.');
   }
 }
@@ -571,7 +584,9 @@ function startGps() {
   }
   // ── REAL ────────────────────────────────────────────────────
   if (watchId !== null) return;
-  updateGpsPill(null);
+  gpsState.provider = 'STARTING';
+  gpsState.backend = 'UNKNOWN';
+  updateGpsPill();
   if (!navigator.geolocation) {
     showNotice('Este navegador no permite GPS. Habilitá la ubicación del navegador.');
     return;
@@ -582,7 +597,8 @@ function startGps() {
   const onErr = e => {
     if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     watchId = null;
-    updateGpsPill(false);
+    gpsState.provider = 'LOST';
+    updateGpsPill();
     showNotice(e.code === 1
       ? 'Permiso de GPS denegado. Habilitalo en el navegador y recargá.'
       : 'No se pudo obtener GPS. Verificá la señal.');
@@ -597,23 +613,31 @@ function startGps() {
 }
 
 function stopGps() {
-  if (DEMO) { updateGpsPill(false); return; }
+  if (DEMO) { gpsState.provider = 'STOPPED'; gpsState.backend = 'UNKNOWN'; updateGpsPill(); return; }
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   watchId = null;
   if (gpsRecoveryTimer) clearInterval(gpsRecoveryTimer);
   gpsRecoveryTimer = null;
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
-  updateGpsPill(false);
+  gpsState.provider = 'STOPPED';
+  gpsState.backend = 'UNKNOWN';
+  updateGpsPill();
 }
 
-function updateGpsPill(active) {
+function updateGpsPill() {
   const pill = $('gpsPill');
   const label = $('gpsLabel');
   if (!pill || !label) return;
-  if (active === null) {
+  if (gpsState.provider === 'STARTING') {
     pill.className = 'gps-pill inactive';
     label.textContent = 'Solicitando GPS…';
-  } else if (active) {
+  } else if (gpsState.provider === 'LOST') {
+    pill.className = 'gps-pill inactive';
+    label.textContent = 'GPS SIN SEÑAL';
+  } else if (gpsState.provider === 'ACTIVE' && ['FAILED', 'UNKNOWN'].includes(gpsState.backend)) {
+    pill.className = 'gps-pill';
+    label.textContent = 'GPS activo · sin sincronizar';
+  } else if (gpsState.provider === 'ACTIVE') {
     pill.className = 'gps-pill';
     label.textContent = DEMO ? 'GPS demo' : 'GPS activo';
   } else {
@@ -747,10 +771,18 @@ async function loadOtherDrivers() {
    NOTIFICACIÓN DE VIAJE NUEVO
 ══════════════════════════════════════════════════════════════ */
 function announceNewTrip(t) {
-  if (operationalStatus === 'out_of_service' || !t || lastAlerted === t.id) return;
-  lastAlerted = t.id;
-  beep();
-  speak(`Nuevo viaje disponible. Origen: ${t.origin}. Destino: ${t.destination}.`);
+  if (operationalStatus === 'out_of_service' || !t) return;
+  const id = t.id != null ? String(t.id) : '';
+  if (!id || lastAlerted === id) return;
+  lastAlerted = id;
+  const fallback = () => window.AndroidGps?.notifyTripFallback?.(
+    id, t.origin || '', t.destination || '', preferences.tone);
+  if (document.visibilityState === 'visible') {
+    beep().then(played => { if (!played) fallback(); });
+    speak(`Nuevo viaje disponible. Origen: ${t.origin}. Destino: ${t.destination}.`);
+  } else {
+    fallback();
+  }
 }
 
 function renderOperationalStatus() {
@@ -940,9 +972,11 @@ window.onNativeLocationStatus = (status, latitude, longitude) => {
   if (!NATIVE_SHELL || !token) return;
   if (status === 'updated' && Number.isFinite(latitude) && Number.isFinite(longitude)) {
     setMapMarker(latitude, longitude);
-    updateGpsPill(true);
-  } else {
-    updateGpsPill(false);
+    gpsState.provider = 'ACTIVE';
+    updateGpsPill();
+  } else if (status === 'provider_lost' || status === 'provider_stopped') {
+    gpsState.provider = 'LOST';
+    updateGpsPill();
   }
 };
 

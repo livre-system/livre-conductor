@@ -335,6 +335,15 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void setAppVisible(boolean visible) {
             runOnUiThread(() -> setServiceAppVisible(visible));
         }
+        @JavascriptInterface public void notifyTripFallback(String tripId, String origin, String destination, String tone) {
+            if (tripId == null || tripId.isEmpty()) return;
+            Intent intent = new Intent(MainActivity.this, LocationService.class)
+                    .putExtra("fallback_trip_id", tripId)
+                    .putExtra("fallback_origin", origin == null ? "" : origin)
+                    .putExtra("fallback_destination", destination == null ? "" : destination)
+                    .putExtra("fallback_tone", tone == null ? "car_horn" : tone);
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent); else startService(intent);
+        }
         @JavascriptInterface public boolean areTripNotificationsEnabled() { return MainActivity.this.areTripNotificationsEnabled(); }
         @JavascriptInterface public String getNativePermissionState() { return PermissionGate.evaluate(MainActivity.this).name(); }
         @JavascriptInterface public boolean consumeSessionInvalidation() { return SessionStore.consumeInvalidation(MainActivity.this); }

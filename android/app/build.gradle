@@ -34,12 +34,25 @@ android {
             applicationIdSuffix '.debug'
             versionNameSuffix '-debug'
         }
+        diagnostic {
+            initWith debug
+            applicationIdSuffix '.diagnostic'
+            versionNameSuffix '-diagnostic'
+        }
         release {
             minifyEnabled false
             signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+}
+
+dependencies {
+    implementation 'com.google.android.gms:play-services-location:21.3.0'
+}
+
+tasks.register('assembleDiagnosticDebug') {
+    dependsOn 'assembleDiagnostic'
 }
 
 tasks.register('verifyReleaseSigning') {

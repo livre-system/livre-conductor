@@ -17,6 +17,13 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.Looper;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -41,11 +48,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class LocationService extends Service {
+    private static final String TAG = "LivreLocation";
     private static final String LOCATION_CHANNEL = "livre_location";
-    private static final String TRIP_CHANNEL = "livre_trips";
+    private static final String TRIP_CHANNEL = "livre_trips_v2";
     private static final int FOREGROUND_ID = 7;
 
     private LocationManager manager;
+    private FusedLocationProviderClient fused;
+    private boolean fusedCallbackReceived;
+    private boolean gpsFallbackRequested;
     private String token;
     private String api;
     private boolean appVisible = false;
@@ -58,21 +69,51 @@ public class LocationService extends Service {
     private ConnectivityManager.NetworkCallback connectivityCallback;
     private ScheduledFuture<?> tripPoll;
     private final LocationListener listener = new LocationListener() {
-        @Override public void onLocationChanged(Location location) { sendLocation(location); }
+        @Override public void onLocationChanged(Location location) {
+            android.util.Log.i(TAG, "GPS fallback callback provider=" + location.getProvider()
+                    + " accuracy_m=" + location.getAccuracy());
+            sendLocation(location);
+        }
+    };
+    private final LocationCallback fusedCallback = new LocationCallback() {
+        @Override public void onLocationResult(LocationResult result) {
+            if (result == null || result.getLastLocation() == null) {
+                android.util.Log.w(TAG, "Fused callback sin ubicación");
+                return;
+            }
+            fusedCallbackReceived = true;
+            Location location = result.getLastLocation();
+            android.util.Log.i(TAG, "Fused callback provider=" + location.getProvider()
+                    + " accuracy_m=" + location.getAccuracy());
+            sendLocation(location);
+        }
     };
 
     @Override public void onCreate() {
         super.onCreate();
         createChannels();
         manager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        fused = LocationServices.getFusedLocationProviderClient(this);
         connectivity = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
+        String fallbackTripId = null;
+        JSONObject fallbackTrip = null;
         if (intent != null) {
             if (intent.hasExtra("token")) token = intent.getStringExtra("token");
             if (intent.hasExtra("api")) api = intent.getStringExtra("api");
             if (intent.hasExtra("app_visible")) appVisible = intent.getBooleanExtra("app_visible", true);
+            fallbackTripId = intent.getStringExtra("fallback_trip_id");
+            if (fallbackTripId != null && !fallbackTripId.isEmpty()) {
+                fallbackTrip = new JSONObject();
+                try {
+                    fallbackTrip.put("id", fallbackTripId);
+                    fallbackTrip.put("status", "assigned");
+                    fallbackTrip.put("origin", intent.getStringExtra("fallback_origin"));
+                    fallbackTrip.put("destination", intent.getStringExtra("fallback_destination"));
+                } catch (Exception ignored) { fallbackTrip = null; }
+            }
         }
         SessionStore.Session session = SessionStore.read(this);
         if (session == null || !PermissionGate.operational(this)) {
@@ -91,19 +132,79 @@ public class LocationService extends Service {
             tripPoll = network.scheduleWithFixedDelay(this::pollTripsIfBackground, 2, 5, TimeUnit.SECONDS);
         }
         requestUpdates();
+        if (fallbackTripId != null && fallbackTrip != null) {
+            final String id = fallbackTripId;
+            final JSONObject trip = fallbackTrip;
+            network.execute(() -> {
+                if (!tripNotificationsEnabled() || !TripNotificationStore.reserve(this, id, System.currentTimeMillis())) return;
+                try {
+                    notifyTrip(id, trip);
+                    TripNotificationStore.markNotified(this, id, System.currentTimeMillis());
+                } catch (RuntimeException ignored) {
+                    // Leave the reservation pending so the normal poll can retry it.
+                }
+            });
+        }
         return START_STICKY;
     }
 
     private void requestUpdates() {
-        if (manager == null || token == null || api == null || !PermissionGate.operational(this)) return;
-        if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return;
+        if (manager == null || fused == null || token == null || api == null || !PermissionGate.operational(this)) {
+            android.util.Log.w(TAG, "Solicitud omitida: sesión/permisos no operativos");
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            android.util.Log.e(TAG, "Solicitud rechazada: ACCESS_FINE_LOCATION no concedido");
+            return;
+        }
+        fusedCallbackReceived = false;
+        gpsFallbackRequested = false;
+        android.util.Log.i(TAG, "Solicitando Fused PRIORITY_HIGH_ACCURACY intervalo_ms=10000");
+        try {
+            LocationRequest request = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000L)
+                    .setMinUpdateIntervalMillis(5000L)
+                    .setMinUpdateDistanceMeters(10f)
+                    .build();
+            fused.requestLocationUpdates(request, fusedCallback, Looper.getMainLooper())
+                    .addOnSuccessListener(unused -> {
+                        android.util.Log.i(TAG, "Solicitud Fused aceptada");
+                        network.schedule(this::requestGpsFallbackIfNeeded, 20, TimeUnit.SECONDS);
+                    })
+                    .addOnFailureListener(error -> {
+                        android.util.Log.e(TAG, "Error solicitando Fused: " + error.getClass().getSimpleName());
+                        requestGpsFallback();
+                    });
+        } catch (SecurityException error) {
+            android.util.Log.e(TAG, "Error de permisos al solicitar Fused: SecurityException");
+            requestGpsFallback();
+        } catch (RuntimeException error) {
+            android.util.Log.e(TAG, "Error del proveedor Fused: " + error.getClass().getSimpleName());
+            requestGpsFallback();
+        }
+    }
+
+    private void requestGpsFallbackIfNeeded() {
+        if (!fusedCallbackReceived) requestGpsFallback();
+    }
+
+    private void requestGpsFallback() {
+        if (gpsFallbackRequested || manager == null) return;
+        gpsFallbackRequested = true;
         try {
             if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                android.util.Log.w(TAG, "Fused sin callback: activando GPS_PROVIDER como fallback");
                 manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000L, 10f, listener, Looper.getMainLooper());
             } else if (manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                android.util.Log.w(TAG, "GPS_PROVIDER no disponible: activando NETWORK_PROVIDER fallback");
                 manager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 15000L, 100f, listener, Looper.getMainLooper());
+            } else {
+                android.util.Log.e(TAG, "Sin proveedor GPS/NETWORK habilitado");
             }
-        } catch (SecurityException ignored) {}
+        } catch (SecurityException error) {
+            android.util.Log.e(TAG, "Error de permisos en fallback: SecurityException");
+        } catch (RuntimeException error) {
+            android.util.Log.e(TAG, "Error del proveedor GPS fallback: " + error.getClass().getSimpleName());
+        }
     }
 
     private void sendLocation(Location location) {
@@ -135,8 +236,10 @@ public class LocationService extends Service {
                     postLocation(currentApi, currentToken, sessionDeviceId(), "/mobility/driver/trips/" + encodePath(activeTripId) + "/location", location);
                 }
             } catch (RequestFailure e) {
+                android.util.Log.e(TAG, "POST " + "/mobility/driver/location" + " rechazado: " + e.kind);
                 handleRequestFailure(e);
-            } catch (Exception ignored) {
+            } catch (Exception error) {
+                android.util.Log.e(TAG, "Error enviando ubicación: " + error.getClass().getSimpleName());
             }
         });
     }
@@ -292,6 +395,7 @@ public class LocationService extends Service {
             String body = String.format(Locale.US, "{\"latitude\":%.7f,\"longitude\":%.7f,\"accuracy\":%.2f,\"device_id\":\"%s\"}", location.getLatitude(), location.getLongitude(), location.getAccuracy(), deviceId);
             try (OutputStream out = connection.getOutputStream()) { out.write(body.getBytes(StandardCharsets.UTF_8)); }
             int status = connection.getResponseCode();
+            android.util.Log.i(TAG, "POST " + path + " HTTP " + status);
             if (status == 401) throw new RequestFailure(RequestFailure.Kind.UNAUTHORIZED);
             if (status == 403) throw new RequestFailure(RequestFailure.Kind.FORBIDDEN);
             if (status >= 500 && status < 600) throw new RequestFailure(RequestFailure.Kind.SERVER);
@@ -425,6 +529,9 @@ public class LocationService extends Service {
 
     @Override public void onDestroy() {
         if (manager != null) manager.removeUpdates(listener);
+        if (fused != null) {
+            try { fused.removeLocationUpdates(fusedCallback); } catch (RuntimeException ignored) {}
+        }
         if (tripPoll != null) tripPoll.cancel(true);
         if (connectivity != null && connectivityCallback != null && Build.VERSION.SDK_INT >= 21) {
             try { connectivity.unregisterNetworkCallback(connectivityCallback); } catch (RuntimeException ignored) {}
