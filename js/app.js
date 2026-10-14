@@ -56,6 +56,8 @@ let selected    = null;
 let watchId     = null;
 let wakeLock    = null;
 let gpsRecoveryTimer = null;
+let gpsSuspended = false;
+let lastNativeLocationAt = 0;
 const gpsState = { provider: 'STOPPED', backend: 'UNKNOWN' };
 let marker      = null;
 let map         = null;
@@ -567,6 +569,11 @@ async function requestGpsWakeLock() {
 
 function restartGpsAfterBackground() {
   if (DEMO || !token || !$('appView') || $('appView').classList.contains('hidden')) return;
+  if (gpsSuspended && watchId !== null) {
+    navigator.geolocation?.clearWatch(watchId);
+    watchId = null;
+  }
+  gpsSuspended = false;
   requestGpsWakeLock();
   if (watchId === null) startGps();
   else if (navigator.geolocation) {
@@ -973,11 +980,15 @@ function resolvePendingNativeTrip() {
 window.onNativeLocationStatus = (status, latitude, longitude) => {
   if (!NATIVE_SHELL || !token) return;
   if (status === 'updated' && Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    lastNativeLocationAt = Date.now();
     setMapMarker(latitude, longitude);
     gpsState.provider = 'ACTIVE';
     updateGpsPill();
   } else if (status === 'provider_lost' || status === 'provider_stopped') {
-    gpsState.provider = 'LOST';
+    // Native FGS can briefly report a provider transition while its fused
+    // request is being recreated. Do not overwrite a recent valid fix.
+    if (!lastNativeLocationAt || Date.now() - lastNativeLocationAt > 45000)
+      gpsState.provider = 'LOST';
     updateGpsPill();
   }
 };
@@ -1138,9 +1149,13 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     restartGpsAfterBackground();
     loadTrips();
-  }
+  } else gpsSuspended = true;
 });
 window.addEventListener('pageshow', () => {
+  restartGpsAfterBackground();
+  loadTrips();
+});
+window.addEventListener('focus', () => {
   restartGpsAfterBackground();
   loadTrips();
 });
