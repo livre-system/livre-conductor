@@ -421,7 +421,9 @@ async function loadTrips() {
   // y logout() recarga la página, generando un ciclo de recargas.
   // DEMO no tiene JWT, pero debe renderizar el sheet igual que una sesión real.
   if ((!token && !DEMO) || $('appView')?.classList.contains('hidden')) return false;
-  if (NATIVE_SHELL && document.visibilityState !== 'visible') return false;
+  // En la APK actual el estado de visibilidad del WebView puede quedar
+  // desfasado después de pausar/reanudar o reiniciar su renderer. El panel
+  // visible es el criterio confiable para mantener la lista sincronizada.
   if (tripsRequestInFlight) return false;
   const requestEpoch = authEpoch;
   const requestToken = token;
@@ -1151,6 +1153,5 @@ if (token) openApp();
 
 // Polling cada 5 segundos (en DEMO no hace llamadas al backend)
 setInterval(() => {
-  if (!DEMO && token && !$('appView').classList.contains('hidden') &&
-      (!NATIVE_SHELL || document.visibilityState === 'visible')) loadTrips();
+  if (!DEMO && token && !$('appView').classList.contains('hidden')) loadTrips();
 }, 5000);
