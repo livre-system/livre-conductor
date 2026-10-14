@@ -557,7 +557,9 @@ function restartGpsAfterBackground() {
 function startGps() {
   // ── DEMO ────────────────────────────────────────────────────
   if (DEMO) { demoStartGps(); return; }
-  if (NATIVE_SHELL) { updateGpsPill(true); return; }
+  if (NATIVE_SHELL) {
+    // The native service owns background GPS; WebView GPS keeps the foreground map marker live.
+  }
   // ── REAL ────────────────────────────────────────────────────
   if (watchId !== null) return;
   updateGpsPill(null);
