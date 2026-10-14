@@ -80,7 +80,10 @@ public class MainActivity extends Activity {
 
             @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 boolean trustedOrigin = "https://livre-conductor-production.up.railway.app".equals(origin);
-                callback.invoke(origin, trustedOrigin && PermissionGate.operational(MainActivity.this), false);
+                boolean preciseLocation = Build.VERSION.SDK_INT < 23
+                        || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+                boolean locationEnabled = PermissionGate.locationProviderEnabled(MainActivity.this);
+                callback.invoke(origin, trustedOrigin && preciseLocation && locationEnabled, false);
             }
         });
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidGps");
