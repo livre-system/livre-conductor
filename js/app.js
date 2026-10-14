@@ -683,6 +683,13 @@ function otherDriverIcon() {
   });
 }
 
+function isFreshDriverLocation(driver) {
+  if (driver?.sessionActive === true) return true;
+  if (driver?.sessionActive === false) return false;
+  const timestamp = Date.parse(driver?.lastSee || '');
+  return Number.isFinite(timestamp) && Date.now() - timestamp <= 120000;
+}
+
 async function loadOtherDrivers() {
   if (!token || DEMO || !map || otherDriversRequestInFlight) return false;
   const requestEpoch = authEpoch;
@@ -699,7 +706,7 @@ async function loadOtherDrivers() {
     const drivers = Array.isArray(data.drivers) ? data.drivers : [];
     const ownId = String(currentDriverUserId || tokenUserId());
     const icon = otherDriverIcon();
-    currentDriverSnapshot = drivers.find(driver => driver.sessionActive && ownId && String(driver.driverUserId) === ownId) || null;
+    currentDriverSnapshot = drivers.find(driver => isFreshDriverLocation(driver) && ownId && String(driver.driverUserId) === ownId) || null;
     const ownLocation = currentDriverSnapshot?.lastPlace;
     if (ownLocation && Number.isFinite(Number(ownLocation.latitude)) && Number.isFinite(Number(ownLocation.longitude))) {
       setMapMarker(Number(ownLocation.latitude), Number(ownLocation.longitude));
@@ -708,7 +715,7 @@ async function loadOtherDrivers() {
 
     if (marker && currentDriverSnapshot) marker.bindPopup(driverPopupHtml(currentDriverSnapshot, true));
     drivers.forEach(driver => {
-      if (!driver.sessionActive || !driver.lastPlace) return;
+      if (!isFreshDriverLocation(driver) || !driver.lastPlace) return;
       if (ownId && String(driver.driverUserId) === ownId) return;
       const lat = Number(driver.lastPlace?.latitude);
       const lng = Number(driver.lastPlace?.longitude);
