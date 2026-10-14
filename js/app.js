@@ -523,6 +523,15 @@ async function sendLocation(lat, lng) {
     }
     updateGpsPill(true);
   } catch(e) {
+    if (String(e?.message || '').includes('driver-location:401')) {
+      try { window.AndroidGps?.clearSession?.(); } catch (_) {}
+      clearWebSession();
+      $('appView').classList.add('hidden');
+      $('loginView').classList.remove('hidden');
+      $('loginError').textContent = 'La sesión GPS expiró. Ingresá nuevamente.';
+      $('loginError').classList.remove('hidden');
+      return;
+    }
     updateGpsPill(false);
     showNotice('No se pudo enviar la ubicación GPS al backend.');
   }
