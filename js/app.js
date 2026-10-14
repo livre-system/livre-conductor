@@ -699,7 +699,7 @@ async function loadOtherDrivers() {
     const drivers = Array.isArray(data.drivers) ? data.drivers : [];
     const ownId = String(currentDriverUserId || tokenUserId());
     const icon = otherDriverIcon();
-    currentDriverSnapshot = drivers.find(driver => ownId && String(driver.driverUserId) === ownId) || null;
+    currentDriverSnapshot = drivers.find(driver => driver.sessionActive && ownId && String(driver.driverUserId) === ownId) || null;
     const ownLocation = currentDriverSnapshot?.lastPlace;
     if (ownLocation && Number.isFinite(Number(ownLocation.latitude)) && Number.isFinite(Number(ownLocation.longitude))) {
       setMapMarker(Number(ownLocation.latitude), Number(ownLocation.longitude));
@@ -708,7 +708,7 @@ async function loadOtherDrivers() {
 
     if (marker && currentDriverSnapshot) marker.bindPopup(driverPopupHtml(currentDriverSnapshot, true));
     drivers.forEach(driver => {
-      if (!driver.lastPlace) return;
+      if (!driver.sessionActive || !driver.lastPlace) return;
       if (ownId && String(driver.driverUserId) === ownId) return;
       const lat = Number(driver.lastPlace?.latitude);
       const lng = Number(driver.lastPlace?.longitude);
