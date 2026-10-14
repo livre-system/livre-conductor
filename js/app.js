@@ -73,6 +73,9 @@ let currentDriverUserId = '';
 let lastAlerted = null;
 let initialTripsLoaded = false;
 let tripsRequestInFlight = false;
+let tripsPollTimer = null;
+let tripsPollEpoch = 0;
+const TRIPS_POLL_MS = 5000;
 let pendingNativeTripId = null;
 let authMode    = 'login';
 let operationalStatus = 'available';
@@ -423,6 +426,33 @@ function demoReset() {
 ══════════════════════════════════════════════════════════════ */
 
 /** Carga los viajes asignados al conductor */
+function tripsPollingAllowed() {
+  return !DEMO && !!token && !$('appView')?.classList.contains('hidden');
+}
+
+function stopTripsPolling() {
+  tripsPollEpoch += 1;
+  if (tripsPollTimer !== null) clearTimeout(tripsPollTimer);
+  tripsPollTimer = null;
+}
+
+function scheduleTripsPolling(epoch) {
+  if (epoch !== tripsPollEpoch || !tripsPollingAllowed()) return;
+  tripsPollTimer = setTimeout(async () => {
+    tripsPollTimer = null;
+    if (epoch !== tripsPollEpoch || !tripsPollingAllowed()) return;
+    try { await loadTrips(); }
+    finally { scheduleTripsPolling(epoch); }
+  }, TRIPS_POLL_MS);
+}
+
+function startTripsPolling() {
+  stopTripsPolling();
+  if (!tripsPollingAllowed()) return;
+  const epoch = tripsPollEpoch;
+  void loadTrips().finally(() => scheduleTripsPolling(epoch));
+}
+
 async function loadTrips() {
   // Nunca consultar viajes desde el login: sin token el API responde 401,
   // y logout() recarga la página, generando un ciclo de recargas.
@@ -1126,7 +1156,7 @@ function openApp() {
   initMap();
   startNativeBackgroundLocation();
   startGps();
-  loadOperationalStatus().then(() => loadTrips());
+  loadOperationalStatus().then(() => startTripsPolling());
 }
 
 function clearWebSession() {
@@ -1148,6 +1178,7 @@ function clearWebSession() {
 }
 
 async function logout() {
+  stopTripsPolling();
   stopGps();
   stopNativeBackgroundLocation();
   const sessionToken = token;
@@ -1189,25 +1220,20 @@ document.addEventListener('visibilitychange', () => {
   setNativeAppVisible(document.visibilityState === 'visible');
   if (document.visibilityState === 'visible') {
     restartGpsAfterBackground();
-    loadTrips();
+    startTripsPolling();
   } else gpsSuspended = true;
 });
 window.addEventListener('pageshow', () => {
   restartGpsAfterBackground();
-  loadTrips();
+  startTripsPolling();
 });
 window.addEventListener('focus', () => {
   restartGpsAfterBackground();
-  loadTrips();
+  startTripsPolling();
 });
 window.addEventListener('online', () => {
   restartGpsAfterBackground();
-  loadTrips();
+  startTripsPolling();
 });
 
 if (token) openApp();
-
-// Polling cada 5 segundos (en DEMO no hace llamadas al backend)
-setInterval(() => {
-  if (!DEMO && token && !$('appView').classList.contains('hidden')) loadTrips();
-}, 5000);
