@@ -245,10 +245,6 @@ function render() {
     sheet.className = 'sheet';
     inner.innerHTML = `
       ${operationalControlsHtml()}
-      <div class="idle-state compact-idle">
-        <div class="idle-sub">GPS activo · Buscando viajes asignados</div>
-        ${DEMO ? `<button class="btn-refresh" onclick="demoReset()">↩ Reiniciar demo</button>` : `<button class="btn-refresh" onclick="loadTrips()">Actualizar viajes</button>`}
-      </div>
       <div id="notice" class="notice hidden"></div>`;
     renderOperationalStatus();
     return;
@@ -916,6 +912,16 @@ function resolvePendingNativeTrip() {
   showNotice('Ese viaje ya fue tomado por otro conductor.');
   window.AndroidGps?.confirmTripUnavailable?.(id);
 }
+
+window.onNativeLocationStatus = (status, latitude, longitude) => {
+  if (!NATIVE_SHELL || !token) return;
+  if (status === 'updated' && Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    setMapMarker(latitude, longitude);
+    updateGpsPill(true);
+  } else {
+    updateGpsPill(false);
+  }
+};
 
 function onNativeSessionExpired() {
   logout();

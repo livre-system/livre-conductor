@@ -117,6 +117,11 @@ public class LocationService extends Service {
             try {
                 if (!SessionStore.hasCurrentSession(this, currentToken, currentApi)) return;
                 postLocation(currentApi, currentToken, sessionDeviceId(), "/mobility/driver/location", location);
+                sendBroadcast(new Intent(MainActivity.ACTION_LOCATION_STATUS)
+                        .setPackage(getPackageName())
+                        .putExtra("status", "updated")
+                        .putExtra("latitude", location.getLatitude())
+                        .putExtra("longitude", location.getLongitude()));
                 if (!SessionStore.hasCurrentSession(this, currentToken, currentApi)) return;
                 JSONArray trips = getTrips(currentApi, currentToken);
                 if (trips != null) {

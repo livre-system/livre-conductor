@@ -728,6 +728,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 /* ── Conductor controls and preferences ─────────────────────── */
 :root { --font-scale: 1; }
 body { font-size: calc(16px * var(--font-scale)); }
+.settings-modal .settings-card, .sheet, .topbar, .login-wrap { zoom: var(--font-scale); }
 .topbar-logo-image { display: block; width: auto; height: 30px; max-width: 112px; object-fit: contain; }
 .header-icon-button { min-width: 34px; height: 34px; padding: 0 7px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--white); font-size: 17px; }
 .header-icon-button:hover { border-color: var(--green); }

@@ -26,6 +26,7 @@ import android.webkit.WebViewClient;
 import org.json.JSONObject;
 
 public class MainActivity extends Activity {
+    public static final String ACTION_LOCATION_STATUS = "com.livre.conductor.LOCATION_STATUS";
     public static final String ACTION_SESSION_INVALIDATED = "com.livre.conductor.SESSION_INVALIDATED";
     private static final String WEB_URL = "https://livre-conductor-production.up.railway.app/";
     private static final int LOCATION_REQUEST = 41;
@@ -51,6 +52,15 @@ public class MainActivity extends Activity {
     private PermissionGate.State lastPermissionState;
     private final BroadcastReceiver sessionReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
+            if (ACTION_LOCATION_STATUS.equals(intent.getAction())) {
+                if (webView != null) {
+                    String status = JSONObject.quote(intent.getStringExtra("status"));
+                    double latitude = intent.getDoubleExtra("latitude", Double.NaN);
+                    double longitude = intent.getDoubleExtra("longitude", Double.NaN);
+                    webView.evaluateJavascript("window.onNativeLocationStatus && window.onNativeLocationStatus(" + status + "," + latitude + "," + longitude + ")", null);
+                }
+                return;
+            }
             clearSession();
             if (webView != null) webView.evaluateJavascript("window.onNativeSessionExpired && window.onNativeSessionExpired()", null);
         }
@@ -75,10 +85,12 @@ public class MainActivity extends Activity {
         });
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidGps");
         setContentView(webView);
+        IntentFilter sessionFilter = new IntentFilter(ACTION_SESSION_INVALIDATED);
+        sessionFilter.addAction(ACTION_LOCATION_STATUS);
         if (Build.VERSION.SDK_INT >= 33) {
-            registerReceiver(sessionReceiver, new IntentFilter(ACTION_SESSION_INVALIDATED), Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(sessionReceiver, sessionFilter, Context.RECEIVER_NOT_EXPORTED);
         } else {
-            registerReceiver(sessionReceiver, new IntentFilter(ACTION_SESSION_INVALIDATED));
+            registerReceiver(sessionReceiver, sessionFilter);
         }
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             notificationPermissionRequestInFlight = true;
