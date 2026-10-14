@@ -99,7 +99,7 @@ public class LocationService extends Service {
         if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return;
         try {
             if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000L, 5f, listener, Looper.getMainLooper());
+                manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000L, 10f, listener, Looper.getMainLooper());
             } else if (manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 manager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 15000L, 100f, listener, Looper.getMainLooper());
             }
