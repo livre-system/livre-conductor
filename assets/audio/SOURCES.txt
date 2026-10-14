@@ -1,0 +1,21 @@
+Livre Conductor debug audio assets
+
+The active files are from Wikimedia Commons and Freesound; sources and licenses are listed below.
+
+truck-horn.mp3
+  Truck Horn Long Length.wav — MisticalSounds2.o — CC0 (Freesound preview, 44.1 kHz stereo)
+  https://freesound.org/people/MisticalSounds2.o/sounds/652997/
+
+bus-horn.ogg
+  WWS CityBusMANSG220horn.ogg — Work With Sounds / Technical Museum of Slovenia — CC BY 4.0 (26 s, 48 kHz stereo)
+  https://commons.wikimedia.org/wiki/File:WWS_CityBusMANSG220horn.ogg
+
+car-horn.ogg
+  Preserved byte-for-byte from the existing local asset; not replaced.
+  Original attribution: Speeding-car-horn doppler effect sample.ogg — Magickallwiz — Wikimedia Commons
+  https://commons.wikimedia.org/wiki/File:Speeding-car-horn_doppler_effect_sample.ogg
+
+The active bus and truck assets were replaced for this stage. The interface does
+not reference legacy ship/alarm files or the previous bus asset. Those files
+remain unreferenced in the debug directory to preserve pre-existing local files.
+

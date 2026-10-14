@@ -70,7 +70,7 @@ let authMode    = 'login';
 let operationalStatus = 'available';
 let currentDriverSnapshot = null;
 const PREFS_KEY = 'livre_driver_preferences';
-const DEFAULT_PREFS = { theme: 'dark', tone: 'classic', volume: 70, fontScale: '1' };
+const DEFAULT_PREFS = { theme: 'dark', tone: 'car_horn', volume: 70, fontScale: '1' };
 let preferences = { ...DEFAULT_PREFS };
 
 const OPERATIONAL_STATUS_LABELS = {
@@ -162,20 +162,18 @@ function speak(text) {
   speechSynthesis.speak(u);
 }
 
+const TONE_SOURCES = {
+  car_horn: 'assets/audio/car-horn.ogg',
+  bus_horn: 'assets/audio/bus-horn.ogg',
+  truck_horn: 'assets/audio/truck-horn.ogg',
+};
+
 function beep() {
   try {
-    const ctx = new AudioContext(); const now = ctx.currentTime;
-    const gain = ctx.createGain(); const osc = ctx.createOscillator();
-    const frequencies = { classic: [260, 170], double: [360, 240], high: [620, 440], soft: [220, 180], pulse: [300, 300] }[preferences.tone] || [260, 170];
-    osc.type = preferences.tone === 'soft' ? 'sine' : 'sawtooth';
-    osc.frequency.setValueAtTime(frequencies[0], now);
-    osc.frequency.exponentialRampToValueAtTime(frequencies[1], now + .28);
-    gain.gain.setValueAtTime(.001, now);
-    gain.gain.exponentialRampToValueAtTime(.42 * Number(preferences.volume) / 100, now + .015);
-    gain.gain.exponentialRampToValueAtTime(.001, now + .3);
-    osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + .31);
-    osc.addEventListener('ended', () => ctx.close(), { once: true });
-  } catch(e) {}
+    const audio = new Audio(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn);
+    audio.volume = Math.max(0, Math.min(1, Number(preferences.volume) / 100));
+    audio.play().catch(() => {});
+  } catch (e) {}
 }
 
 function loadPreferences() {
