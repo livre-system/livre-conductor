@@ -20,6 +20,11 @@ function validatedHttpsApi(value) {
 }
 const API = validatedHttpsApi(new URLSearchParams(location.search).get('api'));
 
+// Diagnóstico temporal: sólo métricas y estados, sin datos personales.
+function diagLog(event, data = {}) {
+  try { console.info('[LIVRE_DIAG]', JSON.stringify({ ts: new Date().toISOString(), event, ...data })); } catch (_) {}
+}
+
 function validDeviceId(value) {
   return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
@@ -427,6 +432,11 @@ async function loadTrips() {
   // desfasado después de pausar/reanudar o reiniciar su renderer. El panel
   // visible es el criterio confiable para mantener la lista sincronizada.
   if (tripsRequestInFlight) return false;
+  const startedAt = performance.now();
+  let httpStatus = null;
+  let result = 'error';
+  let receivedCount = null;
+  diagLog('trips_start');
   const requestEpoch = authEpoch;
   const requestToken = token;
   tripsRequestInFlight = true;
@@ -449,9 +459,11 @@ async function loadTrips() {
       cache: 'no-store',
       signal: controller.signal,
     });
+    httpStatus = r.status;
     if (r.status === 401) { logout(); return false; }
     if (!r.ok) throw Error(r.status);
     const nextTrips = await r.json();
+    receivedCount = Array.isArray(nextTrips) ? nextTrips.length : null;
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
     trips = nextTrips;
     if (selected) selected = trips.find(t => t.id === selected.id) || null;
@@ -462,13 +474,19 @@ async function loadTrips() {
     if (initialTripsLoaded && fresh) announceNewTrip(fresh);
     initialTripsLoaded = true;
     resolvePendingNativeTrip();
+    result = 'ok';
     return true;
   } catch(e) {
+    diagLog('trips_error', { error: String(e?.name || e?.message || e).slice(0, 80) });
     showNotice('No se pudieron cargar los viajes. Revisá la conexión.');
     return false;
   } finally {
     clearTimeout(timeoutId);
     tripsRequestInFlight = false;
+    diagLog('trips_end', {
+      durationMs: Math.round(performance.now() - startedAt),
+      httpStatus, result, receivedCount,
+    });
   }
 }
 
@@ -512,6 +530,8 @@ async function changeStatus(status) {
 
 /** Envía una posición GPS al backend */
 async function sendLocation(lat, lng) {
+  const startedAt = performance.now();
+  diagLog('gps_position_received');
   setMapMarker(lat, lng);
   gpsState.provider = 'ACTIVE';
   gpsState.backend = 'SENDING';
@@ -520,6 +540,7 @@ async function sendLocation(lat, lng) {
   if (DEMO) {
     gpsState.backend = 'SYNCED';
     updateGpsPill();
+    diagLog('gps_send_end', { durationMs: Math.round(performance.now() - startedAt), endpoint: 'demo', result: 'ok' });
     return;
   }
   // ── REAL ────────────────────────────────────────────────────
@@ -528,17 +549,21 @@ async function sendLocation(lat, lng) {
     const liveResponse = await fetch(`${API}/mobility/driver/location`, {
       method: 'POST', headers: h(), body,
     });
+    diagLog('gps_send_response', { endpoint: 'driver', httpStatus: liveResponse.status });
     if (!liveResponse.ok) throw Error(`driver-location:${liveResponse.status}`);
 
     if (selected && ['assigned','arriving','in_progress'].includes(selected.status)) {
       const tripResponse = await fetch(`${API}/mobility/driver/trips/${selected.id}/location`, {
         method: 'POST', headers: h(), body,
       });
+      diagLog('gps_send_response', { endpoint: 'trip', httpStatus: tripResponse.status });
       if (!tripResponse.ok) throw Error(`trip-location:${tripResponse.status}`);
     }
     gpsState.backend = 'SYNCED';
     updateGpsPill();
+    diagLog('gps_send_end', { durationMs: Math.round(performance.now() - startedAt), result: 'ok' });
   } catch(e) {
+    diagLog('gps_send_end', { durationMs: Math.round(performance.now() - startedAt), result: 'error', error: String(e?.message || e).slice(0, 80) });
     if (String(e?.message || '').includes('driver-location:401')) {
       try { window.AndroidGps?.clearSession?.(); } catch (_) {}
       clearWebSession();
@@ -569,6 +594,7 @@ async function requestGpsWakeLock() {
 
 function restartGpsAfterBackground() {
   if (DEMO || !token || !$('appView') || $('appView').classList.contains('hidden')) return;
+  diagLog('gps_recovery_start', { watcher: watchId !== null ? 'active' : 'missing' });
   if (gpsSuspended && watchId !== null) {
     navigator.geolocation?.clearWatch(watchId);
     watchId = null;
@@ -592,7 +618,8 @@ function startGps() {
     // The native service owns background GPS; WebView GPS keeps the foreground map marker live.
   }
   // ── REAL ────────────────────────────────────────────────────
-  if (watchId !== null) return;
+  if (watchId !== null) { diagLog('gps_start_skipped', { reason: 'watcher_active' }); return; }
+  diagLog('gps_start');
   gpsState.provider = 'STARTING';
   gpsState.backend = 'UNKNOWN';
   updateGpsPill();
@@ -602,10 +629,11 @@ function startGps() {
   }
   requestGpsWakeLock();
   const opts = { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 };
-  const onPos = p => sendLocation(p.coords.latitude, p.coords.longitude);
+  const onPos = p => { diagLog('gps_position_callback'); sendLocation(p.coords.latitude, p.coords.longitude); };
   const onErr = e => {
     if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     watchId = null;
+    diagLog('gps_provider_lost', { code: e?.code ?? null, error: String(e?.message || '').slice(0, 80) });
     gpsState.provider = 'LOST';
     updateGpsPill();
     showNotice(e.code === 1
@@ -630,6 +658,7 @@ function stopGps() {
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
   gpsState.provider = 'STOPPED';
   gpsState.backend = 'UNKNOWN';
+  diagLog('gps_stop');
   updateGpsPill();
 }
 
@@ -780,9 +809,16 @@ async function loadOtherDrivers() {
    NOTIFICACIÓN DE VIAJE NUEVO
 ══════════════════════════════════════════════════════════════ */
 function announceNewTrip(t) {
-  if (operationalStatus === 'out_of_service' || !t) return;
+  if (operationalStatus === 'out_of_service' || !t) {
+    diagLog('trip_announce_skipped', { reason: !t ? 'empty' : 'out_of_service' });
+    return;
+  }
   const id = t.id != null ? String(t.id) : '';
-  if (!id || lastAlerted === id) return;
+  if (!id || lastAlerted === id) {
+    diagLog('trip_announce_skipped', { reason: !id ? 'missing_id' : 'already_announced' });
+    return;
+  }
+  diagLog('trip_announce_start');
   lastAlerted = id;
   const fallback = () => window.AndroidGps?.notifyTripFallback?.(
     id, t.origin || '', t.destination || '', preferences.tone);
@@ -792,6 +828,7 @@ function announceNewTrip(t) {
   } else {
     fallback();
   }
+  diagLog('trip_announce_end', { mode: document.visibilityState === 'visible' ? 'foreground' : 'background' });
 }
 
 function renderOperationalStatus() {
