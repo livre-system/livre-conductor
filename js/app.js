@@ -1003,7 +1003,10 @@ async function login(e) {
 
 function startNativeBackgroundLocation() {
   if (DEMO || !token || !window.AndroidGps) return;
-  try { window.AndroidGps.startLocation(token, API); } catch (e) { console.warn('native GPS unavailable', e); }
+  try {
+    window.AndroidGps.startLocation(token, API);
+    updateGpsPill(true);
+  } catch (e) { console.warn('native GPS unavailable', e); }
 }
 
 function stopNativeBackgroundLocation() {
