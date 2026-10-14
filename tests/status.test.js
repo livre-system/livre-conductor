@@ -26,7 +26,8 @@ describe('driver operational status synchronization', () => {
   it('only suppresses new-trip announcements while preserving assigned trips', () => {
     assert.match(source, /function announceNewTrip\(t\)/);
     assert.match(source, /operationalStatus === 'out_of_service' \|\| !t/);
-    assert.match(source, /selected = trips\.find\(t => t\.status === 'assigned'\) \|\| trips\[0\]/);
+    assert.match(source, /selected = trips\.find\(t => t\.status === 'assigned'\) \|\|/);
+    assert.match(source, /selected\.status === 'completed' \|\| selected\.status === 'cancelled'/);
   });
 
   it('renders demo trips without requiring a JWT token', () => {

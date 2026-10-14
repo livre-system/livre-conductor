@@ -467,8 +467,12 @@ async function loadTrips() {
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
     trips = nextTrips;
     if (selected) selected = trips.find(t => t.id === selected.id) || null;
-    if (!selected && trips.length)
-      selected = trips.find(t => t.status === 'assigned') || trips[0];
+    // No conservar en pantalla un viaje terminal cuando llegó uno asignado nuevo.
+    // El polling ya anuncia el nuevo viaje, pero render() quedaba con el anterior
+    // completed/cancelled y dejaba el panel vacío aunque la respuesta fuera correcta.
+    if (!selected || selected.status === 'completed' || selected.status === 'cancelled')
+      selected = trips.find(t => t.status === 'assigned') ||
+        trips.find(t => t.status !== 'completed' && t.status !== 'cancelled') || null;
     render();
     const fresh = trips.find(t => t.status === 'assigned');
     if (initialTripsLoaded && fresh) announceNewTrip(fresh);
