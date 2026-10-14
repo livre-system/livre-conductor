@@ -1025,8 +1025,7 @@ function openApp() {
   $('appView').classList.remove('hidden');
   initMap();
   startNativeBackgroundLocation();
-  if (!NATIVE_SHELL) startGps();
-  else updateGpsPill(true);
+  startGps();
   loadOperationalStatus().then(() => loadTrips());
 }
 
