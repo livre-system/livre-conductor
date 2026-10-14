@@ -100,6 +100,8 @@ public class LocationService extends Service {
         try {
             if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000L, 5f, listener, Looper.getMainLooper());
+            } else if (manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                manager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 15000L, 100f, listener, Looper.getMainLooper());
             }
         } catch (SecurityException ignored) {}
     }
