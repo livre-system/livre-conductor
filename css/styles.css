@@ -735,7 +735,13 @@ body { font-size: calc(16px * var(--font-scale)); }
 .operational-panel-title { margin-bottom: 8px; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
 .operational-panel-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 .operational-panel-button { min-height: 48px; padding: 6px 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface2); color: var(--white); font-size: 11px; font-weight: 800; line-height: 1.15; }
-.operational-panel-button.selected { border-color: var(--green); background: #174b38; box-shadow: 0 0 0 2px #2de08b33; color: #fff; }
+.operational-panel-button[data-operational-status="available"] { border-color: #2de08b66; color: #2de08b; }
+.operational-panel-button[data-operational-status="unavailable"] { border-color: #9aa0aa66; color: #c0c5ce; }
+.operational-panel-button[data-operational-status="out_of_service"] { border-color: #e8003d66; color: #ff607e; }
+.operational-panel-button[data-operational-status="available"].selected { background: #174b38; border-color: #2de08b; }
+.operational-panel-button[data-operational-status="unavailable"].selected { background: #343942; border-color: #9aa0aa; }
+.operational-panel-button[data-operational-status="out_of_service"].selected { background: #4f1826; border-color: #e8003d; }
+.operational-panel-button.selected { box-shadow: 0 0 0 2px #2de08b33; color: #fff; }
 .compact-idle { padding: 6px 0 0; }
 .compact-idle .idle-sub { margin: 0 0 8px; }
 .driver-popup { min-width: 190px; color: #17191d; line-height: 1.5; font-size: 12px; }

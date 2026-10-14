@@ -78,6 +78,12 @@ const OPERATIONAL_STATUS_LABELS = {
   unavailable: '⚪ No disponible',
   out_of_service: '🔴 Fuera de servicio',
 };
+const DRIVER_MARKER_COLORS = {
+  available: '#2de08b',
+  unavailable: '#9aa0aa',
+  out_of_service: '#e8003d',
+};
+
 const NATIVE_SHELL = !!window.AndroidGps;
 
 /* ══════════════════════════════════════════════════════════════
@@ -183,7 +189,7 @@ function loadPreferences() {
   if ($('themeToggle')) $('themeToggle').textContent = preferences.theme === 'light' ? '☾' : '☼';
   if ($('arrivalTone')) $('arrivalTone').value = preferences.tone;
   if ($('volumeRange')) { $('volumeRange').value = preferences.volume; $('volumeValue').textContent = `${preferences.volume}%`; }
-  if ($('fontSizeSelect')) $('fontSizeSelect').value = preferences.fontScale;
+  if ($('fontScaleRange')) { $('fontScaleRange').value = preferences.fontScale; $('fontScaleValue').textContent = `${Math.round(Number(preferences.fontScale) * 100)}%`; }
 }
 function savePreferences() { localStorage.setItem(PREFS_KEY, JSON.stringify(preferences)); }
 function toggleTheme() { preferences.theme = preferences.theme === 'light' ? 'dark' : 'light'; savePreferences(); loadPreferences(); }
@@ -631,7 +637,7 @@ function setMapMarker(lat, lng) {
   if (!marker) {
     marker = L.circleMarker(pos, {
       radius: 10,
-      fillColor: '#2de08b',
+      fillColor: DRIVER_MARKER_COLORS[operationalStatus] || DRIVER_MARKER_COLORS.available,
       fillOpacity: 1,
       color: '#07080a',
       weight: 3,
@@ -640,6 +646,11 @@ function setMapMarker(lat, lng) {
     marker.setLatLng(pos);
   }
   map.setView(pos, Math.max(map.getZoom(), 15));
+}
+
+function updateOwnMarkerStyle() {
+  if (!marker) return;
+  marker.setStyle({ fillColor: DRIVER_MARKER_COLORS[operationalStatus] || DRIVER_MARKER_COLORS.available });
 }
 
 function tokenUserId() {
@@ -742,6 +753,7 @@ async function loadOperationalStatus() {
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
     if (!OPERATIONAL_STATUS_LABELS[data.status]) throw Error('invalid-status');
     operationalStatus = data.status;
+    updateOwnMarkerStyle();
     renderOperationalStatus();
     return true;
   } catch (e) {
@@ -762,6 +774,7 @@ async function changeOperationalStatus(status) {
     const data = await r.json();
     if (!OPERATIONAL_STATUS_LABELS[data.status]) throw Error('invalid-status');
     operationalStatus = data.status;
+    updateOwnMarkerStyle();
     renderOperationalStatus();
     await loadTrips();
     return true;
@@ -1051,7 +1064,7 @@ $('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') setting
 $('tonePreview').onclick = beep;
 $('arrivalTone').onchange = e => { preferences.tone = e.target.value; savePreferences(); };
 $('volumeRange').oninput = e => { preferences.volume = Number(e.target.value); $('volumeValue').textContent = `${preferences.volume}%`; savePreferences(); };
-$('fontSizeSelect').onchange = e => { preferences.fontScale = e.target.value; savePreferences(); loadPreferences(); };
+$('fontScaleRange').oninput = e => { preferences.fontScale = Number(e.target.value); $('fontScaleValue').textContent = `${Math.round(preferences.fontScale * 100)}%`; savePreferences(); loadPreferences(); };
 
 document.addEventListener('visibilitychange', () => {
   setNativeAppVisible(document.visibilityState === 'visible');

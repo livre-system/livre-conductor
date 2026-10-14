@@ -52,7 +52,7 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /PREFS_KEY = 'livre_driver_preferences'/);
     assert.match(source, /localStorage\.setItem\(PREFS_KEY/);
     assert.match(source, /tonePreview/);
-    assert.match(source, /fontSizeSelect/);
+    assert.match(source, /fontScaleRange/);
   });
 
   it('clears web authentication state before reloading after logout', () => {
