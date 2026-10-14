@@ -29,7 +29,6 @@ public final class PermissionGate {
                 && context.checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return State.NEED_BACKGROUND_LOCATION;
         }
-        if (!notificationsEnabled(context)) return State.NEED_NOTIFICATIONS;
         if (!locationProviderEnabled(context)) return State.LOCATION_DISABLED;
         return State.READY;
     }
