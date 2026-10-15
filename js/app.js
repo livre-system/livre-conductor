@@ -220,23 +220,15 @@ function operationalControlsHtml() {
 
 /* ── Formatear tarifa ───────────────────────────────────────── */
 function formatFare(t) {
-  const v = t?.final_fare ?? t?.fare;
+  const v = t?.driver_fare ?? t?.fare;
   if (v == null || v === '') return null;
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(Number(v));
 }
 
 function commercialFareHtml(t) {
-  const finalFare = t?.final_fare ?? t?.fare;
-  if (finalFare == null || finalFare === '') return '';
-  const original = t?.original_fare;
-  const discount = t?.discount_amount;
-  const percentage = t?.discount_percentage;
-  if (original == null || discount == null || !Number(discount)) {
-    return `<div class="fare-row"><span class="fare-label">Tarifa del viaje</span><span class="fare-value">${formatFare(t)}</span></div>`;
-  }
-  return `<div class="fare-row"><span class="fare-label">Tarifa original</span><span class="fare-value">${formatFare({ fare: original })}</span></div>
-    <div class="fare-row"><span class="fare-label">Descuento WhatsApp (${Number(percentage || 0)}%)</span><span class="fare-value">-${formatFare({ fare: discount })}</span></div>
-    <div class="fare-row"><span class="fare-label">Importe final</span><span class="fare-value">${formatFare({ fare: finalFare })}</span></div>`;
+  const driverFare = t?.driver_fare ?? t?.fare;
+  if (driverFare == null || driverFare === '') return '';
+  return `<div class="fare-row"><span class="fare-label">Tarifa para el conductor</span><span class="fare-value">${formatFare({ fare: driverFare })}</span></div>`;
 }
 
 function serviceTypeLabel(t) {
