@@ -30,6 +30,12 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /selected\.status === 'completed' \|\| selected\.status === 'cancelled'/);
   });
 
+  it('shows the official final total after completing a trip', () => {
+    assert.match(source, /function finalFareHtml\(t\)/);
+    assert.match(source, /const finalFare = t\?\.fare \?\? t\?\.final_fare/);
+    assert.match(source, /final-fare-card/);
+  });
+
   it('renders demo trips without requiring a JWT token', () => {
     assert.match(source, /if \(\(!token && !DEMO\) \|\|/);
     assert.match(source, /if \(DEMO\) \{[\s\S]*?trips\s*=\s*\[\{ \.\.\.DEMO_TRIP \}\]/);

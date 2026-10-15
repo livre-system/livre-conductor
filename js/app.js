@@ -231,6 +231,12 @@ function commercialFareHtml(t) {
   return `<div class="fare-row"><span class="fare-label">Tarifa para el conductor</span><span class="fare-value">${formatFare({ fare: driverFare })}</span></div>`;
 }
 
+function finalFareHtml(t) {
+  const finalFare = t?.fare ?? t?.final_fare;
+  if (finalFare == null || finalFare === '') return '';
+  return `<div class="fare-row"><span class="fare-label">Total final</span><span class="fare-value">${formatFare({ fare: finalFare })}</span></div>`;
+}
+
 function serviceTypeLabel(t) {
   if (t?.service_type_name) return t.service_type_name;
   return String(t?.service_type_id) === '1' ? 'Premium' : String(t?.service_type_id) === '2' ? 'Ahorro' : null;
@@ -256,9 +262,7 @@ function render() {
   clearNotice();
 
   // Resolvemos qué viaje mostrar
-  const t = (selected?.status === 'cancelled' || selected?.status === 'completed')
-            ? null
-            : selected || trips.find(x => x.status === 'assigned');
+  const t = selected || trips.find(x => x.status === 'assigned');
 
   const sheet  = $('sheet');
   const inner  = $('sheetInner');
@@ -365,6 +369,8 @@ function render() {
       </div>
 
       <div class="primary-actions">${primaryBtn}</div>
+
+      ${isCompleted ? `<div class="final-fare-card">${finalFareHtml(t)}</div>` : ''}
 
       <div class="secondary-actions">
         <button class="btn-tool" id="btnHandy" title="Conectar con operador">
@@ -501,7 +507,7 @@ async function loadTrips() {
     // No conservar en pantalla un viaje terminal cuando llegó uno asignado nuevo.
     // El polling ya anuncia el nuevo viaje, pero render() quedaba con el anterior
     // completed/cancelled y dejaba el panel vacío aunque la respuesta fuera correcta.
-    if (!selected || selected.status === 'completed' || selected.status === 'cancelled')
+    if (!selected || ((selected.status === 'completed' || selected.status === 'cancelled') && trips.some(t => t.status === 'assigned')))
       selected = trips.find(t => t.status === 'assigned') ||
         trips.find(t => t.status !== 'completed' && t.status !== 'cancelled') || null;
     render();
