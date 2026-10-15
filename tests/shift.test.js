@@ -16,6 +16,11 @@ describe('driver history and shift closure', () => {
 
   it('shows a shift summary and confirms the persisted closure', () => {
     assert.match(source, /function renderHistory\(/);
+    assert.match(source, /Total facturado/);
+    assert.match(source, /Importe del conductor/);
+    assert.match(source, /Comisiones/);
+    assert.match(source, /Resumen final del día/);
+    assert.match(source, /function historyTotals\(/);
     assert.match(source, /async function closeDriverShift\(\)/);
     assert.match(source, /\/mobility\/driver\/shift-closures/);
     assert.match(source, /confirm\(/);

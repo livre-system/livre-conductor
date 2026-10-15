@@ -926,6 +926,32 @@ async function changeOperationalStatus(status) {
    HISTORIAL, RECAUDACIÓN Y CIERRE DIARIO
 ══════════════════════════════════════════════════════════════ */
 const money = value => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(value || 0));
+const amount = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+function driverFare(item) {
+  if (item?.driver_fare != null) return amount(item.driver_fare);
+  if (item?.final_fare != null && item?.fare_source === 'commercial') return amount(item.final_fare);
+  return amount(item?.fare) * 0.85;
+}
+function historyTotals(data = {}) {
+  const items = Array.isArray(data.items) ? data.items : [];
+  const billed = items.length
+    ? items.reduce((sum, item) => sum + amount(item.fare), 0)
+    : amount(data.total_revenue ?? data.total_billed);
+  const driver = items.length
+    ? items.reduce((sum, item) => sum + driverFare(item), 0)
+    : amount(data.driver_revenue ?? data.total_driver_revenue ?? data.driver_amount ?? billed * 0.85);
+  return { trips: amount(data.total ?? data.trip_count ?? items.length), billed, driver, commission: billed - driver };
+}
+function historyTotalsHtml(data, title = '') {
+  const totals = historyTotals(data);
+  return `${title ? `<h3 class="history-section-title">${title}</h3>` : ''}
+    <div class="history-summary" aria-label="Resumen económico del día">
+      <div class="history-stat"><small>Viajes realizados</small><strong>${totals.trips}</strong></div>
+      <div class="history-stat"><small>Total facturado</small><strong>${money(totals.billed)}</strong></div>
+      <div class="history-stat"><small>Importe del conductor</small><strong>${money(totals.driver)}</strong></div>
+      <div class="history-stat"><small>Comisiones</small><strong>${money(totals.commission)}</strong></div>
+    </div>`;
+}
 function localDateInput() { return new Date().toLocaleDateString('en-CA'); }
 function historyNotice(message) {
   const el = $('historyNotice');
@@ -934,9 +960,7 @@ function historyNotice(message) {
   el.classList.toggle('hidden', !message);
 }
 function renderHistory(data) {
-  $('historySummary').innerHTML = `
-    <div class="history-stat"><small>Viajes</small><strong>${Number(data.total || 0)}</strong></div>
-    <div class="history-stat"><small>Total recaudado</small><strong>${money(data.total_revenue)}</strong></div>`;
+  $('historySummary').innerHTML = historyTotalsHtml(data);
   $('historyList').innerHTML = data.items?.length
     ? data.items.map(item => `<div class="history-item"><strong>${esc(item.origin)} → ${esc(item.destination)}</strong><br><span>${esc(item.status)} · ${esc(item.completed_at ? new Date(item.completed_at).toLocaleString('es-AR') : 'Sin fecha')}</span><br><b>${money(item.fare)}</b></div>`).join('')
     : '<div class="history-item"><span>No hay viajes finalizados en el período.</span></div>';
@@ -984,7 +1008,7 @@ async function closeDriverShift() {
     const data = await r.json();
     if (r.status === 409) { historyNotice('Este turno ya está cerrado.'); await loadDriverClosures(); return false; }
     if (!r.ok) throw Error(data.detail || r.status);
-    $('historyClosure').innerHTML = `<div class="history-item"><strong>Turno cerrado</strong><br>${data.trip_count} viajes · ${money(data.total_revenue)}<button id="downloadNewPdf" class="settings-preview" type="button">Descargar / compartir PDF</button></div>`;
+    $('historyClosure').innerHTML = `<div class="history-item"><strong>Turno cerrado</strong>${historyTotalsHtml({ ...data, total: data.trip_count }, 'Resumen final del día')}<button id="downloadNewPdf" class="settings-preview" type="button">Descargar / compartir PDF</button></div>`;
     $('downloadNewPdf').onclick = () => downloadShiftPdf(data.id);
     historyNotice('Cierre guardado en Livre.');
     return true;
