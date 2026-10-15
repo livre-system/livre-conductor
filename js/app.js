@@ -220,9 +220,23 @@ function operationalControlsHtml() {
 
 /* ── Formatear tarifa ───────────────────────────────────────── */
 function formatFare(t) {
-  const v = t?.fare;
+  const v = t?.final_fare ?? t?.fare;
   if (v == null || v === '') return null;
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(v));
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(Number(v));
+}
+
+function commercialFareHtml(t) {
+  const finalFare = t?.final_fare ?? t?.fare;
+  if (finalFare == null || finalFare === '') return '';
+  const original = t?.original_fare;
+  const discount = t?.discount_amount;
+  const percentage = t?.discount_percentage;
+  if (original == null || discount == null || !Number(discount)) {
+    return `<div class="fare-row"><span class="fare-label">Tarifa del viaje</span><span class="fare-value">${formatFare(t)}</span></div>`;
+  }
+  return `<div class="fare-row"><span class="fare-label">Tarifa original</span><span class="fare-value">${formatFare({ fare: original })}</span></div>
+    <div class="fare-row"><span class="fare-label">Descuento WhatsApp (${Number(percentage || 0)}%)</span><span class="fare-value">-${formatFare({ fare: discount })}</span></div>
+    <div class="fare-row"><span class="fare-label">Importe final</span><span class="fare-value">${formatFare({ fare: finalFare })}</span></div>`;
 }
 
 function serviceTypeLabel(t) {
@@ -309,12 +323,7 @@ function render() {
           <span class="fare-label">Tipo de servicio</span>
           <span class="fare-value">${serviceTypeLabel(t) ? esc(serviceTypeLabel(t)) : 'No informado'}</span>
         </div>
-        <div class="fare-row">
-          <span class="fare-label">Tarifa del viaje</span>
-          ${fare
-            ? `<span class="fare-value">${fare}</span>`
-            : `<span class="fare-value unknown">No informada</span>`}
-        </div>
+        ${commercialFareHtml(t)}
 
         <div class="alert-actions">
           <button class="btn-accept" onclick="acceptTrip()">✓ ACEPTAR</button>
