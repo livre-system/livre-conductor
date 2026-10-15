@@ -926,30 +926,24 @@ async function changeOperationalStatus(status) {
    HISTORIAL, RECAUDACIÓN Y CIERRE DIARIO
 ══════════════════════════════════════════════════════════════ */
 const money = value => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(value || 0));
-const amount = value => Number.isFinite(Number(value)) ? Number(value) : 0;
-function driverFare(item) {
-  if (item?.driver_fare != null) return amount(item.driver_fare);
-  if (item?.final_fare != null && item?.fare_source === 'commercial') return amount(item.final_fare);
-  return amount(item?.fare) * 0.85;
-}
+const knownAmount = value => value != null && Number.isFinite(Number(value)) ? Number(value) : null;
+const displayMoney = value => value == null ? 'No informado' : money(value);
 function historyTotals(data = {}) {
-  const items = Array.isArray(data.items) ? data.items : [];
-  const billed = items.length
-    ? items.reduce((sum, item) => sum + amount(item.fare), 0)
-    : amount(data.total_revenue ?? data.total_billed);
-  const driver = items.length
-    ? items.reduce((sum, item) => sum + driverFare(item), 0)
-    : amount(data.driver_revenue ?? data.total_driver_revenue ?? data.driver_amount ?? billed * 0.85);
-  return { trips: amount(data.total ?? data.trip_count ?? items.length), billed, driver, commission: billed - driver };
+  return {
+    trips: data.total ?? data.trip_count ?? null,
+    billed: knownAmount(data.total_revenue ?? data.total_billed),
+    driver: knownAmount(data.driver_revenue ?? data.total_driver_revenue ?? data.driver_amount),
+    commission: knownAmount(data.commission ?? data.total_commission ?? data.commission_amount),
+  };
 }
 function historyTotalsHtml(data, title = '') {
   const totals = historyTotals(data);
   return `${title ? `<h3 class="history-section-title">${title}</h3>` : ''}
     <div class="history-summary" aria-label="Resumen económico del día">
-      <div class="history-stat"><small>Viajes realizados</small><strong>${totals.trips}</strong></div>
-      <div class="history-stat"><small>Total facturado</small><strong>${money(totals.billed)}</strong></div>
-      <div class="history-stat"><small>Importe del conductor</small><strong>${money(totals.driver)}</strong></div>
-      <div class="history-stat"><small>Comisiones</small><strong>${money(totals.commission)}</strong></div>
+      <div class="history-stat"><small>Viajes realizados</small><strong>${totals.trips == null ? 'No informado' : totals.trips}</strong></div>
+      <div class="history-stat"><small>Total facturado</small><strong>${displayMoney(totals.billed)}</strong></div>
+      <div class="history-stat"><small>Importe del conductor</small><strong>${displayMoney(totals.driver)}</strong></div>
+      <div class="history-stat"><small>Comisiones</small><strong>${displayMoney(totals.commission)}</strong></div>
     </div>`;
 }
 function localDateInput() { return new Date().toLocaleDateString('en-CA'); }
