@@ -321,6 +321,29 @@ function serviceTypeLabel(t) {
   return String(t?.service_type_id) === '1' ? 'Premium' : String(t?.service_type_id) === '2' ? 'Ahorro' : null;
 }
 
+// El API debe ordenar por fecha, pero la UI no depende del orden accidental
+// en que el navegador resuelva o reciba una respuesta de polling.
+function orderTripsNewestFirst(list) {
+  return [...list].sort((a, b) => {
+    const dateA = Date.parse(a?.created_at || '');
+    const dateB = Date.parse(b?.created_at || '');
+    if (Number.isFinite(dateA) && Number.isFinite(dateB) && dateA !== dateB) return dateB - dateA;
+    if (Number.isFinite(dateA) !== Number.isFinite(dateB)) return Number.isFinite(dateB) - Number.isFinite(dateA);
+    const idA = Number(a?.id);
+    const idB = Number(b?.id);
+    if (Number.isFinite(idA) && Number.isFinite(idB) && idA !== idB) return idB - idA;
+    return 0;
+  });
+}
+
+function selectPrimaryTrip(list, current) {
+  // Una solicitud nueva reemplaza solo otra solicitud pendiente. Si ya hay
+  // un viaje aceptado/en curso, ese viaje sigue siendo la tarjeta principal.
+  if (current && (current.status === 'arriving' || current.status === 'in_progress')) return current;
+  return list.find(t => t.status === 'assigned') ||
+    (current ? list.find(t => String(t.id) === String(current.id)) || null : null);
+}
+
 /* ══════════════════════════════════════════════════════════════
    RENDER — la pantalla cambia según el estado del viaje
 ══════════════════════════════════════════════════════════════ */
@@ -604,8 +627,10 @@ async function loadTrips() {
     const nextTrips = await r.json();
     receivedCount = Array.isArray(nextTrips) ? nextTrips.length : null;
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
-    trips = nextTrips.filter(t => !rejectedTripIds.has(String(t.id)));
-    if (selected) selected = trips.find(t => t.id === selected.id) || null;
+    trips = orderTripsNewestFirst(nextTrips.filter(t => !rejectedTripIds.has(String(t.id))));
+    // La lista ya está ordenada por la fecha real del pedido. La tarjeta
+    // principal toma el pendiente más nuevo; los anteriores quedan en la cola.
+    selected = selectPrimaryTrip(trips, selected);
     // No conservar en pantalla un viaje terminal cuando llegó uno asignado nuevo.
     // El polling ya anuncia el nuevo viaje, pero render() quedaba con el anterior
     // completed/cancelled y dejaba el panel vacío aunque la respuesta fuera correcta.

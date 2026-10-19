@@ -53,6 +53,36 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /selected = found;/);
   });
 
+  it('promotes the newest assigned trip without dropping older queue items', () => {
+    assert.match(source, /function orderTripsNewestFirst\(list\)/);
+    assert.match(source, /function selectPrimaryTrip\(list, current\)/);
+    assert.match(source, /trips = orderTripsNewestFirst\(nextTrips\.filter/);
+    assert.match(source, /selected = selectPrimaryTrip\(trips, selected\)/);
+    assert.match(source, /trips\.filter\(t => t\.status === 'assigned' && String\(t\.id\) !== String\(current\?\.id\)/);
+
+    const start = source.indexOf('function orderTripsNewestFirst');
+    const end = source.indexOf('/* ═', start);
+    const context = {};
+    require('vm').runInNewContext(`${source.slice(start, end)}; this.orderTripsNewestFirst = orderTripsNewestFirst; this.selectPrimaryTrip = selectPrimaryTrip;`, context);
+    const older = { id: 10, status: 'assigned', created_at: '2026-10-19T10:00:00Z' };
+    const newest = { id: 11, status: 'assigned', created_at: '2026-10-19T10:01:00Z' };
+    const ordered = context.orderTripsNewestFirst([older, newest]);
+    assert.deepStrictEqual(Array.from(ordered, t => t.id), [11, 10]);
+    assert.strictEqual(context.selectPrimaryTrip(ordered, older), newest);
+    assert.deepStrictEqual(Array.from(ordered, t => t.id), [11, 10]);
+  });
+
+  it('does not replace an active trip when a new pending trip arrives', () => {
+    assert.match(source, /current\.status === 'arriving' \|\| current\.status === 'in_progress'/);
+    const start = source.indexOf('function orderTripsNewestFirst');
+    const end = source.indexOf('/* ═', start);
+    const context = {};
+    require('vm').runInNewContext(`${source.slice(start, end)}; this.selectPrimaryTrip = selectPrimaryTrip;`, context);
+    const active = { id: 10, status: 'arriving' };
+    const pending = { id: 11, status: 'assigned', created_at: '2026-10-19T10:01:00Z' };
+    assert.strictEqual(context.selectPrimaryTrip([pending, active], active), active);
+  });
+
   it('moves to the next pending trip after resolving only the selected rejection', () => {
     assert.match(source, /function selectNextPendingTrip\(\)/);
     assert.match(source, /const next = trips\.find\(t => t\.status === 'assigned'\)/);
