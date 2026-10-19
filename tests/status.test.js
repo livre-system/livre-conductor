@@ -34,15 +34,15 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /function driverFareHtml\(t\)/);
     assert.match(source, /!isCompleted \? driverFareHtml\(t\) : ''/);
     assert.match(source, /function finalFareHtml\(t\)/);
-    assert.match(source, /const finalFare = t\?\.final_fare \?\? t\?\.fare/);
+    assert.match(source, /const finalFare = t\?\.original_fare \?\? t\?\.fare/);
     assert.match(source, /final-fare-card/);
 
     const fareSource = source.slice(source.indexOf('function formatFare'), source.indexOf('function serviceTypeLabel'));
     const context = { Intl };
     require('vm').runInNewContext(`${fareSource}; this.driverFareHtml = driverFareHtml; this.finalFareHtml = finalFareHtml;`, context);
     assert.match(context.driverFareHtml({ fare: 4800 }), /4\.080/);
-    assert.match(context.driverFareHtml({ fare: 4800, final_fare: 4000 }), /3\.400/);
-    assert.match(context.finalFareHtml({ fare: 4800, final_fare: 4000 }), /4\.000/);
+    assert.match(context.driverFareHtml({ fare: 4800, final_fare: 4000 }), /4\.080/);
+    assert.match(context.finalFareHtml({ fare: 4800, final_fare: 4000 }), /4\.800/);
   });
 
   it('renders every assigned trip while another trip is selected', () => {
@@ -51,6 +51,12 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /function bindTripQueue\(\)/);
     assert.match(source, /trips\.filter\(t => t\.status === 'assigned'/);
     assert.match(source, /selected = found;/);
+  });
+
+  it('announces each newly assigned trip, including when an older trip stays open', () => {
+    assert.match(source, /const freshTrips = trips\.filter\(t => t\.status === 'assigned'/);
+    assert.match(source, /freshTrips\.forEach\(announceNewTrip\)/);
+    assert.match(source, /showNotice\(`Nuevo viaje disponible/);
   });
 
   it('renders demo trips without requiring a JWT token', () => {

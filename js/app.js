@@ -70,7 +70,7 @@ let otherDriversLayer = null;
 let otherDriversRequestInFlight = false;
 let otherDriversTimer = null;
 let currentDriverUserId = '';
-let lastAlerted = null;
+const announcedTripIds = new Set();
 let initialTripsLoaded = false;
 let tripsRequestInFlight = false;
 let tripsPollTimer = null;
@@ -475,9 +475,9 @@ function demoReset() {
   DEMO_TRIP.status = 'assigned';
   selected = { ...DEMO_TRIP };
   trips = [selected];
-  lastAlerted = null;
-  announceNewTrip(selected);
+  announcedTripIds.clear();
   render();
+  announceNewTrip(selected);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -564,8 +564,15 @@ async function loadTrips() {
       selected = trips.find(t => t.status === 'assigned') ||
         trips.find(t => t.status !== 'completed' && t.status !== 'cancelled') || null;
     render();
-    const fresh = trips.find(t => t.status === 'assigned');
-    if (initialTripsLoaded && fresh) announceNewTrip(fresh);
+    // Un viaje asignado existente puede seguir abierto mientras llegan otros.
+    // Anunciar cada ID nuevo evita que el primero silencie los siguientes.
+    announcedTripIds.forEach(id => {
+      if (!trips.some(t => String(t.id) === id && t.status === 'assigned'))
+        announcedTripIds.delete(id);
+    });
+    const freshTrips = trips.filter(t => t.status === 'assigned' && !announcedTripIds.has(String(t.id)));
+    if (!initialTripsLoaded) freshTrips.length = 0;
+    freshTrips.forEach(announceNewTrip);
     initialTripsLoaded = true;
     resolvePendingNativeTrip();
     result = 'ok';
@@ -908,12 +915,13 @@ function announceNewTrip(t) {
     return;
   }
   const id = t.id != null ? String(t.id) : '';
-  if (!id || lastAlerted === id) {
+  if (!id || announcedTripIds.has(id)) {
     diagLog('trip_announce_skipped', { reason: !id ? 'missing_id' : 'already_announced' });
     return;
   }
   diagLog('trip_announce_start');
-  lastAlerted = id;
+  announcedTripIds.add(id);
+  showNotice(`Nuevo viaje disponible: ${t.origin || 'origen'} → ${t.destination || 'destino'}`);
   const fallback = () => window.AndroidGps?.notifyTripFallback?.(
     id, t.origin || '', t.destination || '', preferences.tone);
   if (document.visibilityState === 'visible') {
@@ -1247,7 +1255,7 @@ function clearWebSession() {
   trips = [];
   selected = null;
   initialTripsLoaded = false;
-  lastAlerted = null;
+  announcedTripIds.clear();
   DEMO = false;
   try {
     localStorage.removeItem('livre_driver_token');
