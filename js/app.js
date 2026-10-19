@@ -182,49 +182,71 @@ function speak(text) {
 }
 
 const TONE_SOURCES = {
-  car_horn: 'assets/audio/car-horn.ogg',
-  bus_horn: 'assets/audio/bus-horn.ogg',
-  truck_horn: 'assets/audio/truck-horn.ogg',
+  // MP3 covers Safari versions without Ogg/Vorbis support. Ogg remains as
+  // a fallback for browsers that prefer it or cannot decode MP3.
+  car_horn: ['assets/audio/car-horn.mp3', 'assets/audio/car-horn.ogg'],
+  bus_horn: ['assets/audio/bus-horn.mp3', 'assets/audio/bus-horn.ogg'],
+  truck_horn: ['assets/audio/truck-horn.mp3', 'assets/audio/truck-horn.ogg'],
 };
+const TONE_MIME_TYPES = { mp3: 'audio/mpeg', ogg: 'audio/ogg; codecs="vorbis"' };
 
 let alertAudio = null;
 let alertAudioUnlocked = false;
 let alertAudioUnlockPromise = null;
 
+function toneSources(tone = preferences.tone) {
+  return TONE_SOURCES[tone] || TONE_SOURCES.car_horn;
+}
+
+function supportedToneSource(tone = preferences.tone) {
+  const probe = document.createElement('audio');
+  return toneSources(tone).find(source => {
+    const extension = source.split('.').pop();
+    return !probe.canPlayType || probe.canPlayType(TONE_MIME_TYPES[extension]) !== '';
+  }) || toneSources(tone)[0];
+}
+
+function createAlertAudio(tone = preferences.tone) {
+  const audio = new Audio(supportedToneSource(tone));
+  audio.preload = 'auto';
+  audio.volume = Math.max(0, Math.min(1, Number(preferences.volume) / 100));
+  return audio;
+}
+
 function unlockAlertAudio() {
   if (alertAudioUnlocked) return Promise.resolve(true);
   if (alertAudioUnlockPromise) return alertAudioUnlockPromise;
   try {
-    alertAudio = new Audio(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn);
-    alertAudio.preload = 'auto';
+    alertAudio = createAlertAudio();
     alertAudio.volume = 0;
-    alertAudioUnlockPromise = alertAudio.play().then(() => {
+    alertAudioUnlockPromise = Promise.resolve(alertAudio.play()).then(() => {
       alertAudio.pause();
       alertAudio.currentTime = 0;
       alertAudio.volume = Math.max(0, Math.min(1, Number(preferences.volume) / 100));
       alertAudioUnlocked = true;
       diagLog('alert_audio_unlocked');
       return true;
-    }).catch(() => {
+    }).catch(e => {
+      diagLog('alert_audio_unlock_failed', { error: String(e?.name || e?.message || e).slice(0, 80) });
       alertAudioUnlockPromise = null;
       return false;
     });
     return alertAudioUnlockPromise;
-  } catch (_) {
+  } catch (e) {
+    diagLog('alert_audio_create_failed', { error: String(e?.name || e?.message || e).slice(0, 80) });
     return Promise.resolve(false);
   }
 }
 
 async function beep() {
   try {
-    if (!alertAudioUnlocked) {
-      const unlocked = await unlockAlertAudio();
-      if (!unlocked) throw Error('audio_locked');
-    }
-    if (!alertAudio || alertAudio.src !== new URL(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn, location.href).href) {
-      alertAudio = new Audio(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn);
-      alertAudio.preload = 'auto';
+    const source = supportedToneSource();
+    if (!alertAudio || alertAudio.src !== new URL(source, location.href).href) {
+      alertAudio = createAlertAudio();
       alertAudioUnlocked = false;
+      alertAudioUnlockPromise = null;
+    }
+    if (!alertAudioUnlocked) {
       const unlocked = await unlockAlertAudio();
       if (!unlocked) throw Error('audio_locked');
     }
@@ -234,9 +256,20 @@ async function beep() {
     console.info('[ALERT] web audio played', preferences.tone);
     return true;
   } catch (e) {
+    diagLog('alert_audio_play_failed', { error: String(e?.name || e?.message || e).slice(0, 80) });
     console.warn('[ALERT] web audio blocked', e);
     return false;
   }
+}
+
+function installAudioGestureUnlock() {
+  const events = ['pointerdown', 'touchstart', 'keydown'];
+  const onGesture = () => {
+    void unlockAlertAudio().then(unlocked => {
+      if (unlocked) events.forEach(event => window.removeEventListener(event, onGesture, true));
+    });
+  };
+  events.forEach(event => window.addEventListener(event, onGesture, { capture: true, passive: true }));
 }
 
 function loadPreferences() {
@@ -1372,6 +1405,7 @@ async function logout() {
 
 /* ── Bootstrap ──────────────────────────────────────────────── */
 loadPreferences();
+installAudioGestureUnlock();
 $('loginForm').onsubmit = login;
 $('toggleAuth').onclick = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
 $('logoutBtn').onclick = logout;
@@ -1384,7 +1418,7 @@ $('settingsButton').onclick = () => $('settingsModal').classList.remove('hidden'
 $('settingsClose').onclick = () => $('settingsModal').classList.add('hidden');
 $('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') settingsClose(); };
 $('tonePreview').onclick = () => { unlockAlertAudio(); beep(); };
-$('arrivalTone').onchange = e => { preferences.tone = e.target.value; alertAudioUnlocked = false; alertAudioUnlockPromise = null; alertAudio = null; savePreferences(); };
+$('arrivalTone').onchange = e => { preferences.tone = e.target.value; alertAudioUnlocked = false; alertAudioUnlockPromise = null; alertAudio = null; savePreferences(); void unlockAlertAudio(); };
 $('volumeRange').oninput = e => { preferences.volume = Number(e.target.value); if (alertAudio) alertAudio.volume = preferences.volume / 100; $('volumeValue').textContent = `${preferences.volume}%`; savePreferences(); };
 $('fontScaleRange').oninput = e => { preferences.fontScale = Number(e.target.value); $('fontScaleValue').textContent = `${Math.round(preferences.fontScale * 100)}%`; savePreferences(); loadPreferences(); };
 

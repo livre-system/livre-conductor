@@ -129,6 +129,30 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /otherDriversTimer = setInterval\(loadOtherDrivers, 15000\)/);
   });
 
+  it('selects MP3 when the browser cannot decode Ogg/Vorbis', () => {
+    const start = source.indexOf('const TONE_SOURCES');
+    const end = source.indexOf('function loadPreferences', start);
+    const context = {
+      preferences: { tone: 'car_horn', volume: 70 },
+      document: { createElement: () => ({ canPlayType: mime => mime === 'audio/mpeg' ? 'probably' : '' }) },
+    };
+    require('vm').runInNewContext(`${source.slice(start, end)}; this.supportedToneSource = supportedToneSource;`, context);
+    assert.strictEqual(context.supportedToneSource(), 'assets/audio/car-horn.mp3');
+  });
+
+  it('attempts audio unlock from a real user gesture and records blocked playback', () => {
+    assert.match(source, /function installAudioGestureUnlock\(\)/);
+    assert.match(source, /pointerdown.*touchstart.*keydown/);
+    assert.match(source, /alert_audio_unlock_failed/);
+    assert.match(source, /alert_audio_play_failed/);
+  });
+
+  it('keeps a visible fallback when browser autoplay remains blocked', () => {
+    assert.match(source, /beep\(\)\.then\(played => \{ if \(!played\) fallback\(\); \}\)/);
+    assert.match(source, /notifyTripFallback/);
+    assert.match(source, /document\.visibilityState === 'visible'/);
+  });
+
   it('uses real CRM driver fields in marker popups', () => {
     assert.match(source, /driver\?\.driverName/);
     assert.match(source, /vehicle\.model/);

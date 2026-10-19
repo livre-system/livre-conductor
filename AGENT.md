@@ -45,3 +45,14 @@ Aliases históricos o alternativos no deben tomarse como URLs principales sin ve
 - Verificar por HTTPS que el JavaScript publicado contiene la lógica nueva antes de informar que el cambio está disponible.
 - Investigar diferencias entre navegadores, incluido Brave, por separado; no atribuirles la causa sin evidencia.
 - No crear viajes reales de prueba, no modificar la APK y no tocar otros repositorios para corregir este flujo web.
+
+## AUDIO DE NUEVOS VIAJES
+
+- Los viajes nuevos llegan por polling; su callback no es una interacción directa del usuario. Safari móvil, Brave y otros navegadores pueden rechazar `HTMLAudioElement.play()` por las políticas de autoplay.
+- No asumir que la existencia del archivo alcanza: registrar y distinguir fallos de creación, desbloqueo y reproducción (`alert_audio_create_failed`, `alert_audio_unlock_failed`, `alert_audio_play_failed`).
+- Usar MP3 como fuente principal y Ogg/Vorbis como fallback. Seleccionar con `canPlayType()` porque el soporte de Ogg/Vorbis varía entre versiones y navegadores.
+- Intentar desbloquear el audio durante la primera interacción real (`pointerdown`, `touchstart` o `keydown`) y también al cambiar el tono desde configuración.
+- Mantener un fallback visible cuando el usuario nunca interactuó o el navegador continúa bloqueando el audio. No afirmar que el sonido automático puede garantizarse sin interacción.
+- La corrección actual vive en `js/app.js` y usa `assets/audio/car-horn.mp3`, `bus-horn.mp3` y `truck-horn.mp3`, conservando los `.ogg` existentes como fallback.
+- Validación automatizada obligatoria: `node --test tests/*.test.js`, `node --check js/app.js` y `git diff --check`.
+- La validación real del sonido debe hacerse por separado en Safari móvil y Brave: tocar la pantalla antes de recibir un viaje, confirmar el desbloqueo y luego verificar un viaje nuevo. Chromium no sustituye la prueba de Safari.
