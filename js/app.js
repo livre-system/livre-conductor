@@ -71,6 +71,7 @@ let otherDriversRequestInFlight = false;
 let otherDriversTimer = null;
 let currentDriverUserId = '';
 const announcedTripIds = new Set();
+const rejectedTripIds = new Set(JSON.parse(localStorage.getItem('livre_driver_rejected_trips') || '[]'));
 let initialTripsLoaded = false;
 let tripsRequestInFlight = false;
 let tripsPollTimer = null;
@@ -186,11 +187,36 @@ const TONE_SOURCES = {
   truck_horn: 'assets/audio/truck-horn.ogg',
 };
 
+let alertAudio = null;
+let alertAudioUnlocked = false;
+
+function unlockAlertAudio() {
+  if (alertAudioUnlocked) return;
+  try {
+    alertAudio = new Audio(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn);
+    alertAudio.preload = 'auto';
+    alertAudio.volume = 0;
+    const unlock = alertAudio.play();
+    if (unlock?.then) unlock.then(() => {
+      alertAudio.pause();
+      alertAudio.currentTime = 0;
+      alertAudio.volume = Math.max(0, Math.min(1, Number(preferences.volume) / 100));
+      alertAudioUnlocked = true;
+      diagLog('alert_audio_unlocked');
+    }).catch(() => {});
+  } catch (_) {}
+}
+
 async function beep() {
   try {
-    const audio = new Audio(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn);
-    audio.volume = Math.max(0, Math.min(1, Number(preferences.volume) / 100));
-    await audio.play();
+    if (!alertAudio || !alertAudioUnlocked || alertAudio.src !== new URL(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn, location.href).href) {
+      alertAudio = new Audio(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn);
+      alertAudio.preload = 'auto';
+    }
+    alertAudio.volume = Math.max(0, Math.min(1, Number(preferences.volume) / 100));
+    alertAudio.currentTime = 0;
+    await alertAudio.play();
+    alertAudioUnlocked = true;
     console.info('[ALERT] web audio played', preferences.tone);
     return true;
   } catch (e) {
@@ -462,11 +488,13 @@ async function rejectTrip() {
     });
     if (!r.ok) throw Error(r.status);
     selected = await r.json();
-    trips = trips.map(t => t.id === selected.id ? selected : t);
+    rejectedTripIds.add(String(selected.id));
+    localStorage.setItem('livre_driver_rejected_trips', JSON.stringify([...rejectedTripIds]));
+    trips = trips.filter(t => String(t.id) !== String(selected.id));
     selectNextPendingTrip();
-    showNotice('Rechazo registrado. Se avisó al pasajero por WhatsApp.');
+    showNotice('Rechazo registrado. El viaje queda disponible para otro conductor.');
   } catch (e) {
-    showNotice('No se pudo registrar el rechazo ni avisar al pasajero.');
+    showNotice('No se pudo registrar el rechazo.');
   }
 }
 
@@ -562,7 +590,7 @@ async function loadTrips() {
     const nextTrips = await r.json();
     receivedCount = Array.isArray(nextTrips) ? nextTrips.length : null;
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
-    trips = nextTrips;
+    trips = nextTrips.filter(t => !rejectedTripIds.has(String(t.id)));
     if (selected) selected = trips.find(t => t.id === selected.id) || null;
     // No conservar en pantalla un viaje terminal cuando llegó uno asignado nuevo.
     // El polling ya anuncia el nuevo viaje, pero render() quedaba con el anterior
@@ -1190,6 +1218,7 @@ function setAuthMode(mode) {
 
 async function login(e) {
   e.preventDefault();
+  unlockAlertAudio();
   $('loginError').classList.add('hidden');
 
   const user = $('username').value.trim();
@@ -1304,9 +1333,9 @@ $('historyModal').onclick = e => { if (e.target.id === 'historyModal') $('histor
 $('settingsButton').onclick = () => $('settingsModal').classList.remove('hidden');
 $('settingsClose').onclick = () => $('settingsModal').classList.add('hidden');
 $('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') settingsClose(); };
-$('tonePreview').onclick = beep;
-$('arrivalTone').onchange = e => { preferences.tone = e.target.value; savePreferences(); };
-$('volumeRange').oninput = e => { preferences.volume = Number(e.target.value); $('volumeValue').textContent = `${preferences.volume}%`; savePreferences(); };
+$('tonePreview').onclick = () => { unlockAlertAudio(); beep(); };
+$('arrivalTone').onchange = e => { preferences.tone = e.target.value; alertAudioUnlocked = false; alertAudio = null; savePreferences(); };
+$('volumeRange').oninput = e => { preferences.volume = Number(e.target.value); if (alertAudio) alertAudio.volume = preferences.volume / 100; $('volumeValue').textContent = `${preferences.volume}%`; savePreferences(); };
 $('fontScaleRange').oninput = e => { preferences.fontScale = Number(e.target.value); $('fontScaleValue').textContent = `${Math.round(preferences.fontScale * 100)}%`; savePreferences(); loadPreferences(); };
 
 document.addEventListener('visibilitychange', () => {

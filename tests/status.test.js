@@ -56,8 +56,16 @@ describe('driver operational status synchronization', () => {
   it('moves to the next pending trip after resolving only the selected rejection', () => {
     assert.match(source, /function selectNextPendingTrip\(\)/);
     assert.match(source, /const next = trips\.find\(t => t\.status === 'assigned'\)/);
-    assert.match(source, /trips = trips\.map\(t => t\.id === selected\.id \? selected : t\)/);
+    assert.match(source, /rejectedTripIds\.add\(String\(selected\.id\)\)/);
+    assert.match(source, /trips = trips\.filter\(t => String\(t\.id\) !== String\(selected\.id\)\)/);
     assert.match(source, /selectNextPendingTrip\(\);/);
+  });
+
+  it('keeps a rejected trip available to other drivers without passenger messaging', () => {
+    const router = fs.readFileSync('../livre-cloud/app/mobility/router.py', 'utf8');
+    assert.match(router, /SET status = 'searching'/);
+    assert.match(router, /assigned_driver_user_id = NULL/);
+    assert.doesNotMatch(router, /send_rejection_message\(rejected_trip\)/);
   });
 
   it('announces each newly assigned trip, including when an older trip stays open', () => {
