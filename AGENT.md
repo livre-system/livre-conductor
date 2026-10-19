@@ -56,3 +56,18 @@ Aliases históricos o alternativos no deben tomarse como URLs principales sin ve
 - La corrección actual vive en `js/app.js` y usa `assets/audio/car-horn.mp3`, `bus-horn.mp3` y `truck-horn.mp3`, conservando los `.ogg` existentes como fallback.
 - Validación automatizada obligatoria: `node --test tests/*.test.js`, `node --check js/app.js` y `git diff --check`.
 - La validación real del sonido debe hacerse por separado en Safari móvil y Brave: tocar la pantalla antes de recibir un viaje, confirmar el desbloqueo y luego verificar un viaje nuevo. Chromium no sustituye la prueba de Safari.
+
+## BACKUP INTEGRAL DE LIVRE — 19/10/2026
+
+- Fecha y hora del backup: 19/10/2026 04:40:50 ART (07:40:50 UTC). La publicación de los repositorios privados terminó a las 04:42:11 ART.
+- Backup local completo de los cuatro repositorios, incluyendo `.git`, archivos trackeados, ignorados y no trackeados: `/home/calambre/Backups/Livre/20261019_044050`.
+- El backup local contiene cuatro archivos `.tar.zst`, con manifiesto y `SHA256SUMS`; los cuatro checksums coincidieron y los cuatro archivos pudieron listarse correctamente.
+- Copias privadas en GitHub, sin sobrescribir los repositorios originales:
+  - `livre-cloud`: https://github.com/livre-system/livre-cloud-backup-20261019
+  - `livre-chatbot`: https://github.com/livre-system/livre-chatbot-backup-20261019
+  - `livre-pasajeros`: https://github.com/livre-system/livre-pasajeros-backup-20261019
+  - `livre-conductor`: https://github.com/livre-system/livre-conductor-backup-20261019
+- Las copias remotas preservan el historial Git y las ramas existentes. En `livre-cloud` también se publicó la rama `backup-20261019_044211` con los cambios locales detectados; su commit verificado es `e66e9b4fc4e77eeab46c8e378b17d6c08817cef3`.
+- `.env.local` de `livre-chatbot` y `credenciales-renombradas-187.md` de `livre-conductor` fueron excluidos de GitHub por seguridad. Quedaron incluidos únicamente en el backup local protegido.
+- Verificación remota: los cuatro repositorios figuran como privados y se confirmaron sus ramas e historiales mediante GitHub.
+- Este backup no ejecutó deploys, no modificó producción, no creó viajes y no alteró APKs.
