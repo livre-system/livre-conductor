@@ -86,9 +86,23 @@ describe('driver operational status synchronization', () => {
   it('moves to the next pending trip after resolving only the selected rejection', () => {
     assert.match(source, /function selectNextPendingTrip\(\)/);
     assert.match(source, /const next = trips\.find\(t => t\.status === 'assigned'\)/);
-    assert.match(source, /rejectedTripIds\.add\(String\(selected\.id\)\)/);
-    assert.match(source, /trips = trips\.filter\(t => String\(t\.id\) !== String\(selected\.id\)\)/);
+    assert.match(source, /rememberRejectedTrip\(rejectedId\)/);
+    assert.match(source, /trips = trips\.filter\(t => String\(t\.id\) !== rejectedId\)/);
     assert.match(source, /selectNextPendingTrip\(\);/);
+  });
+
+  it('keeps the UI rejection independent from localStorage failures', () => {
+    assert.match(source, /function rememberRejectedTrip\(id\)/);
+    const start = source.indexOf('function rememberRejectedTrip');
+    const end = source.indexOf('async function rejectTrip', start);
+    const context = {
+      rejectedTripIds: new Set(),
+      localStorage: { setItem() { throw Error('quota'); } },
+      diagLog() {},
+    };
+    require('vm').runInNewContext(`${source.slice(start, end)}; this.rememberRejectedTrip = rememberRejectedTrip;`, context);
+    assert.strictEqual(context.rememberRejectedTrip(187), '187');
+    assert.ok(context.rejectedTripIds.has('187'));
   });
 
   it('keeps a rejected trip available to other drivers without passenger messaging', () => {

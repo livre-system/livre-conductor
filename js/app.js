@@ -513,6 +513,17 @@ async function acceptTrip() {
   speak('Viaje aceptado. Comenzando a compartir ubicación.');
 }
 
+function rememberRejectedTrip(id) {
+  const rejectedId = String(id);
+  rejectedTripIds.add(rejectedId);
+  try {
+    localStorage.setItem('livre_driver_rejected_trips', JSON.stringify([...rejectedTripIds]));
+  } catch (e) {
+    diagLog('rejected_trip_persistence_failed', { error: String(e?.message || e).slice(0, 80) });
+  }
+  return rejectedId;
+}
+
 async function rejectTrip() {
   if (!selected || !confirm('¿Rechazar este viaje?')) return;
   if (DEMO) {
@@ -520,14 +531,14 @@ async function rejectTrip() {
     return;
   }
   try {
+    const rejectedId = String(selected.id);
     const r = await fetch(`${API}/mobility/driver/trips/${selected.id}/reject`, {
       method: 'POST', headers: h(),
     });
     if (!r.ok) throw Error(r.status);
-    selected = await r.json();
-    rejectedTripIds.add(String(selected.id));
-    localStorage.setItem('livre_driver_rejected_trips', JSON.stringify([...rejectedTripIds]));
-    trips = trips.filter(t => String(t.id) !== String(selected.id));
+    await r.json();
+    rememberRejectedTrip(rejectedId);
+    trips = trips.filter(t => String(t.id) !== rejectedId);
     selectNextPendingTrip();
     showNotice('Rechazo registrado. El viaje queda disponible para otro conductor.');
   } catch (e) {
