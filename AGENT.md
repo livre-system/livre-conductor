@@ -71,3 +71,11 @@ Aliases históricos o alternativos no deben tomarse como URLs principales sin ve
 - `.env.local` de `livre-chatbot` y `credenciales-renombradas-187.md` de `livre-conductor` fueron excluidos de GitHub por seguridad. Quedaron incluidos únicamente en el backup local protegido.
 - Verificación remota: los cuatro repositorios figuran como privados y se confirmaron sus ramas e historiales mediante GitHub.
 - Este backup no ejecutó deploys, no modificó producción, no creó viajes y no alteró APKs.
+
+## Consistencia del canal de notificaciones (2026-10-19)
+
+- El canal activo de viajes es `livre_trips_v2`.
+- `PermissionGate.java`, `MainActivity.java` y `LocationService.java` deben crear o consultar exactamente `livre_trips_v2`; no reintroducir `livre_trips`.
+- Se agregó una regresión estática que compara las referencias de esos tres componentes.
+- Validación local: `node --test tests/*.test.js` → `33 passed, 0 failed`; `node --check js/app.js` → OK; `git diff --check` → OK.
+- No se construyó ni distribuyó APK. La verificación en dispositivo/emulador y la disponibilidad real del canal quedan pendientes.
