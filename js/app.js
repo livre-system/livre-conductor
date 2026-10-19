@@ -226,12 +226,12 @@ function formatFare(t) {
 }
 
 function commercialFareValues(t) {
-  const customerFare = t?.final_fare ?? t?.fare;
+  const customerFare = t?.original_fare ?? t?.fare;
   if (customerFare == null || customerFare === '' || !Number.isFinite(Number(customerFare))) return null;
   const customer = Number(customerFare);
-  const commission = customer * 0.15;
-  const driver = customer * 0.85;
-  return { customer, commission, driver };
+  const driver = t?.driver_fare != null ? Number(t.driver_fare) : customer * 0.85;
+  if (!Number.isFinite(driver)) return null;
+  return { customer, commission: customer - driver, driver };
 }
 
 function driverFareHtml(t) {
@@ -241,7 +241,7 @@ function driverFareHtml(t) {
 }
 
 function finalFareHtml(t) {
-  const finalFare = t?.final_fare ?? t?.fare;
+  const finalFare = t?.original_fare ?? t?.fare;
   if (finalFare == null || finalFare === '') return '';
   return `<div class="fare-row"><span class="fare-label">Tarifa cliente (100%)</span><span class="fare-value">${formatFare({ fare: finalFare })}</span></div>`;
 }
@@ -444,8 +444,23 @@ async function acceptTrip() {
 }
 
 async function rejectTrip() {
-  if (!confirm('¿Rechazar este viaje?')) return;
-  await changeStatus('cancelled');
+  if (!selected || !confirm('¿Rechazar este viaje?')) return;
+  if (DEMO) {
+    await changeStatus('cancelled');
+    return;
+  }
+  try {
+    const r = await fetch(`${API}/mobility/driver/trips/${selected.id}/reject`, {
+      method: 'POST', headers: h(),
+    });
+    if (!r.ok) throw Error(r.status);
+    selected = await r.json();
+    trips = trips.map(t => t.id === selected.id ? selected : t);
+    render();
+    showNotice('Rechazo registrado. Se avisó al pasajero por WhatsApp.');
+  } catch (e) {
+    showNotice('No se pudo registrar el rechazo ni avisar al pasajero.');
+  }
 }
 
 async function nextStatus() {
