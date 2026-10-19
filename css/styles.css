@@ -776,3 +776,10 @@ body[data-theme="light"] .leaflet-control-attribution { background: #fff9 !impor
   .operational-panel { padding: 8px; }
   .operational-panel-button { min-height: 50px; padding-left: 2px; padding-right: 2px; font-size: 9px; }
 }
+
+.trip-queue { margin: 14px 0 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.trip-queue-title { margin-bottom: 8px; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.trip-queue-item { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--white); text-align: left; cursor: pointer; }
+.trip-queue-item:first-of-type { border-top: 0; }
+.trip-queue-item small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+.trip-queue-arrow { color: var(--accent); font-size: 11px; font-weight: 700; }

@@ -30,10 +30,27 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /selected\.status === 'completed' \|\| selected\.status === 'cancelled'/);
   });
 
-  it('shows the official final total after completing a trip', () => {
+  it('shows net driver fare while a trip is active and gross fare when completed', () => {
+    assert.match(source, /function driverFareHtml\(t\)/);
+    assert.match(source, /!isCompleted \? driverFareHtml\(t\) : ''/);
     assert.match(source, /function finalFareHtml\(t\)/);
-    assert.match(source, /const finalFare = t\?\.fare \?\? t\?\.final_fare/);
+    assert.match(source, /const finalFare = t\?\.final_fare \?\? t\?\.fare/);
     assert.match(source, /final-fare-card/);
+
+    const fareSource = source.slice(source.indexOf('function formatFare'), source.indexOf('function serviceTypeLabel'));
+    const context = { Intl };
+    require('vm').runInNewContext(`${fareSource}; this.driverFareHtml = driverFareHtml; this.finalFareHtml = finalFareHtml;`, context);
+    assert.match(context.driverFareHtml({ fare: 4800 }), /4\.080/);
+    assert.match(context.driverFareHtml({ fare: 4800, final_fare: 4000 }), /3\.400/);
+    assert.match(context.finalFareHtml({ fare: 4800, final_fare: 4000 }), /4\.000/);
+  });
+
+  it('renders every assigned trip while another trip is selected', () => {
+    assert.match(source, /function tripQueueHtml\(current\)/);
+    assert.match(source, /data-trip-select=/);
+    assert.match(source, /function bindTripQueue\(\)/);
+    assert.match(source, /trips\.filter\(t => t\.status === 'assigned'/);
+    assert.match(source, /selected = found;/);
   });
 
   it('renders demo trips without requiring a JWT token', () => {

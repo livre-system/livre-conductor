@@ -225,16 +225,48 @@ function formatFare(t) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(Number(v));
 }
 
-function commercialFareHtml(t) {
-  const driverFare = t?.driver_fare ?? t?.fare;
-  if (driverFare == null || driverFare === '') return '';
-  return `<div class="fare-row"><span class="fare-label">Tarifa para el conductor</span><span class="fare-value">${formatFare({ fare: driverFare })}</span></div>`;
+function commercialFareValues(t) {
+  const customerFare = t?.final_fare ?? t?.fare;
+  if (customerFare == null || customerFare === '' || !Number.isFinite(Number(customerFare))) return null;
+  const customer = Number(customerFare);
+  const commission = customer * 0.15;
+  const driver = customer * 0.85;
+  return { customer, commission, driver };
+}
+
+function driverFareHtml(t) {
+  const values = commercialFareValues(t);
+  if (!values) return '';
+  return `<div class="fare-row"><span class="fare-label">Tarifa conductor (85%)</span><span class="fare-value">${formatFare({ fare: values.driver })}</span></div>`;
 }
 
 function finalFareHtml(t) {
-  const finalFare = t?.fare ?? t?.final_fare;
+  const finalFare = t?.final_fare ?? t?.fare;
   if (finalFare == null || finalFare === '') return '';
-  return `<div class="fare-row"><span class="fare-label">Total final</span><span class="fare-value">${formatFare({ fare: finalFare })}</span></div>`;
+  return `<div class="fare-row"><span class="fare-label">Tarifa cliente (100%)</span><span class="fare-value">${formatFare({ fare: finalFare })}</span></div>`;
+}
+
+function tripQueueHtml(current) {
+  const assigned = trips.filter(t => t.status === 'assigned' && String(t.id) !== String(current?.id));
+  if (!assigned.length) return '';
+  return `<section class="trip-queue" aria-label="Pedidos nuevos">
+    <div class="trip-queue-title">Otros pedidos recibidos</div>
+    ${assigned.map(t => `<button type="button" class="trip-queue-item" data-trip-select="${esc(t.id)}">
+      <span><strong>${esc(t.origin)}</strong><small>${esc(t.destination)}</small></span>
+      <span class="trip-queue-arrow">Ver</span>
+    </button>`).join('')}
+  </section>`;
+}
+
+function bindTripQueue() {
+  document.querySelectorAll('[data-trip-select]').forEach(button => {
+    button.onclick = () => {
+      const found = trips.find(t => String(t.id) === String(button.dataset.tripSelect));
+      if (!found) return;
+      selected = found;
+      render();
+    };
+  });
 }
 
 function serviceTypeLabel(t) {
@@ -283,7 +315,6 @@ function render() {
   // ── Viaje asignado (alerta) ──────────────────────────────── */
   if (st === 'assigned') {
     sheet.className = 'sheet alert-mode';
-    const fare = formatFare(t);
     inner.innerHTML = `
       ${operationalControlsHtml()}
       <div class="trip-alert">
@@ -319,14 +350,16 @@ function render() {
           <span class="fare-label">Tipo de servicio</span>
           <span class="fare-value">${serviceTypeLabel(t) ? esc(serviceTypeLabel(t)) : 'No informado'}</span>
         </div>
-        ${commercialFareHtml(t)}
+        ${driverFareHtml(t)}
 
         <div class="alert-actions">
           <button class="btn-accept" onclick="acceptTrip()">✓ ACEPTAR</button>
           <button class="btn-reject" onclick="rejectTrip()">✕ Rechazar</button>
         </div>
       </div>
+      ${tripQueueHtml(t)}
       <div id="notice" class="notice hidden"></div>`;
+    bindTripQueue();
     return;
   }
 
@@ -368,9 +401,13 @@ function render() {
         </div>
       </div>
 
+      ${!isCompleted ? driverFareHtml(t) : ''}
+
       <div class="primary-actions">${primaryBtn}</div>
 
       ${isCompleted ? `<div class="final-fare-card">${finalFareHtml(t)}</div>` : ''}
+
+      ${tripQueueHtml(t)}
 
       <div class="secondary-actions">
         <button class="btn-tool" id="btnHandy" title="Conectar con operador">
@@ -393,6 +430,7 @@ function render() {
     // TODO (Hermes): activar conducción por voz con Libi / ElevenLabs
     showNotice('Conducción por voz — próximamente disponible.');
   };
+  bindTripQueue();
 }
 
 /* ══════════════════════════════════════════════════════════════
