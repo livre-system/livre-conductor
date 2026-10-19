@@ -189,38 +189,52 @@ const TONE_SOURCES = {
 
 let alertAudio = null;
 let alertAudioUnlocked = false;
+let alertAudioUnlockPromise = null;
 
 function unlockAlertAudio() {
-  if (alertAudioUnlocked) return;
+  if (alertAudioUnlocked) return Promise.resolve(true);
+  if (alertAudioUnlockPromise) return alertAudioUnlockPromise;
   try {
     alertAudio = new Audio(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn);
     alertAudio.preload = 'auto';
     alertAudio.volume = 0;
-    const unlock = alertAudio.play();
-    if (unlock?.then) unlock.then(() => {
+    alertAudioUnlockPromise = alertAudio.play().then(() => {
       alertAudio.pause();
       alertAudio.currentTime = 0;
       alertAudio.volume = Math.max(0, Math.min(1, Number(preferences.volume) / 100));
       alertAudioUnlocked = true;
       diagLog('alert_audio_unlocked');
-    }).catch(() => {});
-  } catch (_) {}
+      return true;
+    }).catch(() => {
+      alertAudioUnlockPromise = null;
+      return false;
+    });
+    return alertAudioUnlockPromise;
+  } catch (_) {
+    return Promise.resolve(false);
+  }
 }
 
 async function beep() {
   try {
-    if (!alertAudio || !alertAudioUnlocked || alertAudio.src !== new URL(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn, location.href).href) {
+    if (!alertAudioUnlocked) {
+      const unlocked = await unlockAlertAudio();
+      if (!unlocked) throw Error('audio_locked');
+    }
+    if (!alertAudio || alertAudio.src !== new URL(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn, location.href).href) {
       alertAudio = new Audio(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn);
       alertAudio.preload = 'auto';
+      alertAudioUnlocked = false;
+      const unlocked = await unlockAlertAudio();
+      if (!unlocked) throw Error('audio_locked');
     }
     alertAudio.volume = Math.max(0, Math.min(1, Number(preferences.volume) / 100));
     alertAudio.currentTime = 0;
     await alertAudio.play();
-    alertAudioUnlocked = true;
     console.info('[ALERT] web audio played', preferences.tone);
     return true;
   } catch (e) {
-    console.warn('[ALERT] web audio rejected', { tone: preferences.tone, error: String(e) });
+    console.warn('[ALERT] web audio blocked', e);
     return false;
   }
 }
@@ -1334,7 +1348,7 @@ $('settingsButton').onclick = () => $('settingsModal').classList.remove('hidden'
 $('settingsClose').onclick = () => $('settingsModal').classList.add('hidden');
 $('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') settingsClose(); };
 $('tonePreview').onclick = () => { unlockAlertAudio(); beep(); };
-$('arrivalTone').onchange = e => { preferences.tone = e.target.value; alertAudioUnlocked = false; alertAudio = null; savePreferences(); };
+$('arrivalTone').onchange = e => { preferences.tone = e.target.value; alertAudioUnlocked = false; alertAudioUnlockPromise = null; alertAudio = null; savePreferences(); };
 $('volumeRange').oninput = e => { preferences.volume = Number(e.target.value); if (alertAudio) alertAudio.volume = preferences.volume / 100; $('volumeValue').textContent = `${preferences.volume}%`; savePreferences(); };
 $('fontScaleRange').oninput = e => { preferences.fontScale = Number(e.target.value); $('fontScaleValue').textContent = `${Math.round(preferences.fontScale * 100)}%`; savePreferences(); loadPreferences(); };
 
