@@ -269,6 +269,13 @@ function bindTripQueue() {
   });
 }
 
+function selectNextPendingTrip() {
+  const next = trips.find(t => t.status === 'assigned');
+  selected = next || null;
+  render();
+  return next;
+}
+
 function serviceTypeLabel(t) {
   if (t?.service_type_name) return t.service_type_name;
   return String(t?.service_type_id) === '1' ? 'Premium' : String(t?.service_type_id) === '2' ? 'Ahorro' : null;
@@ -456,7 +463,7 @@ async function rejectTrip() {
     if (!r.ok) throw Error(r.status);
     selected = await r.json();
     trips = trips.map(t => t.id === selected.id ? selected : t);
-    render();
+    selectNextPendingTrip();
     showNotice('Rechazo registrado. Se avisó al pasajero por WhatsApp.');
   } catch (e) {
     showNotice('No se pudo registrar el rechazo ni avisar al pasajero.');

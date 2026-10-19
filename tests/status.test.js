@@ -53,6 +53,13 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /selected = found;/);
   });
 
+  it('moves to the next pending trip after resolving only the selected rejection', () => {
+    assert.match(source, /function selectNextPendingTrip\(\)/);
+    assert.match(source, /const next = trips\.find\(t => t\.status === 'assigned'\)/);
+    assert.match(source, /trips = trips\.map\(t => t\.id === selected\.id \? selected : t\)/);
+    assert.match(source, /selectNextPendingTrip\(\);/);
+  });
+
   it('announces each newly assigned trip, including when an older trip stays open', () => {
     assert.match(source, /const freshTrips = trips\.filter\(t => t\.status === 'assigned'/);
     assert.match(source, /freshTrips\.forEach\(announceNewTrip\)/);
