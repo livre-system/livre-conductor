@@ -352,10 +352,16 @@ function tripQueueHtml(current) {
   const pending = trips.filter(t => ['searching', 'assigned'].includes(t.status) && String(t.id) !== String(current?.id));
   if (!pending.length) return '';
   return `<section class="trip-queue" aria-label="Pedidos nuevos">
-    <div class="trip-queue-title">Otros pedidos recibidos</div>
+    <div class="trip-queue-heading">
+      <div><div class="trip-queue-title">Otros pedidos recibidos</div><small>${pending.length} pendiente${pending.length === 1 ? '' : 's'}</small></div>
+      <div class="trip-queue-tools">
+        <button type="button" class="trip-queue-tool" data-trip-refresh>Actualizar</button>
+        <button type="button" class="trip-queue-tool danger" data-trip-clear>Limpiar</button>
+      </div>
+    </div>
     ${pending.map(t => `<button type="button" class="trip-queue-item" data-trip-select="${esc(t.id)}">
       <span><strong>${esc(t.origin)}</strong><small>${esc(t.destination)}</small></span>
-      <span class="trip-queue-arrow">Ver</span>
+      <span class="trip-queue-arrow">Ver ›</span>
     </button>`).join('')}
   </section>`;
 }
@@ -369,6 +375,23 @@ function bindTripQueue() {
       render();
     };
   });
+  document.querySelectorAll('[data-trip-refresh]').forEach(button => {
+    button.onclick = () => { button.disabled = true; loadTrips().finally(() => { button.disabled = false; }); };
+  });
+  document.querySelectorAll('[data-trip-clear]').forEach(button => {
+    button.onclick = () => clearPendingTrips();
+  });
+}
+
+function clearPendingTrips() {
+  const pendingIds = trips
+    .filter(t => ['searching', 'assigned'].includes(t.status) && String(t.id) !== String(selected?.id))
+    .map(t => String(t.id));
+  pendingIds.forEach(id => rememberRejectedTrip(id));
+  trips = trips.filter(t => !pendingIds.includes(String(t.id)));
+  if (selected && pendingIds.includes(String(selected.id))) selected = null;
+  selectNextPendingTrip();
+  showNotice(pendingIds.length ? 'Ofertas limpiadas de este dispositivo.' : 'No hay ofertas pendientes para limpiar.');
 }
 
 function selectNextPendingTrip() {
@@ -495,7 +518,9 @@ function render() {
 
         <div class="alert-actions">
           <button class="btn-accept" onclick="acceptTrip()">✓ ACEPTAR</button>
-          ${st === 'assigned' ? '<button class="btn-reject" onclick="rejectTrip()">✕ Rechazar</button>' : ''}
+          ${st === 'assigned'
+            ? '<button class="btn-reject" onclick="rejectTrip()">✕ Rechazar</button>'
+            : '<button class="btn-reject" onclick="dismissTrip()">✕ No aceptar</button>'}
         </div>
       </div>
       ${tripQueueHtml(t)}
@@ -597,6 +622,15 @@ async function rejectTrip() {
   } catch (e) {
     showNotice('No se pudo registrar el rechazo.');
   }
+}
+
+function dismissTrip() {
+  if (!selected) return;
+  const dismissedId = rememberRejectedTrip(selected.id);
+  trips = trips.filter(t => String(t.id) !== dismissedId);
+  selected = null;
+  selectNextPendingTrip();
+  showNotice('Oferta ocultada en este dispositivo. Sigue disponible para otros conductores.');
 }
 
 async function nextStatus() {
