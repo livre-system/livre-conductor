@@ -274,8 +274,14 @@ function installAudioGestureUnlock() {
 
 function loadPreferences() {
   try { preferences = { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') }; } catch (_) {}
+  if (!['dark', 'light'].includes(preferences.theme)) preferences.theme = DEFAULT_PREFS.theme;
+  if (!['car_horn', 'bell'].includes(preferences.tone)) preferences.tone = DEFAULT_PREFS.tone;
+  if (!Number.isFinite(Number(preferences.volume))) preferences.volume = DEFAULT_PREFS.volume;
+  if (!['0.9', '1', '1.1', '1.2'].includes(String(preferences.fontScale))) preferences.fontScale = DEFAULT_PREFS.fontScale;
   document.documentElement.style.setProperty('--font-scale', preferences.fontScale);
   document.body.dataset.theme = preferences.theme;
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeMeta) themeMeta.content = preferences.theme === 'light' ? '#f7f8fa' : '#07080a';
   if ($('themeToggle')) $('themeToggle').textContent = preferences.theme === 'light' ? '☾' : '☼';
   if ($('arrivalTone')) $('arrivalTone').value = preferences.tone;
   if ($('volumeRange')) { $('volumeRange').value = preferences.volume; $('volumeValue').textContent = `${preferences.volume}%`; }
