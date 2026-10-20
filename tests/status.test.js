@@ -32,13 +32,15 @@ describe('driver operational status synchronization', () => {
   it('only suppresses new-trip announcements while preserving assigned trips', () => {
     assert.match(source, /function announceNewTrip\(t\)/);
     assert.match(source, /operationalStatus === 'out_of_service' \|\| !t/);
-    assert.match(source, /selected = trips\.find\(t => t\.status === 'assigned'\) \|\|/);
+    assert.match(source, /function selectPrimaryTrip\(list, current\)/);
+    assert.match(source, /return list\.find\(t => t\.status === 'assigned'\) \|\| null/);
     assert.match(source, /selected\.status === 'completed' \|\| selected\.status === 'cancelled'/);
   });
 
-  it('does not leave a terminal trip card when no active trip remains', () => {
-    assert.match(source, /if \(!selected \|\| selected\.status === 'completed' \|\| selected\.status === 'cancelled'\)/);
-    assert.match(source, /trips\.find\(t => t\.status === 'assigned'\) \|\|[\s\S]{0,160}trips\.find\(t => t\.status !== 'completed' && t\.status !== 'cancelled'\) \|\| null/);
+  it('does not leave a terminal or searching trip card when no driver trip remains', () => {
+    assert.match(source, /const DRIVER_CARD_STATUSES = \['assigned', 'arriving', 'in_progress'\]/);
+    assert.match(source, /selected = trips\.find\(t => DRIVER_CARD_STATUSES\.includes\(t\.status\)\) \|\| null/);
+    assert.match(source, /selected && DRIVER_CARD_STATUSES\.includes\(selected\.status\)/);
   });
 
   it('does not reuse a terminal selection from the previous polling response', () => {

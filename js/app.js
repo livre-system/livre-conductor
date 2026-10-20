@@ -390,9 +390,13 @@ function orderTripsNewestFirst(list) {
   });
 }
 
+const DRIVER_CARD_STATUSES = ['assigned', 'arriving', 'in_progress'];
+
 function selectPrimaryTrip(list, current) {
   // Una solicitud nueva reemplaza solo otra solicitud pendiente. Si ya hay
   // un viaje aceptado/en curso, ese viaje sigue siendo la tarjeta principal.
+  // Los viajes `searching` todavía no pertenecen a este conductor: no deben
+  // convertirse en una tarjeta incompleta mientras otro conductor los toma.
   // Siempre devolvemos la instancia recién recibida: conservar `current`
   // podía dejar origen/destino/status de una respuesta anterior en pantalla.
   const latestCurrent = current && list.find(t => String(t.id) === String(current.id));
@@ -419,8 +423,12 @@ const ACTION_LABEL = {
 function render() {
   clearNotice();
 
-  // Resolvemos qué viaje mostrar
-  const t = selected || trips.find(x => x.status === 'assigned');
+  // Resolvemos qué viaje mostrar. Un viaje `searching` es una oferta global,
+  // no una tarjeta perteneciente a este conductor; mostrarlo como activo deja
+  // una tarjeta incompleta que tapa el panel operativo.
+  const t = selected && DRIVER_CARD_STATUSES.includes(selected.status)
+    ? selected
+    : trips.find(x => x.status === 'assigned');
 
   const sheet  = $('sheet');
   const inner  = $('sheetInner');
@@ -684,8 +692,7 @@ async function loadTrips() {
     // Si no queda otro viaje activo, render() debe mostrar solo el panel
     // operativo; conservarlo dejaba una ruta histórica visible sin sentido.
     if (!selected || selected.status === 'completed' || selected.status === 'cancelled')
-      selected = trips.find(t => t.status === 'assigned') ||
-        trips.find(t => t.status !== 'completed' && t.status !== 'cancelled') || null;
+      selected = trips.find(t => DRIVER_CARD_STATUSES.includes(t.status)) || null;
     render();
     // Un viaje asignado existente puede seguir abierto mientras llegan otros.
     // Anunciar cada ID nuevo evita que el primero silencie los siguientes.
