@@ -42,6 +42,11 @@ describe('driver operational status synchronization', () => {
     require('vm').runInNewContext(`${fareSource}; this.driverFareHtml = driverFareHtml; this.finalFareHtml = finalFareHtml;`, context);
     assert.match(context.driverFareHtml({ fare: 4800 }), /4\.080/);
     assert.match(context.driverFareHtml({ fare: 4800, final_fare: 4000 }), /4\.080/);
+    assert.match(context.driverFareHtml({ fare: 4800, service_type_id: '2' }), /4\.800/);
+    assert.match(context.driverFareHtml({ fare: 4800, service_type_id: '2' }), /0% comisión/);
+    assert.match(context.driverFareHtml({ fare: 4800, service_type_id: '1' }), /15% comisión/);
+    assert.match(context.driverFareHtml({ fare: 4800, status: 'completed', original_fare: 4800 }), /4\.800/);
+    assert.doesNotMatch(source, /btnHandy|btnVoice|Handy|Libi/);
     assert.match(context.finalFareHtml({ fare: 4800, final_fare: 4000 }), /4\.800/);
   });
 

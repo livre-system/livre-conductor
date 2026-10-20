@@ -302,15 +302,32 @@ function commercialFareValues(t) {
   const customerFare = t?.original_fare ?? t?.fare;
   if (customerFare == null || customerFare === '' || !Number.isFinite(Number(customerFare))) return null;
   const customer = Number(customerFare);
-  const driver = t?.driver_fare != null ? Number(t.driver_fare) : customer * 0.85;
+  let driver;
+  if (t?.driver_fare != null) {
+    driver = Number(t.driver_fare);
+  } else if (t?.status === 'completed') {
+    // Legacy completed trips must display their persisted historical amount.
+    driver = Number(t?.fare ?? t?.original_fare);
+  } else {
+    driver = String(t?.service_type_id) === '2' ? customer : customer * 0.85;
+  }
   if (!Number.isFinite(driver)) return null;
   return { customer, commission: customer - driver, driver };
+}
+
+function driverFareLabel(t) {
+  if (t?.discount_percentage != null && Number.isFinite(Number(t.discount_percentage))) {
+    return `Tarifa conductor (${Number(t.discount_percentage)}% comisión)`;
+  }
+  if (String(t?.service_type_id) === '2') return 'Tarifa conductor (0% comisión)';
+  if (t?.service_type_id != null) return 'Tarifa conductor (15% comisión)';
+  return 'Tarifa conductor';
 }
 
 function driverFareHtml(t) {
   const values = commercialFareValues(t);
   if (!values) return '';
-  return `<div class="fare-row"><span class="fare-label">Tarifa conductor (85%)</span><span class="fare-value">${formatFare({ fare: values.driver })}</span></div>`;
+  return `<div class="fare-row"><span class="fare-label">${driverFareLabel(t)}</span><span class="fare-value">${formatFare({ fare: values.driver })}</span></div>`;
 }
 
 function finalFareHtml(t) {
@@ -512,28 +529,10 @@ function render() {
       ${isCompleted ? `<div class="final-fare-card">${finalFareHtml(t)}</div>` : ''}
 
       ${tripQueueHtml(t)}
-
-      <div class="secondary-actions">
-        <button class="btn-tool" id="btnHandy" title="Conectar con operador">
-          📻 Handy
-        </button>
-        <button class="btn-tool" id="btnVoice" title="Conducción por voz con Libi">
-          🎙️ Libi
-        </button>
-      </div>
     </div>
     ${operationalControlsHtml()}
     <div id="notice" class="notice hidden"></div>`;
 
-  // Botones secundarios — UI lista, lógica para Hermes
-  $('btnHandy').onclick = () => {
-    // TODO (Hermes): abrir canal Handy / POST /mobility/driver/handie
-    showNotice('Canal Handy — próximamente disponible.');
-  };
-  $('btnVoice').onclick = () => {
-    // TODO (Hermes): activar conducción por voz con Libi / ElevenLabs
-    showNotice('Conducción por voz — próximamente disponible.');
-  };
   bindTripQueue();
 }
 
