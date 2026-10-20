@@ -1370,8 +1370,9 @@ function openApp() {
   $('loginView').classList.add('hidden');
   $('appView').classList.remove('hidden');
   // La sesión nueva no debe mostrar la tarjeta de la identidad anterior
-  // mientras llega su primer snapshot de viajes.
+  // mientras llega el primer snapshot del conductor actual.
   render();
+  $('sheetInner').scrollTop = 0;
   initMap();
   startNativeBackgroundLocation();
   startGps();

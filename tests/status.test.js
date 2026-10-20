@@ -47,7 +47,7 @@ describe('driver operational status synchronization', () => {
   });
 
   it('clears the previous driver card before loading the new session snapshot', () => {
-    assert.match(source, /\$\('appView'\)\.classList\.remove\('hidden'\);[\s\S]{0,180}render\(\);[\s\S]{0,80}initMap\(\);/);
+    assert.match(source, /\$\('appView'\)\.classList\.remove\('hidden'\);[\s\S]{0,180}render\(\);[\s\S]{0,100}\$\('sheetInner'\)\.scrollTop = 0;[\s\S]{0,80}initMap\(\);/);
   });
 
   it('shows net driver fare while a trip is active and gross fare when completed', () => {
