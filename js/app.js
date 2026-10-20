@@ -396,8 +396,8 @@ function selectPrimaryTrip(list, current) {
   // Siempre devolvemos la instancia recién recibida: conservar `current`
   // podía dejar origen/destino/status de una respuesta anterior en pantalla.
   const latestCurrent = current && list.find(t => String(t.id) === String(current.id));
-  if (latestCurrent && (latestCurrent.status === 'arriving' || latestCurrent.status === 'in_progress')) return latestCurrent;
-  return list.find(t => t.status === 'assigned') || latestCurrent || null;
+  if (latestCurrent && ['arriving', 'in_progress'].includes(latestCurrent.status)) return latestCurrent;
+  return list.find(t => t.status === 'assigned') || null;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1243,7 +1243,7 @@ function applyNativeTrip(tripId) {
   }
   selected = found;
   render();
-  lastAlerted = found.id;
+
   window.AndroidGps?.confirmTripOpened?.(String(tripId));
   return true;
 }
@@ -1369,6 +1369,9 @@ function openApp() {
 
   $('loginView').classList.add('hidden');
   $('appView').classList.remove('hidden');
+  // La sesión nueva no debe mostrar la tarjeta de la identidad anterior
+  // mientras llega su primer snapshot de viajes.
+  render();
   initMap();
   startNativeBackgroundLocation();
   startGps();
@@ -1427,7 +1430,7 @@ $('historyRefresh').onclick = loadDriverHistory;
 $('historyModal').onclick = e => { if (e.target.id === 'historyModal') $('historyModal').classList.add('hidden'); };
 $('settingsButton').onclick = () => $('settingsModal').classList.remove('hidden');
 $('settingsClose').onclick = () => $('settingsModal').classList.add('hidden');
-$('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') settingsClose(); };
+$('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') $('settingsModal').classList.add('hidden'); };
 $('tonePreview').onclick = () => { unlockAlertAudio(); beep(); };
 $('arrivalTone').onchange = e => { preferences.tone = e.target.value; alertAudioUnlocked = false; alertAudioUnlockPromise = null; alertAudio = null; savePreferences(); void unlockAlertAudio(); };
 $('volumeRange').oninput = e => { preferences.volume = Number(e.target.value); if (alertAudio) alertAudio.volume = preferences.volume / 100; $('volumeValue').textContent = `${preferences.volume}%`; savePreferences(); };

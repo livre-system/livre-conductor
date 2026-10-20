@@ -17,6 +17,12 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /operationalStatus = data\.status/);
   });
 
+  it('uses the same v2 trip notification channel as the native service', () => {
+    assert.match(nativeSource, /TRIPS_NOTIFICATION_CHANNEL\s*=\s*"livre_trips_v2"/);
+    assert.match(fs.readFileSync('android/app/src/main/java/com/livre/conductor/PermissionGate.java', 'utf8'), /getNotificationChannel\("livre_trips_v2"\)/);
+    assert.match(fs.readFileSync('android/app/src/main/java/com/livre/conductor/LocationService.java', 'utf8'), /TRIP_CHANNEL\s*=\s*"livre_trips_v2"/);
+  });
+
   it('keeps GPS startup independent from operational status', () => {
     assert.match(source, /startGps\(\);/);
     assert.match(source, /loadOperationalStatus\(\)\.then\(\(\) => startTripsPolling\(\)\)/);
@@ -33,6 +39,15 @@ describe('driver operational status synchronization', () => {
   it('does not leave a terminal trip card when no active trip remains', () => {
     assert.match(source, /if \(!selected \|\| selected\.status === 'completed' \|\| selected\.status === 'cancelled'\)/);
     assert.match(source, /trips\.find\(t => t\.status === 'assigned'\) \|\|[\s\S]{0,160}trips\.find\(t => t\.status !== 'completed' && t\.status !== 'cancelled'\) \|\| null/);
+  });
+
+  it('does not reuse a terminal selection from the previous polling response', () => {
+    assert.match(source, /if \(latestCurrent && \['arriving', 'in_progress'\]\.includes\(latestCurrent\.status\)\)/);
+    assert.match(source, /return list\.find\(t => t\.status === 'assigned'\) \|\| null/);
+  });
+
+  it('clears the previous driver card before loading the new session snapshot', () => {
+    assert.match(source, /\$\('appView'\)\.classList\.remove\('hidden'\);[\s\S]{0,180}render\(\);[\s\S]{0,80}initMap\(\);/);
   });
 
   it('shows net driver fare while a trip is active and gross fare when completed', () => {
@@ -86,7 +101,7 @@ describe('driver operational status synchronization', () => {
   });
 
   it('does not replace an active trip when a new pending trip arrives', () => {
-    assert.match(source, /latestCurrent\.status === 'arriving' \|\| latestCurrent\.status === 'in_progress'/);
+    assert.match(source, /\['arriving', 'in_progress'\]\.includes\(latestCurrent\.status\)/);
     const start = source.indexOf('function orderTripsNewestFirst');
     const end = source.indexOf('/* ═', start);
     const context = {};
