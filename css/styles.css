@@ -231,9 +231,13 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 }
 .btn-logout:hover { color: var(--white); }
 .btn-logout { white-space: nowrap; }
-.history-card { width: min(680px, calc(100vw - 28px)); max-height: min(88dvh, 760px); overflow: auto; }
+.history-card { width: min(680px, calc(100vw - 28px)); max-height: min(88dvh, 760px); overflow: auto; border-color: var(--red); box-shadow: 0 24px 70px #000b, 0 0 0 1px var(--red-dim); }
+.history-card .settings-heading { border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.history-card .settings-heading h2 { color: var(--red); }
 .history-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.history-filters input { width: 100%; margin-top: 6px; }
+.history-filters input { width: 100%; margin-top: 6px; accent-color: var(--red); }
+.history-card .settings-preview { border-color: var(--red); color: var(--red); }
+.history-card .settings-preview:hover { background: var(--red); color: #fff; }
 .history-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0 14px; }
 .history-stat { padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .history-stat small { display: block; color: var(--muted); font-size: 11px; }
