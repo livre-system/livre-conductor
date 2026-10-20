@@ -107,3 +107,11 @@ Railway es la única plataforma de despliegue activa. No usar plataformas altern
 - La corrección está publicada en producción: commit `d3a0c73` (`No mostrar ofertas globales como viaje activo`), deploy Railway `SUCCESS`.
 - Validación realizada: `node --test tests/status.test.js`, `git diff --check` y verificación HTTPS del `js/app.js` publicado.
 - No generar viajes reales ni APK para validar esta corrección; debe verificarse primero mediante el flujo web HTTPS y datos de prueba controlados.
+
+## Actualización periódica de ubicación GPS (2026-10-20)
+
+- `watchPosition()` no garantiza callbacks cuando el conductor permanece quieto; tener GPS activo y sesión online no alcanza para mantener una posición vigente en el CRM.
+- El frontend web debe enviar la posición actual por HTTP cada 30 segundos mientras el GPS está activo, además de mantener `watchPosition()` para movimientos.
+- El heartbeat debe usar `getCurrentPosition()` con `maximumAge: 0`, respetar la sesión/token y detenerse al apagar el GPS para evitar envíos de sesiones viejas.
+- La corrección vive en `js/app.js`, commit `6ff2ecc`, y fue verificada en producción por HTTPS después del deploy Railway.
+- Validación ejecutada: `node --test tests/status.test.js` → 30 pasaron, 0 fallaron; `git diff --check` → OK. `npm test` no aplica porque el repositorio no tiene `package.json`.
