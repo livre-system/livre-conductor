@@ -680,10 +680,10 @@ async function loadTrips() {
     // La lista ya está ordenada por la fecha real del pedido. La tarjeta
     // principal toma el pendiente más nuevo; los anteriores quedan en la cola.
     selected = selectPrimaryTrip(trips, selected);
-    // No conservar en pantalla un viaje terminal cuando llegó uno asignado nuevo.
-    // El polling ya anuncia el nuevo viaje, pero render() quedaba con el anterior
-    // completed/cancelled y dejaba el panel vacío aunque la respuesta fuera correcta.
-    if (!selected || ((selected.status === 'completed' || selected.status === 'cancelled') && trips.some(t => t.status === 'assigned')))
+    // Los viajes terminales pertenecen al historial, no a la tarjeta operativa.
+    // Si no queda otro viaje activo, render() debe mostrar solo el panel
+    // operativo; conservarlo dejaba una ruta histórica visible sin sentido.
+    if (!selected || selected.status === 'completed' || selected.status === 'cancelled')
       selected = trips.find(t => t.status === 'assigned') ||
         trips.find(t => t.status !== 'completed' && t.status !== 'cancelled') || null;
     render();

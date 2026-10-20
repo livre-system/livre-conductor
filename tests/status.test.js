@@ -30,6 +30,11 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /selected\.status === 'completed' \|\| selected\.status === 'cancelled'/);
   });
 
+  it('does not leave a terminal trip card when no active trip remains', () => {
+    assert.match(source, /if \(!selected \|\| selected\.status === 'completed' \|\| selected\.status === 'cancelled'\)/);
+    assert.match(source, /trips\.find\(t => t\.status === 'assigned'\) \|\|[\s\S]{0,160}trips\.find\(t => t\.status !== 'completed' && t\.status !== 'cancelled'\) \|\| null/);
+  });
+
   it('shows net driver fare while a trip is active and gross fare when completed', () => {
     assert.match(source, /function driverFareHtml\(t\)/);
     assert.match(source, /!isCompleted \? driverFareHtml\(t\) : ''/);
