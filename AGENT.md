@@ -24,10 +24,7 @@
 - **Livre Cloud:** https://livre-cloud-production.up.railway.app/
   Backend/API central de Livre; no es una pantalla web, sus endpoints son consumidos por los demás módulos.
 
-Aliases históricos o alternativos no deben tomarse como URLs principales sin verificación:
-- https://livre-chatbot.vercel.app/
-- https://livre-pasajeros.vercel.app/
-- https://livre-system.github.io/
+Railway es la única plataforma de despliegue activa. No usar plataformas alternativas como destino de producción; confirmar siempre el estado del servicio en Railway.
 
 ## COMPORTAMIENTO DE LA COLA DE VIAJES
 
@@ -89,6 +86,17 @@ Aliases históricos o alternativos no deben tomarse como URLs principales sin ve
 - La regresión de la tarjeta debe reproducir un snapshot Ahorro obsoleto (bruto `5054.00`, neto histórico `4295.90`) y comprobar que muestra el bruto y `0% comisión`.
 - Antes de declarar resuelto un bug visual, verificar por HTTPS el asset publicado y, si hay credenciales legítimas, la respuesta autenticada de API. No inventar viajes ni credenciales.
 - Corrección coordinada publicada con Cloud: commit `23b434b` en este repositorio y `4b4b34f` en `livre-cloud`.
+
+## Temas visuales y paleta Livre (2026-10-20)
+
+- La identidad visual usa rojo Livre `#e8003d` para marca, títulos, acciones de configuración, historial y cierre.
+- El verde queda reservado para estados operativos, como conductor disponible o GPS activo; no usarlo como color general de Configuración.
+- Light debe usar fondo global claro, superficies blancas, bordes grises y texto oscuro. Dark debe usar fondo `#07080a`, superficies `#181a20`, bordes `#24262d` y texto claro.
+- Configuración e Historial de cierre deben compartir superficie propia, borde, overlay y contraste con el tema activo; no usar fondos hardcodeados que sobrevivan al cambio de tema.
+- Validar siempre ambos modos en navegador, incluyendo topbar, menú operativo, modal de configuración, historial, inputs, avisos y botones.
+- Las preferencias inválidas de `localStorage` deben volver a valores seguros; no permitir que un valor desconocido deje la interfaz en un tema inconsistente.
+- Validación local obligatoria para cambios visuales: `node --test tests/*.test.js`, `node --check js/app.js` y `git diff --check`.
+- Confirmar el asset publicado por HTTPS después del push y verificar el deploy en Railway. No informar disponibilidad de una corrección sólo por haber hecho commit.
 
 ## Tarjeta residual por ofertas globales (2026-10-20)
 
