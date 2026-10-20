@@ -24,7 +24,7 @@
 - **Livre Cloud:** https://livre-cloud-production.up.railway.app/
   Backend/API central de Livre; no es una pantalla web, sus endpoints son consumidos por los demás módulos.
 
-Railway es la única plataforma de despliegue activa. No usar plataformas alternativas como destino de producción; confirmar siempre el estado del servicio en Railway.
+Railway es la única plataforma de despliegue activa para todos los servicios y frontends de Livre. Vercel ya no forma parte del stack: no consultar sus aliases históricos, no publicar allí y no usar su estado como referencia de disponibilidad, salvo pedido explícito del usuario. Confirmar siempre el estado real del servicio en Railway.
 
 ## COMPORTAMIENTO DE LA COLA DE VIAJES
 
