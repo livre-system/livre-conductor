@@ -303,23 +303,27 @@ function commercialFareValues(t) {
   if (customerFare == null || customerFare === '' || !Number.isFinite(Number(customerFare))) return null;
   const customer = Number(customerFare);
   let driver;
-  if (t?.driver_fare != null) {
+  // service_type_id is the commercial contract. Do not let a stale snapshot
+  // combine a 15% label/amount with an Ahorro trip.
+  if (String(t?.service_type_id) === '2') {
+    driver = customer;
+  } else if (t?.driver_fare != null) {
     driver = Number(t.driver_fare);
   } else if (t?.status === 'completed') {
     // Legacy completed trips must display their persisted historical amount.
     driver = Number(t?.fare ?? t?.original_fare);
   } else {
-    driver = String(t?.service_type_id) === '2' ? customer : customer * 0.85;
+    driver = customer * 0.85;
   }
   if (!Number.isFinite(driver)) return null;
   return { customer, commission: customer - driver, driver };
 }
 
 function driverFareLabel(t) {
+  if (String(t?.service_type_id) === '2') return 'Tarifa conductor (0% comisión)';
   if (t?.discount_percentage != null && Number.isFinite(Number(t.discount_percentage))) {
     return `Tarifa conductor (${Number(t.discount_percentage)}% comisión)`;
   }
-  if (String(t?.service_type_id) === '2') return 'Tarifa conductor (0% comisión)';
   if (t?.service_type_id != null) return 'Tarifa conductor (15% comisión)';
   return 'Tarifa conductor';
 }

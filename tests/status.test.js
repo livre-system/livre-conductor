@@ -44,6 +44,9 @@ describe('driver operational status synchronization', () => {
     assert.match(context.driverFareHtml({ fare: 4800, final_fare: 4000 }), /4\.080/);
     assert.match(context.driverFareHtml({ fare: 4800, service_type_id: '2' }), /4\.800/);
     assert.match(context.driverFareHtml({ fare: 4800, service_type_id: '2' }), /0% comisión/);
+    assert.match(context.driverFareHtml({ fare: 5054, original_fare: 5054, service_type_id: '2', driver_fare: 4295.9, discount_percentage: 15, final_fare: 4295.9 }), /5\.054/);
+    assert.match(context.driverFareHtml({ fare: 5054, original_fare: 5054, service_type_id: '2', driver_fare: 4295.9, discount_percentage: 15, final_fare: 4295.9 }), /0% comisión/);
+    assert.doesNotMatch(context.driverFareHtml({ fare: 5054, original_fare: 5054, service_type_id: '2', driver_fare: 4295.9, discount_percentage: 15, final_fare: 4295.9 }), /15% comisión/);
     assert.match(context.driverFareHtml({ fare: 4800, service_type_id: '1' }), /15% comisión/);
     assert.match(context.driverFareHtml({ fare: 4800, status: 'completed', original_fare: 4800 }), /4\.800/);
     assert.doesNotMatch(source, /btnHandy|btnVoice|Handy|Libi/);
