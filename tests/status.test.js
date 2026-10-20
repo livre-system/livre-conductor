@@ -83,6 +83,15 @@ describe('driver operational status synchronization', () => {
     assert.strictEqual(context.selectPrimaryTrip([pending, active], active), active);
   });
 
+  it('clears the selected trip when the backend returns no current trips', () => {
+    const start = source.indexOf('function orderTripsNewestFirst');
+    const end = source.indexOf('/* ═', start);
+    const context = {};
+    require('vm').runInNewContext(`${source.slice(start, end)}; this.selectPrimaryTrip = selectPrimaryTrip;`, context);
+    const active = { id: 10, status: 'in_progress' };
+    assert.strictEqual(context.selectPrimaryTrip([], active), null);
+  });
+
   it('moves to the next pending trip after resolving only the selected rejection', () => {
     assert.match(source, /function selectNextPendingTrip\(\)/);
     assert.match(source, /const next = trips\.find\(t => t\.status === 'assigned'\)/);

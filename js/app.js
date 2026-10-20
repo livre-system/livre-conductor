@@ -372,9 +372,10 @@ function orderTripsNewestFirst(list) {
 function selectPrimaryTrip(list, current) {
   // Una solicitud nueva reemplaza solo otra solicitud pendiente. Si ya hay
   // un viaje aceptado/en curso, ese viaje sigue siendo la tarjeta principal.
-  if (current && (current.status === 'arriving' || current.status === 'in_progress')) return current;
+  const currentStillExists = current && list.some(t => String(t.id) === String(current.id));
+  if (currentStillExists && (current.status === 'arriving' || current.status === 'in_progress')) return current;
   return list.find(t => t.status === 'assigned') ||
-    (current ? list.find(t => String(t.id) === String(current.id)) || null : null);
+    (currentStillExists ? list.find(t => String(t.id) === String(current.id)) || null : null);
 }
 
 /* ══════════════════════════════════════════════════════════════
