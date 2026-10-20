@@ -89,3 +89,13 @@ Aliases históricos o alternativos no deben tomarse como URLs principales sin ve
 - La regresión de la tarjeta debe reproducir un snapshot Ahorro obsoleto (bruto `5054.00`, neto histórico `4295.90`) y comprobar que muestra el bruto y `0% comisión`.
 - Antes de declarar resuelto un bug visual, verificar por HTTPS el asset publicado y, si hay credenciales legítimas, la respuesta autenticada de API. No inventar viajes ni credenciales.
 - Corrección coordinada publicada con Cloud: commit `23b434b` en este repositorio y `4b4b34f` en `livre-cloud`.
+
+## Tarjeta residual por ofertas globales (2026-10-20)
+
+- La tarjeta incompleta que reaparecía sobre el panel no era un problema de caché: el frontend estaba tratando viajes `searching` como si fueran viajes activos del conductor.
+- `searching` representa una oferta global y no debe convertirse en la tarjeta principal de este conductor.
+- La tarjeta principal solo puede seleccionar viajes en estados `assigned`, `arriving` o `in_progress`; si no existe uno de esos estados, `selected` debe quedar en `null` y mostrarse únicamente el panel operativo.
+- La protección está centralizada en `DRIVER_CARD_STATUSES` y se aplica tanto al seleccionar como al renderizar la tarjeta.
+- La corrección está publicada en producción: commit `d3a0c73` (`No mostrar ofertas globales como viaje activo`), deploy Railway `SUCCESS`.
+- Validación realizada: `node --test tests/status.test.js`, `git diff --check` y verificación HTTPS del `js/app.js` publicado.
+- No generar viajes reales ni APK para validar esta corrección; debe verificarse primero mediante el flujo web HTTPS y datos de prueba controlados.
