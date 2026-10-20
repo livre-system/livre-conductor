@@ -79,3 +79,13 @@ Aliases históricos o alternativos no deben tomarse como URLs principales sin ve
 - Se agregó una regresión estática que compara las referencias de esos tres componentes.
 - Validación local: `node --test tests/*.test.js` → `33 passed, 0 failed`; `node --check js/app.js` → OK; `git diff --check` → OK.
 - No se construyó ni distribuyó APK. La verificación en dispositivo/emulador y la disponibilidad real del canal quedan pendientes.
+
+## Regla comercial de tarifa visible (2026-10-20)
+
+- `service_type_id = "2"` identifica Livre Ahorro: la tarjeta debe mostrar el importe bruto del conductor y `0% comisión`.
+- Para otros servicios, mostrar 85% al conductor y 15% de comisión según el snapshot comercial vigente; no volver a descontar un `final_fare` ya neto.
+- El frontend debe priorizar `service_type_id` frente a `discount_percentage` o snapshots antiguos. Un snapshot obsoleto no puede forzar la etiqueta `15% comisión` en Ahorro.
+- El contrato esperado con Cloud usa `service_type_id`, `driver_fare` y `commission_percentage`; cualquier cambio debe validar importe y etiqueta, no sólo que el bundle compile.
+- La regresión de la tarjeta debe reproducir un snapshot Ahorro obsoleto (bruto `5054.00`, neto histórico `4295.90`) y comprobar que muestra el bruto y `0% comisión`.
+- Antes de declarar resuelto un bug visual, verificar por HTTPS el asset publicado y, si hay credenciales legítimas, la respuesta autenticada de API. No inventar viajes ni credenciales.
+- Corrección coordinada publicada con Cloud: commit `23b434b` en este repositorio y `4b4b34f` en `livre-cloud`.
