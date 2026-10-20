@@ -61,7 +61,9 @@ let selected    = null;
 let watchId     = null;
 let wakeLock    = null;
 let gpsRecoveryTimer = null;
+let gpsHeartbeatTimer = null;
 let gpsSuspended = false;
+const GPS_HEARTBEAT_MS = 30000;
 let lastNativeLocationAt = 0;
 const gpsState = { provider: 'STOPPED', backend: 'UNKNOWN' };
 let marker      = null;
@@ -879,6 +881,16 @@ function startGps() {
   };
   navigator.geolocation.getCurrentPosition(onPos, onErr, opts);
   watchId = navigator.geolocation.watchPosition(onPos, onErr, opts);
+  // watchPosition may not emit anything while the driver is stationary. Keep
+  // the CRM session alive by sending the current position periodically too.
+  if (!gpsHeartbeatTimer) {
+    gpsHeartbeatTimer = setInterval(() => {
+      if (document.visibilityState !== 'visible' || !navigator.geolocation || !token) return;
+      navigator.geolocation.getCurrentPosition(onPos, onErr, {
+        enableHighAccuracy: true, maximumAge: 0, timeout: 15000,
+      });
+    }, GPS_HEARTBEAT_MS);
+  }
   if (!gpsRecoveryTimer) {
     gpsRecoveryTimer = setInterval(() => {
       if (document.visibilityState === 'visible') restartGpsAfterBackground();
@@ -890,6 +902,8 @@ function stopGps() {
   if (DEMO) { gpsState.provider = 'STOPPED'; gpsState.backend = 'UNKNOWN'; updateGpsPill(); return; }
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   watchId = null;
+  if (gpsHeartbeatTimer) clearInterval(gpsHeartbeatTimer);
+  gpsHeartbeatTimer = null;
   if (gpsRecoveryTimer) clearInterval(gpsRecoveryTimer);
   gpsRecoveryTimer = null;
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
