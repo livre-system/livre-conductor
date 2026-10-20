@@ -349,11 +349,11 @@ function finalFareHtml(t) {
 }
 
 function tripQueueHtml(current) {
-  const assigned = trips.filter(t => t.status === 'assigned' && String(t.id) !== String(current?.id));
-  if (!assigned.length) return '';
+  const pending = trips.filter(t => ['searching', 'assigned'].includes(t.status) && String(t.id) !== String(current?.id));
+  if (!pending.length) return '';
   return `<section class="trip-queue" aria-label="Pedidos nuevos">
     <div class="trip-queue-title">Otros pedidos recibidos</div>
-    ${assigned.map(t => `<button type="button" class="trip-queue-item" data-trip-select="${esc(t.id)}">
+    ${pending.map(t => `<button type="button" class="trip-queue-item" data-trip-select="${esc(t.id)}">
       <span><strong>${esc(t.origin)}</strong><small>${esc(t.destination)}</small></span>
       <span class="trip-queue-arrow">Ver</span>
     </button>`).join('')}
@@ -372,7 +372,7 @@ function bindTripQueue() {
 }
 
 function selectNextPendingTrip() {
-  const next = trips.find(t => t.status === 'assigned');
+  const next = trips.find(t => ['searching', 'assigned'].includes(t.status));
   selected = next || null;
   render();
   return next;
@@ -398,18 +398,18 @@ function orderTripsNewestFirst(list) {
   });
 }
 
-const DRIVER_CARD_STATUSES = ['assigned', 'arriving', 'in_progress'];
+const DRIVER_CARD_STATUSES = ['searching', 'assigned', 'arriving', 'in_progress'];
 
 function selectPrimaryTrip(list, current) {
   // Una solicitud nueva reemplaza solo otra solicitud pendiente. Si ya hay
   // un viaje aceptado/en curso, ese viaje sigue siendo la tarjeta principal.
-  // Los viajes `searching` todavía no pertenecen a este conductor: no deben
-  // convertirse en una tarjeta incompleta mientras otro conductor los toma.
+  // Los viajes `searching` son ofertas globales. El primer conductor que
+  // acepta hace el claim en el backend y pasa el viaje a `arriving`.
   // Siempre devolvemos la instancia recién recibida: conservar `current`
   // podía dejar origen/destino/status de una respuesta anterior en pantalla.
   const latestCurrent = current && list.find(t => String(t.id) === String(current.id));
   if (latestCurrent && ['arriving', 'in_progress'].includes(latestCurrent.status)) return latestCurrent;
-  return list.find(t => t.status === 'assigned') || null;
+  return list.find(t => ['searching', 'assigned'].includes(t.status)) || null;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -431,12 +431,11 @@ const ACTION_LABEL = {
 function render() {
   clearNotice();
 
-  // Resolvemos qué viaje mostrar. Un viaje `searching` es una oferta global,
-  // no una tarjeta perteneciente a este conductor; mostrarlo como activo deja
-  // una tarjeta incompleta que tapa el panel operativo.
+  // Resolvemos qué viaje mostrar. Un viaje `searching` es una oferta global
+  // que este conductor puede tomar; el backend hace el claim al aceptar.
   const t = selected && DRIVER_CARD_STATUSES.includes(selected.status)
     ? selected
-    : trips.find(x => x.status === 'assigned');
+    : trips.find(x => ['searching', 'assigned'].includes(x.status));
 
   const sheet  = $('sheet');
   const inner  = $('sheetInner');
@@ -455,14 +454,14 @@ function render() {
   const st = t.status;
 
   // ── Viaje asignado (alerta) ──────────────────────────────── */
-  if (st === 'assigned') {
+  if (st === 'assigned' || st === 'searching') {
     sheet.className = 'sheet alert-mode';
     inner.innerHTML = `
       ${operationalControlsHtml()}
       <div class="trip-alert">
         <div class="alert-badge">
           <span class="alert-pulse"></span>
-          ${DEMO ? '🧪 DEMO — ' : ''}Viaje recibido
+          ${DEMO ? '🧪 DEMO — ' : ''}${st === 'searching' ? 'Nuevo viaje disponible' : 'Viaje recibido'}
         </div>
         <div class="alert-title">¿Aceptás este viaje?</div>
 
@@ -496,7 +495,7 @@ function render() {
 
         <div class="alert-actions">
           <button class="btn-accept" onclick="acceptTrip()">✓ ACEPTAR</button>
-          <button class="btn-reject" onclick="rejectTrip()">✕ Rechazar</button>
+          ${st === 'assigned' ? '<button class="btn-reject" onclick="rejectTrip()">✕ Rechazar</button>' : ''}
         </div>
       </div>
       ${tripQueueHtml(t)}
@@ -705,10 +704,10 @@ async function loadTrips() {
     // Un viaje asignado existente puede seguir abierto mientras llegan otros.
     // Anunciar cada ID nuevo evita que el primero silencie los siguientes.
     announcedTripIds.forEach(id => {
-      if (!trips.some(t => String(t.id) === id && t.status === 'assigned'))
+      if (!trips.some(t => String(t.id) === id && ['searching', 'assigned'].includes(t.status)))
         announcedTripIds.delete(id);
     });
-    const freshTrips = trips.filter(t => t.status === 'assigned' && !announcedTripIds.has(String(t.id)));
+    const freshTrips = trips.filter(t => ['searching', 'assigned'].includes(t.status) && !announcedTripIds.has(String(t.id)));
     if (!initialTripsLoaded) freshTrips.length = 0;
     freshTrips.forEach(announceNewTrip);
     initialTripsLoaded = true;
