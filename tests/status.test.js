@@ -81,14 +81,20 @@ describe('driver operational status synchronization', () => {
   });
 
   it('does not replace an active trip when a new pending trip arrives', () => {
-    assert.match(source, /current\.status === 'arriving' \|\| current\.status === 'in_progress'/);
+    assert.match(source, /latestCurrent\.status === 'arriving' \|\| latestCurrent\.status === 'in_progress'/);
     const start = source.indexOf('function orderTripsNewestFirst');
     const end = source.indexOf('/* ═', start);
     const context = {};
     require('vm').runInNewContext(`${source.slice(start, end)}; this.selectPrimaryTrip = selectPrimaryTrip;`, context);
-    const active = { id: 10, status: 'arriving' };
+    const active = { id: 10, status: 'arriving', origin: 'Origen anterior' };
+    const latestActive = { id: 10, status: 'arriving', origin: 'Origen actualizado' };
     const pending = { id: 11, status: 'assigned', created_at: '2026-10-19T10:01:00Z' };
-    assert.strictEqual(context.selectPrimaryTrip([pending, active], active), active);
+    assert.strictEqual(context.selectPrimaryTrip([pending, latestActive], active), latestActive);
+    assert.strictEqual(context.selectPrimaryTrip([pending, latestActive], active).origin, 'Origen actualizado');
+  });
+
+  it('clears the previous session card before loading the new driver snapshot', () => {
+    assert.match(source, /function openApp\(\)[\s\S]*?trips = \[\];[\s\S]*?selected = null;[\s\S]*?initialTripsLoaded = false;/);
   });
 
   it('clears the selected trip when the backend returns no current trips', () => {

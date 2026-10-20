@@ -393,10 +393,11 @@ function orderTripsNewestFirst(list) {
 function selectPrimaryTrip(list, current) {
   // Una solicitud nueva reemplaza solo otra solicitud pendiente. Si ya hay
   // un viaje aceptado/en curso, ese viaje sigue siendo la tarjeta principal.
-  const currentStillExists = current && list.some(t => String(t.id) === String(current.id));
-  if (currentStillExists && (current.status === 'arriving' || current.status === 'in_progress')) return current;
-  return list.find(t => t.status === 'assigned') ||
-    (currentStillExists ? list.find(t => String(t.id) === String(current.id)) || null : null);
+  // Siempre devolvemos la instancia recién recibida: conservar `current`
+  // podía dejar origen/destino/status de una respuesta anterior en pantalla.
+  const latestCurrent = current && list.find(t => String(t.id) === String(current.id));
+  if (latestCurrent && (latestCurrent.status === 'arriving' || latestCurrent.status === 'in_progress')) return latestCurrent;
+  return list.find(t => t.status === 'assigned') || latestCurrent || null;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1359,6 +1360,12 @@ function setNativeAppVisible(visible) {
 function openApp() {
   const claims = tokenClaims();
   currentDriverUserId = String(claims.sub || '');
+  // No reutilizar la tarjeta de la sesión anterior mientras llega el primer
+  // snapshot del conductor actual.
+  trips = [];
+  selected = null;
+  initialTripsLoaded = false;
+  announcedTripIds.clear();
 
   $('loginView').classList.add('hidden');
   $('appView').classList.remove('hidden');
