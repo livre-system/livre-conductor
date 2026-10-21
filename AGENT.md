@@ -137,3 +137,12 @@ Railway es la única plataforma de despliegue activa para todos los servicios y 
 - Cambio visual aislado en `css/styles.css`; cache-busting actualizado en `index.html`.
 - Commits publicados: `456a8c7` (estilos) y `b105d0c` (cache-busting).
 - Validación local: `node --check js/app.js` → OK; `git diff --check` → OK. Falta confirmar el deploy Railway y el asset por HTTPS.
+
+## Segunda etapa visual: cockpit operativo (2026-10-21)
+
+- La segunda etapa mantiene intactos los estados, callbacks, GPS, cola de viajes y contrato API; modifica únicamente presentación.
+- El sheet del conductor usa superficies diferenciadas para estado, recorrido, tarifa y acciones; no volver a presentar el panel como un modal genérico.
+- La disponibilidad usa teal solamente como estado operativo seleccionado; aceptar, iniciar y finalizar siguen usando rojo Livre.
+- Los estados light y dark deben tener superficies, bordes y contraste propios; no reutilizar literales oscuros en el tema claro.
+- El cambio vive en `css/styles.css` bajo `Stage 2: conductor cockpit`; `index.html` referencia `stage2-cockpit` para invalidar caché.
+- Validar con `node --check js/app.js`, `git diff --check` y revisión HTTPS del asset publicado; no atribuir deploy verificado al push solamente.
