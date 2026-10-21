@@ -841,15 +841,15 @@ async function sendLocation(lat, lng) {
 
     const gpsTrip = activeTripId
       ? trips.find(t => String(t.id) === activeTripId) || (selected && String(selected.id) === activeTripId ? selected : null)
-      : (selected && ['assigned', 'arriving', 'in_progress'].includes(selected.status) ? selected : null);
-    if (gpsTrip && ['assigned','arriving','in_progress'].includes(gpsTrip.status)) {
+      : (selected && tripUsesMapRoute(selected.status) ? selected : null);
+    if (gpsTrip && tripUsesMapRoute(gpsTrip.status)) {
       const tripResponse = await fetch(`${API}/mobility/driver/trips/${gpsTrip.id}/location`, {
         method: 'POST', headers: h(), body,
       });
       diagLog('gps_send_response', { endpoint: 'trip', httpStatus: tripResponse.status });
       if (!tripResponse.ok) throw Error(`trip-location:${tripResponse.status}`);
     }
-    if (gpsTrip?.status === 'arriving') scheduleRouteRefresh();
+    if (gpsTrip && tripUsesMapRoute(gpsTrip.status)) scheduleRouteRefresh();
     gpsState.backend = 'SYNCED';
     updateGpsPill();
     diagLog('gps_send_end', { durationMs: Math.round(performance.now() - startedAt), result: 'ok' });
@@ -1019,13 +1019,21 @@ function clearTripRoute() {
   routeLine = null;
 }
 
+function tripUsesMapRoute(status) {
+  return ['assigned', 'accepted', 'arriving', 'started', 'in_progress'].includes(status);
+}
+
+function tripRoutePhase(status) {
+  return ['started', 'in_progress'].includes(status) ? 'trip' : 'pickup';
+}
+
 function scheduleRouteRefresh() {
   if (routeRefreshTimer) clearTimeout(routeRefreshTimer);
-  if (!selected || selected.status !== 'arriving') return;
+  if (!selected || !tripUsesMapRoute(selected.status)) return;
   routeRefreshTimer = setTimeout(async () => {
     routeRefreshTimer = null;
-    if (selected?.status !== 'arriving') return;
-    await loadTripRoute('pickup');
+    if (!selected || !tripUsesMapRoute(selected.status)) return;
+    await loadTripRoute(tripRoutePhase(selected.status));
     scheduleRouteRefresh();
   }, 30000);
 }
@@ -1190,8 +1198,8 @@ async function loadOtherDrivers() {
     }
 
     if (marker && currentDriverSnapshot) marker.bindPopup(driverPopupHtml(currentDriverSnapshot, true));
-    if (selected && ['arriving', 'in_progress'].includes(selected.status)) {
-      void loadTripRoute(selected.status === 'arriving' ? 'pickup' : 'trip');
+    if (selected && tripUsesMapRoute(selected.status)) {
+      void loadTripRoute(tripRoutePhase(selected.status));
     }
     const icon = otherDriverIcon();
     drivers.forEach(driver => {
