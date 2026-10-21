@@ -73,6 +73,7 @@ let marker      = null;
 let directionMarker = null;
 let lastMapPosition = null;
 let routeLine   = null;
+let routeCasing = null;
 let ownTraceLine = null;
 let ownTracePoints = [];
 let ownTraceTripId = '';
@@ -1051,7 +1052,9 @@ async function loadTripTrace() {
 function clearTripRoute() {
   if (routeRefreshTimer) clearTimeout(routeRefreshTimer);
   routeRefreshTimer = null;
+  if (routeCasing && map) map.removeLayer(routeCasing);
   if (routeLine && map) map.removeLayer(routeLine);
+  routeCasing = null;
   routeLine = null;
 }
 
@@ -1088,12 +1091,23 @@ async function loadTripRoute(phase) {
     // los tiles.
     map.invalidateSize({ pan: false });
     clearTripRoute();
-    routeLine = L.polyline(points, {
-      color: '#38bdf8',
-      weight: 6,
-      opacity: 0.9,
+    // Capa de contraste + núcleo de color: la ruta queda legible sobre
+    // calles claras y oscuras, sin perder las curvas viales.
+    routeCasing = L.polyline(points, {
+      color: '#082f49',
+      weight: 15,
+      opacity: 0.78,
       lineCap: 'round',
       lineJoin: 'round',
+      smoothFactor: 0.5,
+    }).addTo(map);
+    routeLine = L.polyline(points, {
+      color: '#22c7f5',
+      weight: 8,
+      opacity: 1,
+      lineCap: 'round',
+      lineJoin: 'round',
+      smoothFactor: 0.5,
     }).addTo(map);
     map.fitBounds(routeLine.getBounds(), { padding: [28, 28], maxZoom: 16 });
     diagLog('trip_route_loaded', { phase, points: points.length });
