@@ -940,14 +940,18 @@ function startGps() {
   const opts = { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 };
   const onPos = p => { diagLog('gps_position_callback'); sendLocation(p.coords.latitude, p.coords.longitude); };
   const onErr = e => {
-    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-    watchId = null;
-    diagLog('gps_provider_lost', { code: e?.code ?? null, error: String(e?.message || '').slice(0, 80) });
+    // Un timeout o una pérdida momentánea no significa que el proveedor
+    // haya terminado. Mantener watchPosition activo permite recuperar el
+    // primer fix y evita dejar el viaje aceptado sin marcador ni trazo.
+    const code = e?.code ?? null;
+    diagLog('gps_provider_lost', { code, error: String(e?.message || '').slice(0, 80) });
     gpsState.provider = 'LOST';
     updateGpsPill();
-    showNotice(e.code === 1
-      ? 'Permiso de GPS denegado. Habilitalo en el navegador y recargá.'
-      : 'No se pudo obtener GPS. Verificá la señal.');
+    if (code === 1) {
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+      showNotice('Permiso de GPS denegado. Habilitalo en el navegador y recargá.');
+    }
   };
   navigator.geolocation.getCurrentPosition(onPos, onErr, opts);
   watchId = navigator.geolocation.watchPosition(onPos, onErr, opts);
@@ -964,7 +968,7 @@ function startGps() {
   if (!gpsRecoveryTimer) {
     gpsRecoveryTimer = setInterval(() => {
       if (document.visibilityState === 'visible') restartGpsAfterBackground();
-    }, 60000);
+    }, 10000);
   }
 }
 
