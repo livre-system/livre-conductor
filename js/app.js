@@ -1104,10 +1104,21 @@ function initMap() {
   map = L.map('map', { zoomControl: false, maxBounds: BAHIA_BLANCA_BOUNDS, maxBoundsViscosity: 0.85 })
           .setView([-38.718, -62.266], 14);
   L.control.zoom({ position: 'topright' }).addTo(map);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap',
-    maxZoom: 19,
-  }).addTo(map);
+  const conductorTileLayer = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    {
+      attribution: '&copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    },
+  ).addTo(map);
+  let conductorTileFallbackUsed = false;
+  conductorTileLayer.on('tileerror', () => {
+    if (conductorTileFallbackUsed || !map) return;
+    conductorTileFallbackUsed = true;
+    conductorTileLayer.setUrl(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    );
+  });
   loadOtherDrivers();
   void loadTripTrace();
   otherDriversTimer = setInterval(loadOtherDrivers, 15000);
