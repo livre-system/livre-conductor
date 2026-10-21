@@ -75,6 +75,7 @@ let lastMapPosition = null;
 let routeLine   = null;
 let ownTraceLine = null;
 let ownTracePoints = [];
+let ownTraceTripId = '';
 let routeRefreshTimer = null;
 let map         = null;
 let otherDriversLayer = null;
@@ -940,7 +941,13 @@ function startGps() {
   }
   requestGpsWakeLock();
   const opts = { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 };
-  const onPos = p => { diagLog('gps_position_callback'); sendLocation(p.coords.latitude, p.coords.longitude); };
+  const onPos = p => {
+    const lat = Number(p.coords.latitude);
+    const lng = Number(p.coords.longitude);
+    diagLog('gps_position_callback');
+    recordOwnGpsPoint(lat, lng);
+    sendLocation(lat, lng);
+  };
   const onErr = e => {
     // Un timeout o una pérdida momentánea no significa que el proveedor
     // haya terminado. Mantener watchPosition activo permite recuperar el
@@ -1124,12 +1131,24 @@ function pointIsInBahiaBlanca(lat, lng) {
     && BAHIA_BLANCA_BOUNDS.contains([lat, lng]);
 }
 
+function recordOwnGpsPoint(lat, lng) {
+  if (!selected || !tripUsesMapRoute(selected.status)) return;
+  const tripId = String(selected.id ?? '');
+  if (!tripId || !pointIsInBahiaBlanca(lat, lng)) return;
+  if (ownTraceTripId !== tripId) {
+    ownTraceTripId = tripId;
+    ownTracePoints = [];
+    if (ownTraceLine && map) map.removeLayer(ownTraceLine);
+    ownTraceLine = null;
+  }
+  appendOwnTracePoint(lat, lng);
+}
+
 function applyCloudTripLocation(trip) {
   const lat = Number(trip?.latitude);
   const lng = Number(trip?.longitude);
   if (!map || !pointIsInBahiaBlanca(lat, lng)) return false;
   setMapMarker(lat, lng);
-  appendOwnTracePoint(lat, lng);
   gpsState.provider = 'ACTIVE';
   updateGpsPill();
   return true;
@@ -1236,7 +1255,6 @@ async function loadOtherDrivers() {
     const ownLocation = currentDriverSnapshot?.lastPlace;
     if (ownLocation && Number.isFinite(Number(ownLocation.latitude)) && Number.isFinite(Number(ownLocation.longitude))) {
       setMapMarker(Number(ownLocation.latitude), Number(ownLocation.longitude));
-      appendOwnTracePoint(Number(ownLocation.latitude), Number(ownLocation.longitude));
       gpsState.provider = 'ACTIVE';
       updateGpsPill();
     }
@@ -1498,6 +1516,7 @@ window.onNativeLocationStatus = (status, latitude, longitude) => {
   if (status === 'updated' && Number.isFinite(latitude) && Number.isFinite(longitude)) {
     lastNativeLocationAt = Date.now();
     setMapMarker(latitude, longitude);
+    recordOwnGpsPoint(latitude, longitude);
     gpsState.provider = 'ACTIVE';
     updateGpsPill();
   } else if (status === 'provider_lost' || status === 'provider_stopped') {
