@@ -73,6 +73,8 @@ let marker      = null;
 let directionMarker = null;
 let lastMapPosition = null;
 let routeLine   = null;
+let ownTraceLine = null;
+let ownTracePoints = [];
 let routeRefreshTimer = null;
 let map         = null;
 let otherDriversLayer = null;
@@ -1095,6 +1097,23 @@ function driverHeadingIcon(heading) {
   });
 }
 
+function appendOwnTracePoint(lat, lng) {
+  if (!map || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  const point = [lat, lng];
+  const last = ownTracePoints[ownTracePoints.length - 1];
+  if (last && Math.abs(last[0] - lat) < 0.000001 && Math.abs(last[1] - lng) < 0.000001) return;
+  ownTracePoints.push(point);
+  if (ownTracePoints.length > 1000) ownTracePoints.shift();
+  if (!ownTraceLine) {
+    ownTraceLine = L.polyline(ownTracePoints, {
+      color: '#facc15', weight: 6, opacity: 0.95,
+      lineCap: 'round', lineJoin: 'round',
+    }).addTo(map);
+  } else {
+    ownTraceLine.setLatLngs(ownTracePoints);
+  }
+}
+
 function setMapMarker(lat, lng) {
   if (!map) return;
   const pos = [lat, lng];
@@ -1185,14 +1204,18 @@ async function loadOtherDrivers() {
     otherDriversLayer.clearLayers();
     const drivers = Array.isArray(data.drivers) ? data.drivers : [];
     const ownId = String(currentDriverUserId || tokenUserId());
-    // El panel web debe poder mostrar el GPS que ya recibió Cloud aunque
-    // navigator.geolocation no entregue un callback en esta pestaña.
+    const ownTripId = activeTripId || (selected && selected.id != null ? String(selected.id) : '');
+    // Primero identifica por usuario; durante una sesión activa también puede
+    // identificar al propio conductor por el viaje asignado a ese token.
     currentDriverSnapshot = drivers.find(driver =>
       ownId && String(driver.driverUserId) === ownId && driver.lastPlace
+    ) || drivers.find(driver =>
+      ownTripId && String(driver.tripId) === ownTripId && driver.lastPlace
     ) || null;
     const ownLocation = currentDriverSnapshot?.lastPlace;
     if (ownLocation && Number.isFinite(Number(ownLocation.latitude)) && Number.isFinite(Number(ownLocation.longitude))) {
       setMapMarker(Number(ownLocation.latitude), Number(ownLocation.longitude));
+      appendOwnTracePoint(Number(ownLocation.latitude), Number(ownLocation.longitude));
       gpsState.provider = 'ACTIVE';
       updateGpsPill();
     }
@@ -1552,7 +1575,9 @@ function setNativeAppVisible(visible) {
 function openApp() {
   const claims = tokenClaims();
   currentDriverUserId = String(claims.sub || '');
-  // No reutilizar la tarjeta de la sesión anterior mientras llega el primer
+  ownTracePoints = [];
+  if (ownTraceLine && map) map.removeLayer(ownTraceLine);
+  ownTraceLine = null;
   // snapshot del conductor actual.
   trips = [];
   selected = null;
