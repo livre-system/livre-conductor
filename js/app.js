@@ -67,6 +67,7 @@ const GPS_HEARTBEAT_MS = 30000;
 let lastNativeLocationAt = 0;
 const gpsState = { provider: 'STOPPED', backend: 'UNKNOWN' };
 let marker      = null;
+let routeLine   = null;
 let map         = null;
 let otherDriversLayer = null;
 let otherDriversRequestInFlight = false;
@@ -588,6 +589,8 @@ async function acceptTrip() {
   const changed = await changeStatus('arriving');
   if (!changed) return;
   startGps();
+  await requestImmediateGpsSync();
+  await loadTripRoute('pickup');
   speak('Viaje aceptado. Comenzando a compartir ubicación.');
 }
 
@@ -637,7 +640,9 @@ async function nextStatus() {
   if (!selected) return;
   const next = { arriving: 'in_progress', in_progress: 'completed' }[selected.status];
   if (!next) return;
-  await changeStatus(next);
+  const changed = await changeStatus(next);
+  if (changed && next === 'in_progress') await loadTripRoute('trip');
+  if (changed && next === 'completed') clearTripRoute();
 }
 
 /** Solo en DEMO: reinicia el viaje mock para poder recorrer el flujo de nuevo */
@@ -989,6 +994,37 @@ function updateGpsPill() {
 /* ══════════════════════════════════════════════════════════════
    MAPA
 ══════════════════════════════════════════════════════════════ */
+function clearTripRoute() {
+  if (routeLine && map) map.removeLayer(routeLine);
+  routeLine = null;
+}
+
+async function loadTripRoute(phase) {
+  if (DEMO || !selected || !map) return false;
+  try {
+    const response = await fetch(`${API}/mobility/driver/trips/${selected.id}/route?phase=${phase}`, { headers: h() });
+    if (!response.ok) throw Error(response.status);
+    const route = await response.json();
+    const points = (route.coordinates || []).map(([lng, lat]) => [lat, lng]);
+    if (points.length < 2) throw Error('route-empty');
+    clearTripRoute();
+    routeLine = L.polyline(points, {
+      color: '#38bdf8',
+      weight: 6,
+      opacity: 0.9,
+      lineCap: 'round',
+      lineJoin: 'round',
+    }).addTo(map);
+    map.fitBounds(routeLine.getBounds(), { padding: [28, 28], maxZoom: 16 });
+    diagLog('trip_route_loaded', { phase, points: points.length });
+    return true;
+  } catch (error) {
+    diagLog('trip_route_failed', { phase, status: String(error?.message || error).slice(0, 40) });
+    showNotice('El viaje aceptó correctamente, pero todavía no se pudo trazar la ruta.');
+    return false;
+  }
+}
+
 function initMap() {
   map = L.map('map', { zoomControl: false })
           .setView([-38.718, -62.266], 14);
