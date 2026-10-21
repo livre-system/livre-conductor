@@ -1047,7 +1047,7 @@ async function loadTripRoute(phase) {
     if (!response.ok) throw Error(response.status);
     const route = await response.json();
     const points = (route.coordinates || []).map(([lng, lat]) => [lat, lng]);
-    if (points.length < 2) throw Error('route-empty');
+    if (points.length < 2 || points.some(([lat, lng]) => !pointIsInBahiaBlanca(lat, lng))) throw Error('route-outside-bahia-blanca');
     clearTripRoute();
     routeLine = L.polyline(points, {
       color: '#38bdf8',
@@ -1067,7 +1067,7 @@ async function loadTripRoute(phase) {
 }
 
 function initMap() {
-  map = L.map('map', { zoomControl: false })
+  map = L.map('map', { zoomControl: false, maxBounds: BAHIA_BLANCA_BOUNDS, maxBoundsViscosity: 0.85 })
           .setView([-38.718, -62.266], 14);
   L.control.zoom({ position: 'topright' }).addTo(map);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1114,10 +1114,20 @@ function appendOwnTracePoint(lat, lng) {
   }
 }
 
+const BAHIA_BLANCA_BOUNDS = L.latLngBounds(
+  [-38.90, -62.48],
+  [-38.52, -62.05],
+);
+
+function pointIsInBahiaBlanca(lat, lng) {
+  return Number.isFinite(lat) && Number.isFinite(lng)
+    && BAHIA_BLANCA_BOUNDS.contains([lat, lng]);
+}
+
 function applyCloudTripLocation(trip) {
   const lat = Number(trip?.latitude);
   const lng = Number(trip?.longitude);
-  if (!map || !Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (!map || !pointIsInBahiaBlanca(lat, lng)) return false;
   setMapMarker(lat, lng);
   appendOwnTracePoint(lat, lng);
   gpsState.provider = 'ACTIVE';
