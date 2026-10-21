@@ -75,6 +75,8 @@ let lastMapPosition = null;
 let routeLine   = null;
 let routeCasing = null;
 let routeSummary = null;
+let plannedRoutePoints = [];
+let routeDeviation = { level: 'unknown', distanceM: null, consecutive: 0 };
 let routeRequestController = null;
 let routeRequestTimeout = null;
 let routeRequestSequence = 0;
@@ -842,10 +844,10 @@ async function changeStatus(status) {
 }
 
 /** Envía una posición GPS al backend */
-async function sendLocation(lat, lng) {
+async function sendLocation(lat, lng, accuracy = null) {
   const startedAt = performance.now();
   diagLog('gps_position_received');
-  setMapMarker(lat, lng);
+  setMapMarker(lat, lng, accuracy);
   gpsState.provider = 'ACTIVE';
   gpsState.backend = 'SENDING';
   updateGpsPill();
@@ -903,7 +905,7 @@ function requestImmediateGpsSync() {
   return new Promise(resolve => {
     navigator.geolocation.getCurrentPosition(
       position => {
-        void sendLocation(position.coords.latitude, position.coords.longitude).finally(() => resolve(true));
+        void sendLocation(position.coords.latitude, position.coords.longitude, position.coords.accuracy).finally(() => resolve(true));
       },
       error => {
         diagLog('gps_status_sync_failed', { code: error?.code ?? null });
@@ -939,7 +941,7 @@ function restartGpsAfterBackground() {
   if (watchId === null) startGps();
   else if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      p => sendLocation(p.coords.latitude, p.coords.longitude),
+      p => sendLocation(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
       () => {},
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
     );
@@ -969,7 +971,7 @@ function startGps() {
     const lng = Number(p.coords.longitude);
     diagLog('gps_position_callback');
     recordOwnGpsPoint(lat, lng);
-    sendLocation(lat, lng);
+    sendLocation(lat, lng, p.coords.accuracy);
   };
   const onErr = e => {
     // Un timeout o una pérdida momentánea no significa que el proveedor
@@ -1060,7 +1062,7 @@ async function loadTripTrace() {
     if (!map) return true;
     if (ownTraceLine) ownTraceLine.setLatLngs(ownTracePoints);
     else ownTraceLine = L.polyline(ownTracePoints, {
-      color: '#facc15', weight: 6, opacity: 0.95,
+      color: routeDeviation.level === 'off_route' ? '#ef4444' : routeDeviation.level === 'warning' ? '#f59e0b' : '#22c7f5', weight: 6, opacity: 0.95,
       lineCap: 'round', lineJoin: 'round',
     }).addTo(map);
     return true;
@@ -1085,6 +1087,68 @@ function formatRouteDuration(minutes) {
     : `${rounded} min`;
 }
 
+function routeDistanceToPointMeters(point, routePoints) {
+  if (!Array.isArray(point) || routePoints.length < 2) return null;
+  const [lat, lng] = point;
+  const metersPerLat = 111320;
+  const metersPerLng = Math.max(1, 111320 * Math.cos(lat * Math.PI / 180));
+  let best = Infinity;
+  for (let i = 1; i < routePoints.length; i += 1) {
+    const [aLat, aLng] = routePoints[i - 1];
+    const [bLat, bLng] = routePoints[i];
+    const ax = (aLng - lng) * metersPerLng;
+    const ay = (aLat - lat) * metersPerLat;
+    const bx = (bLng - lng) * metersPerLng;
+    const by = (bLat - lat) * metersPerLat;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lengthSquared = dx * dx + dy * dy;
+    const t = lengthSquared ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / lengthSquared)) : 0;
+    best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy));
+  }
+  return best;
+}
+
+function updateRouteDeviationUi() {
+  const panel = $('routeGuidance');
+  const status = panel?.querySelector('.route-guidance-status');
+  if (!status) return;
+  const labels = {
+    ok: ['En ruta', 'ok'],
+    warning: ['Revisá la calle', 'warning'],
+    off_route: ['DESVÍO: calle incorrecta', 'off-route'],
+    unknown: ['Esperando GPS preciso', 'unknown'],
+  };
+  const [label, className] = labels[routeDeviation.level] || labels.unknown;
+  status.textContent = routeDeviation.distanceM == null
+    ? label
+    : `${label} · ${Math.round(routeDeviation.distanceM)} m de la ruta`;
+  status.className = `route-guidance-status ${className}`;
+}
+
+function updateRouteDeviation(lat, lng, accuracy = null) {
+  if (plannedRoutePoints.length < 2 || !pointIsInBahiaBlanca(lat, lng)) return;
+  const distanceM = routeDistanceToPointMeters([lat, lng], plannedRoutePoints);
+  if (!Number.isFinite(distanceM)) return;
+  const gpsAccuracy = Number.isFinite(Number(accuracy)) ? Math.max(8, Math.min(60, Number(accuracy))) : 15;
+  const warningLimit = Math.max(20, gpsAccuracy + 10);
+  const redLimit = Math.max(40, gpsAccuracy + 25);
+  if (distanceM > warningLimit) routeDeviation.consecutive += 1;
+  else routeDeviation.consecutive = Math.max(0, routeDeviation.consecutive - 1);
+  const previous = routeDeviation.level;
+  routeDeviation.distanceM = distanceM;
+  if (distanceM > redLimit && routeDeviation.consecutive >= 3) routeDeviation.level = 'off_route';
+  else if (distanceM > warningLimit) routeDeviation.level = previous === 'off_route' && routeDeviation.consecutive > 0 ? 'off_route' : 'warning';
+  else if (routeDeviation.consecutive === 0) routeDeviation.level = 'ok';
+  const color = routeDeviation.level === 'off_route' ? '#ef4444'
+    : routeDeviation.level === 'warning' ? '#f59e0b' : '#22c7f5';
+  if (ownTraceLine) ownTraceLine.setStyle({ color });
+  updateRouteDeviationUi();
+  if (routeDeviation.level !== previous && routeDeviation.level === 'off_route') {
+    showNotice('Desvío confirmado: el conductor está fuera de la calle indicada.');
+  }
+}
+
 function renderRouteGuidance() {
   const panel = $('routeGuidance');
   if (!panel) return;
@@ -1100,6 +1164,7 @@ function renderRouteGuidance() {
     <div class="route-guidance-kicker"></div>
     <div class="route-guidance-title"></div>
     <div class="route-guidance-address"></div>
+    <div class="route-guidance-status unknown">Esperando GPS preciso</div>
     <div class="route-guidance-metrics">
       <span><strong class="route-guidance-distance"></strong><small>por ruta</small></span>
       <span><strong class="route-guidance-duration"></strong><small>estimado</small></span>
@@ -1123,6 +1188,8 @@ function clearTripRoute() {
   if (routeLine && map) map.removeLayer(routeLine);
   routeCasing = null;
   routeLine = null;
+  plannedRoutePoints = [];
+  routeDeviation = { level: 'unknown', distanceM: null, consecutive: 0 };
   routeSummary = null;
   renderRouteGuidance();
 }
@@ -1180,6 +1247,8 @@ async function loadTripRoute(phase) {
       if (routeCache.size > 20) routeCache.delete(routeCache.keys().next().value);
     }
     clearTripRoute();
+    plannedRoutePoints = points;
+    routeDeviation = { level: 'unknown', distanceM: null, consecutive: 0 };
     routeSummary = {
       trip_id: tripId,
       phase,
@@ -1200,7 +1269,7 @@ async function loadTripRoute(phase) {
       opacity: 0.72,
       lineCap: 'round',
       lineJoin: 'round',
-      smoothFactor: 0.5,
+      smoothFactor: 0.1,
     }).addTo(map);
     routeLine = L.polyline(points, {
       color: '#22c7f5',
@@ -1208,7 +1277,7 @@ async function loadTripRoute(phase) {
       opacity: 1,
       lineCap: 'round',
       lineJoin: 'round',
-      smoothFactor: 0.5,
+      smoothFactor: 0.1,
     }).addTo(map);
     map.fitBounds(routeLine.getBounds(), { padding: [28, 28], maxZoom: 16 });
     diagLog('trip_route_loaded', { phase, points: points.length });
@@ -1278,7 +1347,7 @@ function appendOwnTracePoint(lat, lng) {
   if (ownTracePoints.length > 1000) ownTracePoints.shift();
   if (!ownTraceLine) {
     ownTraceLine = L.polyline(ownTracePoints, {
-      color: '#facc15', weight: 6, opacity: 0.95,
+      color: routeDeviation.level === 'off_route' ? '#ef4444' : routeDeviation.level === 'warning' ? '#f59e0b' : '#22c7f5', weight: 6, opacity: 0.95,
       lineCap: 'round', lineJoin: 'round',
     }).addTo(map);
   } else {
@@ -1319,8 +1388,9 @@ function applyCloudTripLocation(trip) {
   return true;
 }
 
-function setMapMarker(lat, lng) {
+function setMapMarker(lat, lng, accuracy = null) {
   if (!map) return;
+  updateRouteDeviation(lat, lng, accuracy);
   const pos = [lat, lng];
   const heading = lastMapPosition ? driverHeading(lastMapPosition, pos) : 0;
   lastMapPosition = pos;
