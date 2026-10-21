@@ -74,6 +74,7 @@ let directionMarker = null;
 let lastMapPosition = null;
 let routeLine   = null;
 let routeCasing = null;
+let routeSummary = null;
 let ownTraceLine = null;
 let ownTracePoints = [];
 let ownTraceTripId = '';
@@ -1049,6 +1050,47 @@ async function loadTripTrace() {
   }
 }
 
+function formatRouteDistance(km) {
+  const value = Number(km);
+  if (!Number.isFinite(value) || value <= 0) return 'Distancia no disponible';
+  return value < 1 ? `${Math.round(value * 1000)} m` : `${value.toFixed(1).replace('.', ',')} km`;
+}
+
+function formatRouteDuration(minutes) {
+  const value = Number(minutes);
+  if (!Number.isFinite(value) || value <= 0) return 'Tiempo no disponible';
+  const rounded = Math.max(1, Math.round(value));
+  return rounded >= 60
+    ? `${Math.floor(rounded / 60)} h ${rounded % 60} min`
+    : `${rounded} min`;
+}
+
+function renderRouteGuidance() {
+  const panel = $('routeGuidance');
+  if (!panel) return;
+  if (!routeSummary || !selected) {
+    panel.hidden = true;
+    panel.innerHTML = '';
+    return;
+  }
+  const pickup = routeSummary.phase === 'pickup';
+  const address = pickup ? selected.origin : selected.destination;
+  panel.hidden = false;
+  panel.innerHTML = `
+    <div class="route-guidance-kicker"></div>
+    <div class="route-guidance-title"></div>
+    <div class="route-guidance-address"></div>
+    <div class="route-guidance-metrics">
+      <span><strong class="route-guidance-distance"></strong><small>por ruta</small></span>
+      <span><strong class="route-guidance-duration"></strong><small>estimado</small></span>
+    </div>`;
+  panel.querySelector('.route-guidance-kicker').textContent = pickup ? 'IR A BUSCAR' : 'TRASLADO EN CURSO';
+  panel.querySelector('.route-guidance-title').textContent = pickup ? 'Ruta al pasajero' : 'Ruta al destino';
+  panel.querySelector('.route-guidance-address').textContent = address || 'Destino del viaje';
+  panel.querySelector('.route-guidance-distance').textContent = formatRouteDistance(routeSummary.distance_km);
+  panel.querySelector('.route-guidance-duration').textContent = formatRouteDuration(routeSummary.duration_min);
+}
+
 function clearTripRoute() {
   if (routeRefreshTimer) clearTimeout(routeRefreshTimer);
   routeRefreshTimer = null;
@@ -1056,6 +1098,8 @@ function clearTripRoute() {
   if (routeLine && map) map.removeLayer(routeLine);
   routeCasing = null;
   routeLine = null;
+  routeSummary = null;
+  renderRouteGuidance();
 }
 
 function tripUsesMapRoute(status) {
@@ -1085,6 +1129,12 @@ async function loadTripRoute(phase) {
     const route = await response.json();
     const points = (route.coordinates || []).map(([lng, lat]) => [lat, lng]);
     if (points.length < 2 || points.some(([lat, lng]) => !pointIsInBahiaBlanca(lat, lng))) throw Error('route-outside-bahia-blanca');
+    routeSummary = {
+      phase,
+      distance_km: route.distance_km,
+      duration_min: route.duration_min,
+    };
+    renderRouteGuidance();
     // El panel inferior cambia la altura útil del mapa al aceptar/iniciar.
     // Leaflet conserva el viewport anterior si no se invalida antes de
     // proyectar la polyline, y la capa vectorial queda corrida respecto de
@@ -1122,6 +1172,11 @@ async function loadTripRoute(phase) {
 function initMap() {
   map = L.map('map', { zoomControl: false, maxBounds: BAHIA_BLANCA_BOUNDS, maxBoundsViscosity: 0.85 })
           .setView([-38.718, -62.266], 14);
+  const routeGuidance = document.createElement('aside');
+  routeGuidance.id = 'routeGuidance';
+  routeGuidance.className = 'route-guidance';
+  routeGuidance.hidden = true;
+  map.getContainer().appendChild(routeGuidance);
   L.control.zoom({ position: 'topright' }).addTo(map);
   const conductorTileLayer = L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
