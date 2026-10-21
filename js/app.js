@@ -1177,15 +1177,23 @@ async function loadOtherDrivers() {
     otherDriversLayer.clearLayers();
     const drivers = Array.isArray(data.drivers) ? data.drivers : [];
     const ownId = String(currentDriverUserId || tokenUserId());
-    const icon = otherDriverIcon();
-    currentDriverSnapshot = drivers.find(driver => isFreshDriverLocation(driver) && ownId && String(driver.driverUserId) === ownId) || null;
+    // El panel web debe poder mostrar el GPS que ya recibió Cloud aunque
+    // navigator.geolocation no entregue un callback en esta pestaña.
+    currentDriverSnapshot = drivers.find(driver =>
+      ownId && String(driver.driverUserId) === ownId && driver.lastPlace
+    ) || null;
     const ownLocation = currentDriverSnapshot?.lastPlace;
     if (ownLocation && Number.isFinite(Number(ownLocation.latitude)) && Number.isFinite(Number(ownLocation.longitude))) {
       setMapMarker(Number(ownLocation.latitude), Number(ownLocation.longitude));
-      updateGpsPill(true);
+      gpsState.provider = 'ACTIVE';
+      updateGpsPill();
     }
 
     if (marker && currentDriverSnapshot) marker.bindPopup(driverPopupHtml(currentDriverSnapshot, true));
+    if (selected && ['arriving', 'in_progress'].includes(selected.status)) {
+      void loadTripRoute(selected.status === 'arriving' ? 'pickup' : 'trip');
+    }
+    const icon = otherDriverIcon();
     drivers.forEach(driver => {
       if (!isFreshDriverLocation(driver) || !driver.lastPlace) return;
       if (ownId && String(driver.driverUserId) === ownId) return;
