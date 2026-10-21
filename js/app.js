@@ -58,6 +58,9 @@ let token       = localStorage.getItem('livre_driver_token');
 let authEpoch   = 0;
 let trips       = [];
 let selected    = null;
+// Se conserva fuera de la tarjeta para que un refresh de viajes no corte
+// el envío del GPS del viaje aceptado.
+let activeTripId = null;
 let watchId     = null;
 let wakeLock    = null;
 let gpsRecoveryTimer = null;
@@ -591,6 +594,7 @@ function render() {
 async function acceptTrip() {
   const changed = await changeStatus('arriving');
   if (!changed) return;
+  activeTripId = String(selected.id);
   startGps();
   await requestImmediateGpsSync();
   await loadTripRoute('pickup');
@@ -645,7 +649,10 @@ async function nextStatus() {
   if (!next) return;
   const changed = await changeStatus(next);
   if (changed && next === 'in_progress') await loadTripRoute('trip');
-  if (changed && next === 'completed') clearTripRoute();
+  if (changed && next === 'completed') {
+    activeTripId = null;
+    clearTripRoute();
+  }
 }
 
 /** Solo en DEMO: reinicia el viaje mock para poder recorrer el flujo de nuevo */
@@ -832,14 +839,17 @@ async function sendLocation(lat, lng) {
     diagLog('gps_send_response', { endpoint: 'driver', httpStatus: liveResponse.status });
     if (!liveResponse.ok) throw Error(`driver-location:${liveResponse.status}`);
 
-    if (selected && ['assigned','arriving','in_progress'].includes(selected.status)) {
-      const tripResponse = await fetch(`${API}/mobility/driver/trips/${selected.id}/location`, {
+    const gpsTrip = activeTripId
+      ? trips.find(t => String(t.id) === activeTripId) || (selected && String(selected.id) === activeTripId ? selected : null)
+      : (selected && ['assigned', 'arriving', 'in_progress'].includes(selected.status) ? selected : null);
+    if (gpsTrip && ['assigned','arriving','in_progress'].includes(gpsTrip.status)) {
+      const tripResponse = await fetch(`${API}/mobility/driver/trips/${gpsTrip.id}/location`, {
         method: 'POST', headers: h(), body,
       });
       diagLog('gps_send_response', { endpoint: 'trip', httpStatus: tripResponse.status });
       if (!tripResponse.ok) throw Error(`trip-location:${tripResponse.status}`);
     }
-    if (selected?.status === 'arriving') scheduleRouteRefresh();
+    if (gpsTrip?.status === 'arriving') scheduleRouteRefresh();
     gpsState.backend = 'SYNCED';
     updateGpsPill();
     diagLog('gps_send_end', { durationMs: Math.round(performance.now() - startedAt), result: 'ok' });
@@ -1545,6 +1555,7 @@ function clearWebSession() {
   // El JWT es la única credencial web persistida. También limpiamos la sesión
   // de la pestaña para no dejar estado de autenticación en un WebView.
   token = null;
+  activeTripId = null;
   authEpoch += 1;
   currentDriverUserId = '';
   currentDriverSnapshot = null;
