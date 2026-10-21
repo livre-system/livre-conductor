@@ -764,7 +764,19 @@ async function loadTrips() {
       selected = trips.find(t => DRIVER_CARD_STATUSES.includes(t.status)) || null;
     render();
     applyCloudTripLocation(selected);
-    if (selected) void loadTripTrace();
+    if (selected) {
+      void loadTripTrace();
+      if (tripUsesMapRoute(selected.status)) {
+        const phase = tripRoutePhase(selected.status);
+        const routeIsCurrent = routeSummary
+          && routeSummary.trip_id === String(selected.id)
+          && routeSummary.phase === phase;
+        if (!routeIsCurrent && !routeRequestController) {
+          activeTripId = String(selected.id);
+          void loadTripRoute(phase);
+        }
+      }
+    }
     // Anunciar cada ID nuevo evita que el primero silencie los siguientes.
     announcedTripIds.forEach(id => {
       if (!trips.some(t => String(t.id) === id && ['searching', 'assigned'].includes(t.status)))
@@ -1169,6 +1181,7 @@ async function loadTripRoute(phase) {
     }
     clearTripRoute();
     routeSummary = {
+      trip_id: tripId,
       phase,
       distance_km: route.distance_km,
       duration_min: route.duration_min,
