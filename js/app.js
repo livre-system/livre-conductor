@@ -601,8 +601,10 @@ async function acceptTrip() {
   if (!changed) return;
   activeTripId = String(selected.id);
   startGps();
-  await requestImmediateGpsSync();
-  await loadTripRoute('pickup');
+  const gpsSync = requestImmediateGpsSync();
+  const routeLoad = loadTripRoute('pickup');
+  await gpsSync;
+  await routeLoad;
   speak('Viaje aceptado. Comenzando a compartir ubicación.');
 }
 
@@ -653,7 +655,9 @@ async function nextStatus() {
   const next = { arriving: 'in_progress', in_progress: 'completed' }[selected.status];
   if (!next) return;
   const changed = await changeStatus(next);
-  if (changed && next === 'in_progress') await loadTripRoute('trip');
+  if (changed && next === 'in_progress') {
+    await loadTripRoute('trip');
+  }
   if (changed && next === 'completed') {
     activeTripId = null;
     clearTripRoute();
@@ -1129,6 +1133,7 @@ async function loadTripRoute(phase) {
     const route = await response.json();
     const points = (route.coordinates || []).map(([lng, lat]) => [lat, lng]);
     if (points.length < 2 || points.some(([lat, lng]) => !pointIsInBahiaBlanca(lat, lng))) throw Error('route-outside-bahia-blanca');
+    clearTripRoute();
     routeSummary = {
       phase,
       distance_km: route.distance_km,
@@ -1140,7 +1145,6 @@ async function loadTripRoute(phase) {
     // proyectar la polyline, y la capa vectorial queda corrida respecto de
     // los tiles.
     map.invalidateSize({ pan: false });
-    clearTripRoute();
     // Capa de contraste + núcleo de color: la ruta queda legible sobre
     // calles claras y oscuras, sin perder las curvas viales.
     routeCasing = L.polyline(points, {
