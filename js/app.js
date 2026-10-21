@@ -752,7 +752,7 @@ async function loadTrips() {
     if (!selected || selected.status === 'completed' || selected.status === 'cancelled')
       selected = trips.find(t => DRIVER_CARD_STATUSES.includes(t.status)) || null;
     render();
-    // Un viaje asignado existente puede seguir abierto mientras llegan otros.
+    applyCloudTripLocation(selected);
     // Anunciar cada ID nuevo evita que el primero silencie los siguientes.
     announcedTripIds.forEach(id => {
       if (!trips.some(t => String(t.id) === id && ['searching', 'assigned'].includes(t.status)))
@@ -1112,6 +1112,17 @@ function appendOwnTracePoint(lat, lng) {
   } else {
     ownTraceLine.setLatLngs(ownTracePoints);
   }
+}
+
+function applyCloudTripLocation(trip) {
+  const lat = Number(trip?.latitude);
+  const lng = Number(trip?.longitude);
+  if (!map || !Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  setMapMarker(lat, lng);
+  appendOwnTracePoint(lat, lng);
+  gpsState.provider = 'ACTIVE';
+  updateGpsPill();
+  return true;
 }
 
 function setMapMarker(lat, lng) {
