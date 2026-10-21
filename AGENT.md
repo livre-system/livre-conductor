@@ -126,3 +126,14 @@ Railway es la única plataforma de despliegue activa para todos los servicios y 
 - La lógica vive en `js/app.js`; los estados visuales viven en `css/styles.css`. El cache-busting de ambos assets se mantiene en `index.html`.
 - Corrección publicada en `livre-conductor`: commit `d359275`; actualización de assets: commit `0017739`.
 - Validar con `node --check js/app.js` y `git diff --check`; no usar `npm test` porque el repositorio no tiene `package.json`. Verificar además el asset publicado por HTTPS y el deploy Railway antes de afirmar disponibilidad.
+
+## Renovación visual del panel del conductor (2026-10-21)
+
+- La identidad visual debe priorizar rojo Livre `#e8003d`; el verde dejó de ser color de marca y queda reemplazado por un teal operativo `#35d0b0` para GPS/disponibilidad.
+- Las acciones principales de aceptar, iniciar y confirmar viaje usan rojo Livre; no reutilizar verde para botones de acción.
+- La guía de ruta debe reforzar la jerarquía del mapa con borde y acento rojo, sin tocar la geometría ni la lógica de enrutamiento.
+- El mapa conserva la ruta como foco, con contraste y saturación moderados para que el trazo y los estados de desvío sean legibles.
+- El bottom sheet puede crecer en modo de viaje activo y en escritorio usa un ancho máximo de 560px para evitar apariencia de modal estrecho.
+- Cambio visual aislado en `css/styles.css`; cache-busting actualizado en `index.html`.
+- Commits publicados: `456a8c7` (estilos) y `b105d0c` (cache-busting).
+- Validación local: `node --check js/app.js` → OK; `git diff --check` → OK. Falta confirmar el deploy Railway y el asset por HTTPS.
