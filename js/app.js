@@ -1021,6 +1021,31 @@ function updateGpsPill() {
 /* ══════════════════════════════════════════════════════════════
    MAPA
 ══════════════════════════════════════════════════════════════ */
+async function loadTripTrace() {
+  if (DEMO || !selected || !map || !tripUsesMapRoute(selected.status)) return false;
+  try {
+    const response = await fetch(`${API}/mobility/driver/trips/${selected.id}/trace?_=${Date.now()}`, {
+      headers: h(), cache: 'no-store',
+    });
+    if (!response.ok) throw Error(response.status);
+    const data = await response.json();
+    const points = (data.points || [])
+      .map(point => [Number(point.latitude), Number(point.longitude)])
+      .filter(([lat, lng]) => pointIsInBahiaBlanca(lat, lng));
+    if (points.length < 2) return false;
+    ownTracePoints = points.slice(-1000);
+    if (ownTraceLine) ownTraceLine.setLatLngs(ownTracePoints);
+    else ownTraceLine = L.polyline(ownTracePoints, {
+      color: '#facc15', weight: 6, opacity: 0.95,
+      lineCap: 'round', lineJoin: 'round',
+    }).addTo(map);
+    return true;
+  } catch (error) {
+    diagLog('gps_trace_load_failed', { error: String(error?.message || error).slice(0, 80) });
+    return false;
+  }
+}
+
 function clearTripRoute() {
   if (routeRefreshTimer) clearTimeout(routeRefreshTimer);
   routeRefreshTimer = null;
@@ -1262,6 +1287,7 @@ async function loadOtherDrivers() {
     if (marker && currentDriverSnapshot) marker.bindPopup(driverPopupHtml(currentDriverSnapshot, true));
     if (selected && tripUsesMapRoute(selected.status)) {
       void loadTripRoute(tripRoutePhase(selected.status));
+      void loadTripTrace();
     }
     const icon = otherDriverIcon();
     drivers.forEach(driver => {
