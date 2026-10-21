@@ -1023,7 +1023,7 @@ function updateGpsPill() {
    MAPA
 ══════════════════════════════════════════════════════════════ */
 async function loadTripTrace() {
-  if (DEMO || !selected || !map) return false;
+  if (DEMO || !selected) return false;
   try {
     const response = await fetch(`${API}/mobility/driver/trips/${selected.id}/trace?_=${Date.now()}`, {
       headers: h(), cache: 'no-store',
@@ -1035,6 +1035,7 @@ async function loadTripTrace() {
       .filter(([lat, lng]) => pointIsInBahiaBlanca(lat, lng));
     if (points.length < 2) return false;
     ownTracePoints = points.slice(-1000);
+    if (!map) return true;
     if (ownTraceLine) ownTraceLine.setLatLngs(ownTracePoints);
     else ownTraceLine = L.polyline(ownTracePoints, {
       color: '#facc15', weight: 6, opacity: 0.95,
@@ -1108,6 +1109,7 @@ function initMap() {
     maxZoom: 19,
   }).addTo(map);
   loadOtherDrivers();
+  void loadTripTrace();
   otherDriversTimer = setInterval(loadOtherDrivers, 15000);
   setTimeout(() => map?.invalidateSize(), 0);
 }
