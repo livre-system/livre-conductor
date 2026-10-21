@@ -678,6 +678,22 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 .leaflet-top { top: max(12px, env(safe-area-inset-top)); }
 .leaflet-right { right: 12px; }
 .leaflet-control-zoom a { width: 38px !important; height: 38px !important; line-height: 38px !important; }
+.driver-heading-icon {
+  background: transparent;
+  border: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.driver-heading-icon span {
+  color: #38bdf8;
+  display: block;
+  filter: drop-shadow(0 1px 2px #000);
+  font-size: 28px;
+  line-height: 1;
+  text-shadow: 0 0 2px #07080a;
+}
+
 .driver-other-marker {
   display: grid;
   place-items: center;

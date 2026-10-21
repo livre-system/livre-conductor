@@ -67,7 +67,10 @@ const GPS_HEARTBEAT_MS = 30000;
 let lastNativeLocationAt = 0;
 const gpsState = { provider: 'STOPPED', backend: 'UNKNOWN' };
 let marker      = null;
+let directionMarker = null;
+let lastMapPosition = null;
 let routeLine   = null;
+let routeRefreshTimer = null;
 let map         = null;
 let otherDriversLayer = null;
 let otherDriversRequestInFlight = false;
@@ -836,6 +839,7 @@ async function sendLocation(lat, lng) {
       diagLog('gps_send_response', { endpoint: 'trip', httpStatus: tripResponse.status });
       if (!tripResponse.ok) throw Error(`trip-location:${tripResponse.status}`);
     }
+    if (selected?.status === 'arriving') scheduleRouteRefresh();
     gpsState.backend = 'SYNCED';
     updateGpsPill();
     diagLog('gps_send_end', { durationMs: Math.round(performance.now() - startedAt), result: 'ok' });
@@ -995,8 +999,21 @@ function updateGpsPill() {
    MAPA
 ══════════════════════════════════════════════════════════════ */
 function clearTripRoute() {
+  if (routeRefreshTimer) clearTimeout(routeRefreshTimer);
+  routeRefreshTimer = null;
   if (routeLine && map) map.removeLayer(routeLine);
   routeLine = null;
+}
+
+function scheduleRouteRefresh() {
+  if (routeRefreshTimer) clearTimeout(routeRefreshTimer);
+  if (!selected || selected.status !== 'arriving') return;
+  routeRefreshTimer = setTimeout(async () => {
+    routeRefreshTimer = null;
+    if (selected?.status !== 'arriving') return;
+    await loadTripRoute('pickup');
+    scheduleRouteRefresh();
+  }, 30000);
 }
 
 async function loadTripRoute(phase) {
@@ -1038,9 +1055,29 @@ function initMap() {
   setTimeout(() => map?.invalidateSize(), 0);
 }
 
+function driverHeading(from, to) {
+  const lat1 = from[0] * Math.PI / 180;
+  const lat2 = to[0] * Math.PI / 180;
+  const deltaLng = (to[1] - from[1]) * Math.PI / 180;
+  const y = Math.sin(deltaLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+function driverHeadingIcon(heading) {
+  return L.divIcon({
+    className: 'driver-heading-icon',
+    html: `<span style="transform: rotate(${heading + 90}deg)">➤</span>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  });
+}
+
 function setMapMarker(lat, lng) {
   if (!map) return;
   const pos = [lat, lng];
+  const heading = lastMapPosition ? driverHeading(lastMapPosition, pos) : 0;
+  lastMapPosition = pos;
   if (!marker) {
     marker = L.circleMarker(pos, {
       radius: 10,
@@ -1051,6 +1088,16 @@ function setMapMarker(lat, lng) {
     }).addTo(map);
   } else {
     marker.setLatLng(pos);
+  }
+  if (!directionMarker) {
+    directionMarker = L.marker(pos, {
+      icon: driverHeadingIcon(heading),
+      interactive: false,
+      zIndexOffset: 1000,
+    }).addTo(map);
+  } else {
+    directionMarker.setLatLng(pos);
+    directionMarker.setIcon(driverHeadingIcon(heading));
   }
   map.setView(pos, Math.max(map.getZoom(), 15));
 }
