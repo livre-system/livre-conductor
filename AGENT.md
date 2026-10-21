@@ -146,3 +146,14 @@ Railway es la única plataforma de despliegue activa para todos los servicios y 
 - Los estados light y dark deben tener superficies, bordes y contraste propios; no reutilizar literales oscuros en el tema claro.
 - El cambio vive en `css/styles.css` bajo `Stage 2: conductor cockpit`; `index.html` referencia `stage2-cockpit` para invalidar caché.
 - Validar con `node --check js/app.js`, `git diff --check` y revisión HTTPS del asset publicado; no atribuir deploy verificado al push solamente.
+
+## Dos líneas de llegada del viaje (2026-10-21)
+
+- El mapa debe mostrar simultáneamente dos rutas planificadas: `pickup`, desde la posición del conductor hasta retirar al cliente, y `trip`, desde el origen del viaje hasta el destino.
+- `pickup` se dibuja en celeste continuo (`#22c7f5`) y `trip` en fucsia segmentado (`#f43f5e`); la ruta correspondiente a la fase actual queda resaltada y la otra permanece visible como referencia.
+- La leyenda del mapa debe identificar explícitamente “Retiro del cliente” y “Traslado al destino”; una línea gris de la cartografía no cuenta como segunda ruta.
+- El backend ya expone ambas fases en `/mobility/driver/trips/{trip_id}/route?phase=pickup|trip`; el frontend las carga y valida antes de dibujarlas.
+- La detección de desvíos continúa comparando el GPS únicamente contra la ruta activa, sin marcar como error la ruta futura.
+- La corrección vive en `js/app.js`, `css/styles.css` e `index.html`, con cache-busting `stage2-routes`.
+- Commit `eb55a4c` publicado en GitHub. Railway estaba temporalmente pausado al verificar; la disponibilidad HTTPS queda pendiente de un deploy posterior.
+- Validar con `node --check js/app.js` y `git diff --check`; no informar la corrección como disponible en producción hasta confirmar los assets por HTTPS.
