@@ -306,6 +306,30 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
   min-height: 0;
 }
 
+.route-legend {
+  position: absolute;
+  left: 16px;
+  bottom: 18px;
+  z-index: 900;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  max-width: min(420px, calc(100% - 32px));
+  padding: 9px 12px;
+  border: 1px solid rgba(148, 163, 184, .28);
+  border-radius: 12px;
+  background: rgba(7, 18, 31, .9);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .28);
+  pointer-events: none;
+}
+.route-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.route-legend-swatch { width: 24px; height: 5px; display: inline-block; border-radius: 999px; }
+.route-legend-swatch.pickup { background: #22c7f5; }
+.route-legend-swatch.trip { background: #f43f5e; }
+
 .route-guidance {
   position: absolute;
   top: 16px;

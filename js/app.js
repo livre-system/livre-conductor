@@ -75,6 +75,10 @@ let lastMapPosition = null;
 let routeLine   = null;
 let routeCasing = null;
 let routeSummary = null;
+let routeLayers = {
+  pickup: { line: null, casing: null, points: [], summary: null },
+  trip: { line: null, casing: null, points: [], summary: null },
+};
 let plannedRoutePoints = [];
 let routeDeviation = { level: 'unknown', distanceM: null, consecutive: 0 };
 let routeRequestController = null;
@@ -1186,6 +1190,14 @@ function clearTripRoute() {
   routeRefreshTimer = null;
   if (routeCasing && map) map.removeLayer(routeCasing);
   if (routeLine && map) map.removeLayer(routeLine);
+  Object.values(routeLayers).forEach(layer => {
+    if (layer.casing && map) map.removeLayer(layer.casing);
+    if (layer.line && map) map.removeLayer(layer.line);
+    layer.casing = null;
+    layer.line = null;
+    layer.points = [];
+    layer.summary = null;
+  });
   routeCasing = null;
   routeLine = null;
   plannedRoutePoints = [];
@@ -1217,75 +1229,84 @@ async function loadTripRoute(phase) {
   if (DEMO || !selected || !map) return false;
   const tripId = String(selected.id);
   const requestSequence = ++routeRequestSequence;
-  const cacheKey = `${tripId}:${phase}`;
-  const cachedRoute = phase === 'trip' ? routeCache.get(cacheKey) : null;
   if (routeRequestController) routeRequestController.abort();
   if (routeRequestTimeout) clearTimeout(routeRequestTimeout);
   routeRequestController = null;
   routeRequestTimeout = null;
   try {
-    let route = cachedRoute;
-    if (!route) {
+    const phases = ['pickup', 'trip'];
+    const routes = await Promise.all(phases.map(async routePhase => {
+      const cacheKey = `${tripId}:${routePhase}`;
+      const cachedRoute = routePhase === 'trip' ? routeCache.get(cacheKey) : null;
+      if (cachedRoute) return [routePhase, cachedRoute];
       const controller = new AbortController();
       routeRequestController = controller;
       routeRequestTimeout = setTimeout(() => controller.abort(), 12000);
-      const response = await fetch(`${API}/mobility/driver/trips/${tripId}/route?phase=${phase}`, {
+      const response = await fetch(`${API}/mobility/driver/trips/${tripId}/route?phase=${routePhase}`, {
         headers: h(),
         signal: controller.signal,
       });
       if (routeRequestTimeout) clearTimeout(routeRequestTimeout);
       routeRequestTimeout = null;
-      if (!response.ok) throw Error(response.status);
-      route = await response.json();
-      if (routeRequestController === controller) routeRequestController = null;
-    }
+      if (!response.ok) throw Error(`${routePhase}:${response.status}`);
+      const route = await response.json();
+      if (routePhase === 'trip') {
+        routeCache.set(cacheKey, route);
+        if (routeCache.size > 20) routeCache.delete(routeCache.keys().next().value);
+      }
+      return [routePhase, route];
+    }));
     if (requestSequence !== routeRequestSequence || !selected || String(selected.id) !== tripId) return false;
-    const points = (route.coordinates || []).map(([lng, lat]) => [lat, lng]);
-    if (points.length < 2 || points.some(([lat, lng]) => !pointIsInBahiaBlanca(lat, lng))) throw Error('route-outside-bahia-blanca');
-    if (!cachedRoute && phase === 'trip') {
-      routeCache.set(cacheKey, route);
-      if (routeCache.size > 20) routeCache.delete(routeCache.keys().next().value);
-    }
     clearTripRoute();
-    plannedRoutePoints = points;
+    routes.forEach(([routePhase, route]) => {
+      const points = (route.coordinates || []).map(([lng, lat]) => [lat, lng]);
+      if (points.length < 2 || points.some(([lat, lng]) => !pointIsInBahiaBlanca(lat, lng))) throw Error(`route-outside-bahia-blanca:${routePhase}`);
+      routeLayers[routePhase] = {
+        points,
+        summary: { trip_id: tripId, phase: routePhase, distance_km: route.distance_km, duration_min: route.duration_min },
+        casing: null,
+        line: null,
+      };
+    });
+    routeSummary = routeLayers[phase].summary;
+    plannedRoutePoints = routeLayers[phase].points;
     routeDeviation = { level: 'unknown', distanceM: null, consecutive: 0 };
-    routeSummary = {
-      trip_id: tripId,
-      phase,
-      distance_km: route.distance_km,
-      duration_min: route.duration_min,
-    };
     renderRouteGuidance();
-    // El panel inferior cambia la altura útil del mapa al aceptar/iniciar.
-    // Leaflet conserva el viewport anterior si no se invalida antes de
-    // proyectar la polyline, y la capa vectorial queda corrida respecto de
-    // los tiles.
     map.invalidateSize({ pan: false });
-    // Capa de contraste + núcleo de color: la ruta queda legible sobre
-    // calles claras y oscuras, sin perder las curvas viales.
-    routeCasing = L.polyline(points, {
-      color: '#082f49',
-      weight: 9,
-      opacity: 0.72,
-      lineCap: 'round',
-      lineJoin: 'round',
-      smoothFactor: 0.1,
-    }).addTo(map);
-    routeLine = L.polyline(points, {
-      color: '#22c7f5',
-      weight: 5,
-      opacity: 1,
-      lineCap: 'round',
-      lineJoin: 'round',
-      smoothFactor: 0.1,
-    }).addTo(map);
-    map.fitBounds(routeLine.getBounds(), { padding: [28, 28], maxZoom: 16 });
-    diagLog('trip_route_loaded', { phase, points: points.length });
+    const colors = { pickup: '#22c7f5', trip: '#f43f5e' };
+    phases.forEach(routePhase => {
+      const layer = routeLayers[routePhase];
+      const active = routePhase === phase;
+      layer.casing = L.polyline(layer.points, {
+        color: active ? '#082f49' : '#4b1024',
+        weight: active ? 9 : 7,
+        opacity: active ? 0.72 : 0.45,
+        lineCap: 'round',
+        lineJoin: 'round',
+        smoothFactor: 0.1,
+        dashArray: active ? null : '10 8',
+      }).addTo(map);
+      layer.line = L.polyline(layer.points, {
+        color: colors[routePhase],
+        weight: active ? 5 : 4,
+        opacity: active ? 1 : 0.78,
+        lineCap: 'round',
+        lineJoin: 'round',
+        smoothFactor: 0.1,
+        dashArray: active ? null : '10 8',
+      }).addTo(map);
+    });
+    routeCasing = routeLayers[phase].casing;
+    routeLine = routeLayers[phase].line;
+    const bounds = L.latLngBounds([]);
+    phases.forEach(routePhase => routeLayers[routePhase].points.forEach(point => bounds.extend(point)));
+    map.fitBounds(bounds, { padding: [28, 28], maxZoom: 16 });
+    diagLog('trip_routes_loaded', { activePhase: phase, pickupPoints: routeLayers.pickup.points.length, tripPoints: routeLayers.trip.points.length });
     return true;
   } catch (error) {
     if (requestSequence !== routeRequestSequence || error?.name === 'AbortError') return false;
-    diagLog('trip_route_failed', { phase, status: String(error?.message || error).slice(0, 40) });
-    showNotice('El viaje aceptó correctamente, pero todavía no se pudo trazar la ruta.');
+    diagLog('trip_routes_failed', { activePhase: phase, status: String(error?.message || error).slice(0, 80) });
+    showNotice('El viaje aceptó correctamente, pero todavía no se pudieron trazar las dos rutas.');
     return false;
   }
 }
@@ -1298,6 +1319,11 @@ function initMap() {
   routeGuidance.className = 'route-guidance';
   routeGuidance.hidden = true;
   map.getContainer().appendChild(routeGuidance);
+  const routeLegend = document.createElement('div');
+  routeLegend.id = 'routeLegend';
+  routeLegend.className = 'route-legend';
+  routeLegend.innerHTML = '<span><i class="route-legend-swatch pickup"></i>Retiro del cliente</span><span><i class="route-legend-swatch trip"></i>Traslado al destino</span>';
+  map.getContainer().appendChild(routeLegend);
   L.control.zoom({ position: 'topright' }).addTo(map);
   const conductorTileLayer = L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
