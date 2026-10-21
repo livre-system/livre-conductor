@@ -1196,15 +1196,15 @@ async function loadTripRoute(phase) {
     // calles claras y oscuras, sin perder las curvas viales.
     routeCasing = L.polyline(points, {
       color: '#082f49',
-      weight: 15,
-      opacity: 0.78,
+      weight: 11,
+      opacity: 0.72,
       lineCap: 'round',
       lineJoin: 'round',
       smoothFactor: 0.5,
     }).addTo(map);
     routeLine = L.polyline(points, {
       color: '#22c7f5',
-      weight: 8,
+      weight: 6,
       opacity: 1,
       lineCap: 'round',
       lineJoin: 'round',
