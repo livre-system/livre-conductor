@@ -754,6 +754,7 @@ async function loadTrips() {
       selected = trips.find(t => DRIVER_CARD_STATUSES.includes(t.status)) || null;
     render();
     applyCloudTripLocation(selected);
+    if (selected && tripUsesMapRoute(selected.status)) void loadTripTrace();
     // Anunciar cada ID nuevo evita que el primero silencie los siguientes.
     announcedTripIds.forEach(id => {
       if (!trips.some(t => String(t.id) === id && ['searching', 'assigned'].includes(t.status)))
