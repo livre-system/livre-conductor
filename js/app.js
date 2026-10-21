@@ -1082,6 +1082,11 @@ async function loadTripRoute(phase) {
     const route = await response.json();
     const points = (route.coordinates || []).map(([lng, lat]) => [lat, lng]);
     if (points.length < 2 || points.some(([lat, lng]) => !pointIsInBahiaBlanca(lat, lng))) throw Error('route-outside-bahia-blanca');
+    // El panel inferior cambia la altura útil del mapa al aceptar/iniciar.
+    // Leaflet conserva el viewport anterior si no se invalida antes de
+    // proyectar la polyline, y la capa vectorial queda corrida respecto de
+    // los tiles.
+    map.invalidateSize({ pan: false });
     clearTripRoute();
     routeLine = L.polyline(points, {
       color: '#38bdf8',
