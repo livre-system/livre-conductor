@@ -851,6 +851,24 @@ async function sendLocation(lat, lng) {
   }
 }
 
+// Fuerza una lectura puntual cuando cambia el estado operativo. El servicio
+// nativo sigue enviando GPS en segundo plano; esto solo acelera la actualización.
+function requestImmediateGpsSync() {
+  if (DEMO || !token || !navigator.geolocation) return Promise.resolve(false);
+  return new Promise(resolve => {
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        void sendLocation(position.coords.latitude, position.coords.longitude).finally(() => resolve(true));
+      },
+      error => {
+        diagLog('gps_status_sync_failed', { code: error?.code ?? null });
+        resolve(false);
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
+    );
+  });
+}
+
 /* ══════════════════════════════════════════════════════════════
    GPS
 ══════════════════════════════════════════════════════════════ */
@@ -1158,6 +1176,7 @@ async function changeOperationalStatus(status) {
     operationalStatus = data.status;
     updateOwnMarkerStyle();
     renderOperationalStatus();
+    await requestImmediateGpsSync();
     await loadTrips();
     return true;
   } catch (e) {
