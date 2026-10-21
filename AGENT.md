@@ -115,3 +115,14 @@ Railway es la única plataforma de despliegue activa para todos los servicios y 
 - El heartbeat debe usar `getCurrentPosition()` con `maximumAge: 0`, respetar la sesión/token y detenerse al apagar el GPS para evitar envíos de sesiones viejas.
 - La corrección vive en `js/app.js`, commit `6ff2ecc`, y fue verificada en producción por HTTPS después del deploy Railway.
 - Validación ejecutada: `node --test tests/status.test.js` → 30 pasaron, 0 fallaron; `git diff --check` → OK. `npm test` no aplica porque el repositorio no tiene `package.json`.
+
+## Trazado rígido y aviso visual de desvíos (2026-10-21)
+
+- La ruta planificada debe seguir la geometría vial recibida y dibujarse con `smoothFactor: 0.1`; no suavizarla con valores altos que oculten curvas o desvíos.
+- El GPS real del conductor se compara contra la ruta planificada usando una distancia aproximada en metros y la precisión reportada por el navegador.
+- El trazo real usa colores semánticos: celeste dentro de ruta, amarillo ante separación moderada y rojo ante desvío confirmado.
+- No marcar rojo por una sola posición: exigir varios puntos consecutivos fuera de tolerancia para evitar falsos avisos por ruido GPS.
+- El estado visible debe permanecer en el panel de guía y el color rojo debe representar el recorrido real desviado, no pintar como incorrecta la ruta planificada.
+- La lógica vive en `js/app.js`; los estados visuales viven en `css/styles.css`. El cache-busting de ambos assets se mantiene en `index.html`.
+- Corrección publicada en `livre-conductor`: commit `d359275`; actualización de assets: commit `0017739`.
+- Validar con `node --check js/app.js` y `git diff --check`; no usar `npm test` porque el repositorio no tiene `package.json`. Verificar además el asset publicado por HTTPS y el deploy Railway antes de afirmar disponibilidad.
