@@ -75,6 +75,10 @@ let lastMapPosition = null;
 let routeLine   = null;
 let routeCasing = null;
 let routeSummary = null;
+let routeRequestController = null;
+let routeRequestTimeout = null;
+let routeRequestSequence = 0;
+const routeCache = new Map();
 let ownTraceLine = null;
 let ownTracePoints = [];
 let ownTraceTripId = '';
@@ -1096,6 +1100,11 @@ function renderRouteGuidance() {
 }
 
 function clearTripRoute() {
+  routeRequestSequence += 1;
+  if (routeRequestController) routeRequestController.abort();
+  if (routeRequestTimeout) clearTimeout(routeRequestTimeout);
+  routeRequestController = null;
+  routeRequestTimeout = null;
   if (routeRefreshTimer) clearTimeout(routeRefreshTimer);
   routeRefreshTimer = null;
   if (routeCasing && map) map.removeLayer(routeCasing);
@@ -1127,12 +1136,37 @@ function scheduleRouteRefresh() {
 
 async function loadTripRoute(phase) {
   if (DEMO || !selected || !map) return false;
+  const tripId = String(selected.id);
+  const requestSequence = ++routeRequestSequence;
+  const cacheKey = `${tripId}:${phase}`;
+  const cachedRoute = phase === 'trip' ? routeCache.get(cacheKey) : null;
+  if (routeRequestController) routeRequestController.abort();
+  if (routeRequestTimeout) clearTimeout(routeRequestTimeout);
+  routeRequestController = null;
+  routeRequestTimeout = null;
   try {
-    const response = await fetch(`${API}/mobility/driver/trips/${selected.id}/route?phase=${phase}`, { headers: h() });
-    if (!response.ok) throw Error(response.status);
-    const route = await response.json();
+    let route = cachedRoute;
+    if (!route) {
+      const controller = new AbortController();
+      routeRequestController = controller;
+      routeRequestTimeout = setTimeout(() => controller.abort(), 12000);
+      const response = await fetch(`${API}/mobility/driver/trips/${tripId}/route?phase=${phase}`, {
+        headers: h(),
+        signal: controller.signal,
+      });
+      if (routeRequestTimeout) clearTimeout(routeRequestTimeout);
+      routeRequestTimeout = null;
+      if (!response.ok) throw Error(response.status);
+      route = await response.json();
+      if (routeRequestController === controller) routeRequestController = null;
+    }
+    if (requestSequence !== routeRequestSequence || !selected || String(selected.id) !== tripId) return false;
     const points = (route.coordinates || []).map(([lng, lat]) => [lat, lng]);
     if (points.length < 2 || points.some(([lat, lng]) => !pointIsInBahiaBlanca(lat, lng))) throw Error('route-outside-bahia-blanca');
+    if (!cachedRoute && phase === 'trip') {
+      routeCache.set(cacheKey, route);
+      if (routeCache.size > 20) routeCache.delete(routeCache.keys().next().value);
+    }
     clearTripRoute();
     routeSummary = {
       phase,
@@ -1167,6 +1201,7 @@ async function loadTripRoute(phase) {
     diagLog('trip_route_loaded', { phase, points: points.length });
     return true;
   } catch (error) {
+    if (requestSequence !== routeRequestSequence || error?.name === 'AbortError') return false;
     diagLog('trip_route_failed', { phase, status: String(error?.message || error).slice(0, 40) });
     showNotice('El viaje aceptó correctamente, pero todavía no se pudo trazar la ruta.');
     return false;
