@@ -28,6 +28,7 @@ import org.json.JSONObject;
 public class MainActivity extends Activity {
     public static final String ACTION_LOCATION_STATUS = "com.livre.conductor.LOCATION_STATUS";
     public static final String ACTION_SESSION_INVALIDATED = "com.livre.conductor.SESSION_INVALIDATED";
+    private static final String TRIPS_NOTIFICATION_CHANNEL = "livre_trips_v2";
     private static final String WEB_URL = "https://livre-conductor-production.up.railway.app/";
     private static final int LOCATION_REQUEST = 41;
     private static final int BACKGROUND_LOCATION_REQUEST = 42;
@@ -131,7 +132,7 @@ public class MainActivity extends Activity {
         if (manager == null) return false;
         if (Build.VERSION.SDK_INT >= 24 && !manager.areNotificationsEnabled()) return false;
         if (Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel channel = manager.getNotificationChannel("livre_trips");
+            NotificationChannel channel = manager.getNotificationChannel(TRIPS_NOTIFICATION_CHANNEL);
             return channel == null || channel.getImportance() != NotificationManager.IMPORTANCE_NONE;
         }
         return true;

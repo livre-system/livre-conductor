@@ -394,7 +394,7 @@ function finalFareHtml(t) {
 }
 
 function tripQueueHtml(current) {
-  const pending = trips.filter(t => ['searching', 'assigned'].includes(t.status) && String(t.id) !== String(current?.id));
+  const pending = trips.filter(t => t.status === 'assigned' && String(t.id) !== String(current?.id));
   if (!pending.length) return '';
   return `<section class="trip-queue" aria-label="Pedidos nuevos">
     <div class="trip-queue-heading">
@@ -430,7 +430,7 @@ function bindTripQueue() {
 
 function clearPendingTrips() {
   const pendingIds = trips
-    .filter(t => ['searching', 'assigned'].includes(t.status) && String(t.id) !== String(selected?.id))
+    .filter(t => t.status === 'assigned' && String(t.id) !== String(selected?.id))
     .map(t => String(t.id));
   pendingIds.forEach(id => rememberRejectedTrip(id));
   trips = trips.filter(t => !pendingIds.includes(String(t.id)));
@@ -440,7 +440,7 @@ function clearPendingTrips() {
 }
 
 function selectNextPendingTrip() {
-  const next = trips.find(t => ['searching', 'assigned'].includes(t.status));
+  const next = trips.find(t => t.status === 'assigned');
   selected = next || null;
   render();
   return next;
@@ -466,7 +466,7 @@ function orderTripsNewestFirst(list) {
   });
 }
 
-const DRIVER_CARD_STATUSES = ['searching', 'assigned', 'arriving', 'in_progress'];
+const DRIVER_CARD_STATUSES = ['assigned', 'arriving', 'in_progress'];
 
 function operationalTripsOnly(list) {
   return Array.isArray(list)
@@ -477,13 +477,13 @@ function operationalTripsOnly(list) {
 function selectPrimaryTrip(list, current) {
   // Una solicitud nueva reemplaza solo otra solicitud pendiente. Si ya hay
   // un viaje aceptado/en curso, ese viaje sigue siendo la tarjeta principal.
-  // Los viajes `searching` son ofertas globales. El primer conductor que
-  // acepta hace el claim en el backend y pasa el viaje a `arriving`.
+  // Los viajes `searching` son ofertas globales y no son tarjetas del
+  // conductor hasta que el backend los asigna.
   // Siempre devolvemos la instancia recién recibida: conservar `current`
   // podía dejar origen/destino/status de una respuesta anterior en pantalla.
   const latestCurrent = current && list.find(t => String(t.id) === String(current.id));
   if (latestCurrent && ['arriving', 'in_progress'].includes(latestCurrent.status)) return latestCurrent;
-  return list.find(t => ['searching', 'assigned'].includes(t.status)) || null;
+  return list.find(t => t.status === 'assigned') || null;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -505,11 +505,10 @@ const ACTION_LABEL = {
 function render() {
   clearNotice();
 
-  // Resolvemos qué viaje mostrar. Un viaje `searching` es una oferta global
-  // que este conductor puede tomar; el backend hace el claim al aceptar.
+  // `searching` es una oferta global, no una tarjeta operativa del conductor.
   const t = selected && DRIVER_CARD_STATUSES.includes(selected.status)
     ? selected
-    : trips.find(x => ['searching', 'assigned'].includes(x.status));
+    : trips.find(x => x.status === 'assigned');
 
   const sheet  = $('sheet');
   const inner  = $('sheetInner');
@@ -528,14 +527,14 @@ function render() {
   const st = t.status;
 
   // ── Viaje asignado (alerta) ──────────────────────────────── */
-  if (st === 'assigned' || st === 'searching') {
+  if (st === 'assigned') {
     sheet.className = 'sheet alert-mode';
     inner.innerHTML = `
       ${operationalControlsHtml()}
       <div class="trip-alert">
         <div class="alert-badge">
           <span class="alert-pulse"></span>
-          ${DEMO ? '🧪 DEMO — ' : ''}${st === 'searching' ? 'Nuevo viaje disponible' : 'Viaje recibido'}
+          ${DEMO ? '🧪 DEMO — ' : ''}Viaje recibido
         </div>
         <div class="alert-title">¿Aceptás este viaje?</div>
 
@@ -789,7 +788,7 @@ async function loadTrips() {
     const operationalTrips = operationalTripsOnly(nextTrips);
     receivedCount = operationalTrips.length;
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
-    trips = orderTripsNewestFirst(operationalTrips.filter(t => !rejectedTripIds.has(String(t.id))));
+    trips = orderTripsNewestFirst(nextTrips.filter(t => DRIVER_CARD_STATUSES.includes(t.status) && !rejectedTripIds.has(String(t.id))));
     // La lista ya está ordenada por la fecha real del pedido. La tarjeta
     // principal toma el pendiente más nuevo; los anteriores quedan en la cola.
     selected = selectPrimaryTrip(trips, selected);
@@ -818,7 +817,7 @@ async function loadTrips() {
       if (!trips.some(t => String(t.id) === id && ['searching', 'assigned'].includes(t.status)))
         announcedTripIds.delete(id);
     });
-    const freshTrips = trips.filter(t => ['searching', 'assigned'].includes(t.status) && !announcedTripIds.has(String(t.id)));
+    const freshTrips = trips.filter(t => t.status === 'assigned' && !announcedTripIds.has(String(t.id)));
     if (!initialTripsLoaded) freshTrips.length = 0;
     freshTrips.forEach(announceNewTrip);
     initialTripsLoaded = true;

@@ -10,6 +10,7 @@ import android.os.Build;
 
 /** Single permission/lifecycle gate shared by the Activity and service. */
 public final class PermissionGate {
+
     public enum State {
         READY,
         NEED_PRECISE_LOCATION,
@@ -38,7 +39,7 @@ public final class PermissionGate {
         if (manager == null) return false;
         if (Build.VERSION.SDK_INT >= 24 && !manager.areNotificationsEnabled()) return false;
         if (Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel channel = manager.getNotificationChannel("livre_trips");
+            NotificationChannel channel = manager.getNotificationChannel("livre_trips_v2");
             if (channel != null && channel.getImportance() == NotificationManager.IMPORTANCE_NONE) return false;
         }
         return true;
