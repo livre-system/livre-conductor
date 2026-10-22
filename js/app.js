@@ -93,6 +93,9 @@ let map         = null;
 let otherDriversLayer = null;
 let otherDriversRequestInFlight = false;
 let otherDriversTimer = null;
+let followOwnLocation = true;
+let showOwnTrace = true;
+let traceRequestSequence = 0;
 let currentDriverUserId = '';
 const announcedTripIds = new Set();
 const rejectedTripIds = new Set(JSON.parse(localStorage.getItem('livre_driver_rejected_trips') || '[]'));
@@ -1052,8 +1055,10 @@ function updateGpsPill() {
 ══════════════════════════════════════════════════════════════ */
 async function loadTripTrace() {
   if (DEMO || !selected) return false;
+  const tripId = String(selected.id);
+  const requestSequence = ++traceRequestSequence;
   try {
-    const response = await fetch(`${API}/mobility/driver/trips/${selected.id}/trace?_=${Date.now()}`, {
+    const response = await fetch(`${API}/mobility/driver/trips/${tripId}/trace?_=${Date.now()}`, {
       headers: h(), cache: 'no-store',
     });
     if (!response.ok) throw Error(response.status);
@@ -1061,9 +1066,13 @@ async function loadTripTrace() {
     const points = (data.points || [])
       .map(point => [Number(point.latitude), Number(point.longitude)])
       .filter(([lat, lng]) => pointIsInBahiaBlanca(lat, lng));
+    if (requestSequence !== traceRequestSequence || !selected || String(selected.id) !== tripId) return false;
     if (points.length < 2) return false;
+    if (ownTraceTripId !== tripId && ownTraceLine && map) map.removeLayer(ownTraceLine);
+    if (ownTraceTripId !== tripId) ownTraceLine = null;
+    ownTraceTripId = tripId;
     ownTracePoints = points.slice(-1000);
-    if (!map) return true;
+    if (!map || !showOwnTrace) return true;
     if (ownTraceLine) ownTraceLine.setLatLngs(ownTracePoints);
     else ownTraceLine = L.polyline(ownTracePoints, {
       color: routeDeviation.level === 'off_route' ? '#ef4444' : routeDeviation.level === 'warning' ? '#f59e0b' : '#22c7f5', weight: 6, opacity: 0.95,
@@ -1073,6 +1082,59 @@ async function loadTripTrace() {
   } catch (error) {
     diagLog('gps_trace_load_failed', { error: String(error?.message || error).slice(0, 80) });
     return false;
+  }
+}
+
+function updateMapFollowButton() {
+  const button = $('mapFollowButton');
+  if (!button) return;
+  button.classList.toggle('active', followOwnLocation);
+  button.setAttribute('aria-pressed', String(followOwnLocation));
+  button.textContent = followOwnLocation ? '◎ Siguiendo' : '◎ Volver a mí';
+}
+
+function centerOnOwnLocation() {
+  followOwnLocation = true;
+  updateMapFollowButton();
+  if (marker && map) map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15), { animate: true });
+  else showNotice('Todavía no hay una ubicación GPS válida.');
+}
+
+function fitActiveMapContent() {
+  if (!map) return;
+  const bounds = L.latLngBounds([]);
+  let hasPoints = false;
+  [routeLayers.pickup, routeLayers.trip].forEach(layer => {
+    if (layer.points.length) { layer.points.forEach(point => bounds.extend(point)); hasPoints = true; }
+  });
+  if (showOwnTrace && ownTracePoints.length) {
+    ownTracePoints.forEach(point => bounds.extend(point));
+    hasPoints = true;
+  }
+  if (marker) { bounds.extend(marker.getLatLng()); hasPoints = true; }
+  if (hasPoints) {
+    followOwnLocation = false;
+    updateMapFollowButton();
+    map.fitBounds(bounds, { padding: [34, 34], maxZoom: 16, animate: true });
+  } else showNotice('Todavía no hay una ruta o posición para encuadrar.');
+}
+
+function toggleOwnTrace() {
+  showOwnTrace = !showOwnTrace;
+  if (ownTraceLine && map) {
+    if (showOwnTrace) ownTraceLine.addTo(map);
+    else map.removeLayer(ownTraceLine);
+  } else if (showOwnTrace && map && ownTracePoints.length > 1) {
+    ownTraceLine = L.polyline(ownTracePoints, {
+      color: routeDeviation.level === 'off_route' ? '#ef4444' : routeDeviation.level === 'warning' ? '#f59e0b' : '#22c7f5',
+      weight: 6, opacity: 0.95, lineCap: 'round', lineJoin: 'round',
+    }).addTo(map);
+  }
+  const button = $('mapTraceButton');
+  if (button) {
+    button.classList.toggle('active', showOwnTrace);
+    button.setAttribute('aria-pressed', String(showOwnTrace));
+    button.textContent = showOwnTrace ? 'Trazo visible' : 'Mostrar trazo';
   }
 }
 
@@ -1203,6 +1265,7 @@ function clearTripRoute() {
   plannedRoutePoints = [];
   routeDeviation = { level: 'unknown', distanceM: null, consecutive: 0 };
   routeSummary = null;
+  traceRequestSequence += 1;
   renderRouteGuidance();
 }
 
@@ -1324,6 +1387,15 @@ function initMap() {
   routeLegend.className = 'route-legend';
   routeLegend.innerHTML = '<span><i class="route-legend-swatch pickup"></i>Retiro del cliente</span><span><i class="route-legend-swatch trip"></i>Traslado al destino</span>';
   map.getContainer().appendChild(routeLegend);
+  const mapToolbar = document.createElement('div');
+  mapToolbar.className = 'map-toolbar';
+  mapToolbar.innerHTML = '<button id="mapFollowButton" class="map-tool active" type="button" aria-pressed="true">◎ Siguiendo</button><button id="mapFitButton" class="map-tool" type="button">⌗ Ver ruta</button><button id="mapTraceButton" class="map-tool active" type="button" aria-pressed="true">Trazo visible</button>';
+  map.getContainer().appendChild(mapToolbar);
+  $('mapFollowButton').onclick = centerOnOwnLocation;
+  $('mapFitButton').onclick = fitActiveMapContent;
+  $('mapTraceButton').onclick = toggleOwnTrace;
+  updateMapFollowButton();
+  map.on('dragstart', () => { followOwnLocation = false; updateMapFollowButton(); });
   L.control.zoom({ position: 'topright' }).addTo(map);
   const conductorTileLayer = L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
@@ -1371,6 +1443,7 @@ function appendOwnTracePoint(lat, lng) {
   if (last && Math.abs(last[0] - lat) < 0.000001 && Math.abs(last[1] - lng) < 0.000001) return;
   ownTracePoints.push(point);
   if (ownTracePoints.length > 1000) ownTracePoints.shift();
+  if (!showOwnTrace) return;
   if (!ownTraceLine) {
     ownTraceLine = L.polyline(ownTracePoints, {
       color: routeDeviation.level === 'off_route' ? '#ef4444' : routeDeviation.level === 'warning' ? '#f59e0b' : '#22c7f5', weight: 6, opacity: 0.95,
@@ -1441,7 +1514,7 @@ function setMapMarker(lat, lng, accuracy = null) {
     directionMarker.setLatLng(pos);
     directionMarker.setIcon(driverHeadingIcon(heading));
   }
-  map.setView(pos, Math.max(map.getZoom(), 15));
+  if (followOwnLocation) map.setView(pos, Math.max(map.getZoom(), 15));
 }
 
 function updateOwnMarkerStyle() {

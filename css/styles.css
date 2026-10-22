@@ -330,6 +330,32 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 .route-legend-swatch.pickup { background: #22c7f5; }
 .route-legend-swatch.trip { background: #f43f5e; }
 
+.map-toolbar {
+  position: absolute;
+  top: 16px;
+  right: 58px;
+  z-index: 900;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: min(360px, calc(100% - 76px));
+}
+.map-tool {
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid rgba(148, 163, 184, .35);
+  border-radius: 10px;
+  background: rgba(7, 18, 31, .92);
+  color: #dbeafe;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .25);
+  cursor: pointer;
+}
+.map-tool:hover, .map-tool.active { border-color: #22c7f5; color: #fff; background: rgba(8, 47, 73, .94); }
+.map-tool:focus-visible { outline: 2px solid #22c7f5; outline-offset: 2px; }
+
 .route-guidance {
   position: absolute;
   top: 16px;
@@ -821,6 +847,8 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
   .gps-pill { padding-left: 7px; padding-right: 7px; }
   .btn-logout { padding-left: 4px; padding-right: 0; }
   .sheet-inner { padding-left: 16px; padding-right: 16px; }
+  .map-toolbar { top: 58px; right: 12px; max-width: calc(100% - 24px); }
+  .map-tool { min-height: 32px; padding: 6px 8px; font-size: 10px; }
 }
 
 @media (max-width: 350px) {
