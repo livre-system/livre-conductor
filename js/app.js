@@ -133,6 +133,7 @@ let tripsPollTimer = null;
 let tripsPollEpoch = 0;
 const TRIPS_POLL_MS = 5000;
 let pendingNativeTripId = null;
+let acceptInFlight = false;
 let authMode    = 'login';
 let operationalStatus = 'available';
 let currentDriverSnapshot = null;
@@ -643,15 +644,22 @@ function render() {
    ACCIONES DE VIAJE
 ══════════════════════════════════════════════════════════════ */
 async function acceptTrip() {
-  const changed = await changeStatus('arriving');
-  if (!changed) return;
-  activeTripId = String(selected.id);
-  startGps();
-  const gpsSync = requestImmediateGpsSync();
-  const routeLoad = loadTripRoute('pickup');
-  await gpsSync;
-  await routeLoad;
-  speak('Viaje aceptado. Comenzando a compartir ubicación.');
+  if (acceptInFlight || !selected) return;
+  const tripId = String(selected.id);
+  acceptInFlight = true;
+  try {
+    const changed = await changeStatus('arriving', tripId);
+    if (!changed || !selected || String(selected.id) !== tripId) return;
+    activeTripId = tripId;
+    startGps();
+    const gpsSync = requestImmediateGpsSync();
+    const routeLoad = loadTripRoute('pickup');
+    await gpsSync;
+    await routeLoad;
+    speak('Viaje aceptado. Comenzando a compartir ubicación.');
+  } finally {
+    acceptInFlight = false;
+  }
 }
 
 function rememberRejectedTrip(id) {
@@ -847,16 +855,17 @@ async function loadTrips() {
 }
 
 /** Cambia el estado de un viaje */
-async function changeStatus(status) {
+async function changeStatus(status, tripId = selected?.id) {
   // ── DEMO ────────────────────────────────────────────────────
   if (DEMO) {
     demoChangeStatus(status);
     return true;
   }
   // ── REAL ────────────────────────────────────────────────────
-  if (!selected) return false;
+  if (tripId == null) return false;
+  const normalizedTripId = String(tripId);
   try {
-    const r = await fetch(`${API}/mobility/driver/trips/${selected.id}/status`, {
+    const r = await fetch(`${API}/mobility/driver/trips/${encodeURIComponent(normalizedTripId)}/status`, {
       method: 'POST',
       headers: h(),
       body: JSON.stringify({ status }),
@@ -864,9 +873,9 @@ async function changeStatus(status) {
     const statusCode = r.status;
     if (!r.ok) {
       if (statusCode === 409) {
-        const lostTripId = selected.id;
-        trips = trips.filter(t => t.id !== lostTripId);
-        selected = null;
+        const lostTripId = normalizedTripId;
+        trips = trips.filter(t => String(t.id) !== lostTripId);
+        if (selected && String(selected.id) === lostTripId) selected = null;
         render();
         showNotice('Ese viaje ya fue tomado por otro conductor.');
         loadTrips();
@@ -875,7 +884,7 @@ async function changeStatus(status) {
       throw Error(statusCode);
     }
     selected = await r.json();
-    trips = trips.map(t => t.id === selected.id ? selected : t);
+    trips = trips.map(t => String(t.id) === String(selected.id) ? selected : t);
     render();
     return true;
   } catch(e) {

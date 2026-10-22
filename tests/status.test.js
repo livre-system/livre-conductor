@@ -271,6 +271,16 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /device_id: deviceId/);
   });
 
+  it('prevents duplicate acceptance and keeps the accepted trip identity stable', () => {
+    assert.match(source, /let acceptInFlight = false/);
+    assert.match(source, /if \(acceptInFlight \|\| !selected\) return;/);
+    assert.match(source, /const tripId = String\(selected\.id\);/);
+    assert.match(source, /changeStatus\('arriving', tripId\)/);
+    assert.match(source, /if \(!changed \|\| !selected \|\| String\(selected\.id\) !== tripId\) return;/);
+    assert.match(source, /finally \{\n    acceptInFlight = false;/);
+    assert.match(source, /String\(t\.id\) !== lostTripId/);
+  });
+
   it('renders operational actions in the bottom panel', () => {
     assert.match(source, /operationalControlsHtml/);
     assert.doesNotMatch(source, /Esperando un viaje/);
