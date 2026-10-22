@@ -88,6 +88,7 @@ let gpsHeartbeatTimer = null;
 let gpsSuspended = false;
 const GPS_HEARTBEAT_MS = 30000;
 let lastNativeLocationAt = 0;
+let gpsSendControllers = new Set();
 const gpsState = { provider: 'STOPPED', backend: 'UNKNOWN' };
 let marker      = null;
 let directionMarker = null;
@@ -877,7 +878,8 @@ async function changeStatus(status) {
 }
 
 /** Envía una posición GPS al backend */
-async function sendLocation(lat, lng, accuracy = null) {
+async function sendLocation(lat, lng, accuracy = null, sessionEpoch = authEpoch) {
+  if (sessionEpoch !== authEpoch || !token) return;
   const startedAt = performance.now();
   diagLog('gps_position_received');
   setMapMarker(lat, lng, accuracy);
@@ -892,11 +894,14 @@ async function sendLocation(lat, lng, accuracy = null) {
     return;
   }
   // ── REAL ────────────────────────────────────────────────────
+  const controller = new AbortController();
+  gpsSendControllers.add(controller);
   const body = JSON.stringify({ latitude: lat, longitude: lng, device_id: deviceId });
   try {
     const liveResponse = await fetch(`${API}/mobility/driver/location`, {
-      method: 'POST', headers: h(), body,
+      method: 'POST', headers: h(), body, signal: controller.signal,
     });
+    if (sessionEpoch !== authEpoch || !token) return;
     diagLog('gps_send_response', { endpoint: 'driver', httpStatus: liveResponse.status });
     if (!liveResponse.ok) throw Error(`driver-location:${liveResponse.status}`);
 
@@ -905,7 +910,7 @@ async function sendLocation(lat, lng, accuracy = null) {
       : (selected && tripUsesMapRoute(selected.status) ? selected : null);
     if (gpsTrip && tripUsesMapRoute(gpsTrip.status)) {
       const tripResponse = await fetch(`${API}/mobility/driver/trips/${gpsTrip.id}/location`, {
-        method: 'POST', headers: h(), body,
+        method: 'POST', headers: h(), body, signal: controller.signal,
       });
       diagLog('gps_send_response', { endpoint: 'trip', httpStatus: tripResponse.status });
       if (!tripResponse.ok) throw Error(`trip-location:${tripResponse.status}`);
@@ -915,6 +920,7 @@ async function sendLocation(lat, lng, accuracy = null) {
     updateGpsPill();
     diagLog('gps_send_end', { durationMs: Math.round(performance.now() - startedAt), result: 'ok' });
   } catch(e) {
+    if (e?.name === 'AbortError' || sessionEpoch !== authEpoch || !token) return;
     diagLog('gps_send_end', { durationMs: Math.round(performance.now() - startedAt), result: 'error', error: String(e?.message || e).slice(0, 80) });
     if (String(e?.message || '').includes('driver-location:401')) {
       try { window.AndroidGps?.clearSession?.(); } catch (_) {}
@@ -928,6 +934,8 @@ async function sendLocation(lat, lng, accuracy = null) {
     gpsState.backend = 'FAILED';
     updateGpsPill();
     showNotice('No se pudo enviar la ubicación GPS al backend.');
+  } finally {
+    gpsSendControllers.delete(controller);
   }
 }
 
@@ -935,10 +943,11 @@ async function sendLocation(lat, lng, accuracy = null) {
 // nativo sigue enviando GPS en segundo plano; esto solo acelera la actualización.
 function requestImmediateGpsSync() {
   if (DEMO || !token || !navigator.geolocation) return Promise.resolve(false);
+  const sessionEpoch = authEpoch;
   return new Promise(resolve => {
     navigator.geolocation.getCurrentPosition(
       position => {
-        void sendLocation(position.coords.latitude, position.coords.longitude, position.coords.accuracy).finally(() => resolve(true));
+        void sendLocation(position.coords.latitude, position.coords.longitude, position.coords.accuracy, sessionEpoch).finally(() => resolve(true));
       },
       error => {
         diagLog('gps_status_sync_failed', { code: error?.code ?? null });
@@ -964,6 +973,7 @@ async function requestGpsWakeLock() {
 
 function restartGpsAfterBackground() {
   if (DEMO || !token || !$('appView') || $('appView').classList.contains('hidden')) return;
+  const sessionEpoch = authEpoch;
   diagLog('gps_recovery_start', { watcher: watchId !== null ? 'active' : 'missing' });
   if (gpsSuspended && watchId !== null) {
     navigator.geolocation?.clearWatch(watchId);
@@ -974,7 +984,7 @@ function restartGpsAfterBackground() {
   if (watchId === null) startGps();
   else if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      p => sendLocation(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
+      p => sendLocation(p.coords.latitude, p.coords.longitude, p.coords.accuracy, sessionEpoch),
       () => {},
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
     );
@@ -998,13 +1008,14 @@ function startGps() {
     return;
   }
   requestGpsWakeLock();
+  const gpsEpoch = authEpoch;
   const opts = { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 };
   const onPos = p => {
     const lat = Number(p.coords.latitude);
     const lng = Number(p.coords.longitude);
     diagLog('gps_position_callback');
     recordOwnGpsPoint(lat, lng);
-    sendLocation(lat, lng, p.coords.accuracy);
+    sendLocation(lat, lng, p.coords.accuracy, gpsEpoch);
   };
   const onErr = e => {
     // Un timeout o una pérdida momentánea no significa que el proveedor
@@ -1043,6 +1054,8 @@ function stopGps() {
   if (DEMO) { gpsState.provider = 'STOPPED'; gpsState.backend = 'UNKNOWN'; updateGpsPill(); return; }
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   watchId = null;
+  gpsSendControllers.forEach(controller => controller.abort());
+  gpsSendControllers.clear();
   if (gpsHeartbeatTimer) clearInterval(gpsHeartbeatTimer);
   gpsHeartbeatTimer = null;
   if (gpsRecoveryTimer) clearInterval(gpsRecoveryTimer);

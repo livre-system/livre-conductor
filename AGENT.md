@@ -190,3 +190,10 @@ Railway es la única plataforma de despliegue activa para todos los servicios y 
 - El repositorio no incluye `gradlew` y el entorno utilizado no tiene Java/Gradle; por eso no se debe afirmar una compilación Android local ni una prueba en dispositivo a partir de estos tests web.
 - La suite disponible es de JavaScript y contratos estáticos: actualmente contiene 38 tests en 3 suites, todos pasan.
 - Para cambios nativos futuros, instalar o configurar explícitamente un JDK/Gradle y validar el artefacto solo si la modificación realmente afecta la capa nativa. Para cambios web, ejecutar la suite y verificar el asset remoto por HTTPS.
+
+## Aislamiento GPS entre sesiones (2026-10-21)
+
+- Cada watcher y lectura puntual captura el `authEpoch` vigente; una callback vieja no puede enviar ubicación usando un login posterior.
+- Los envíos web de GPS se registran en `gpsSendControllers` y `stopGps()` los aborta al cerrar sesión o apagar el GPS.
+- El frontend ignora respuestas y errores de requests que ya no pertenecen a la sesión activa, evitando estados o avisos de una sesión anterior.
+- Corrección local en `js/app.js` y `tests/status.test.js`; todavía requiere deploy y verificación HTTPS cuando Railway vuelva.

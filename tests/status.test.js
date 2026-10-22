@@ -237,6 +237,11 @@ describe('driver operational status synchronization', () => {
 
   it('prevents stale web requests and native GPS work from crossing sessions', () => {
     assert.match(source, /let authEpoch\s*=\s*0;/);
+    assert.match(source, /let gpsSendControllers = new Set\(\);/);
+    assert.match(source, /function sendLocation\(lat, lng, accuracy = null, sessionEpoch = authEpoch\)/);
+    assert.match(source, /sessionEpoch !== authEpoch \|\| !token/);
+    assert.match(source, /controller\.abort\(\)/);
+    assert.match(source, /sendLocation\(lat, lng, p\.coords\.accuracy, gpsEpoch\)/);
     assert.match(source, /const requestEpoch = authEpoch;/);
     assert.match(source, /requestEpoch !== authEpoch/);
     assert.match(nativeSource, /SessionStore\.save\(MainActivity\.this, token, api\)/);
