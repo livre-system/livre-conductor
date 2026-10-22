@@ -87,8 +87,11 @@ let gpsRecoveryTimer = null;
 let gpsHeartbeatTimer = null;
 let gpsSuspended = false;
 const GPS_HEARTBEAT_MS = 30000;
+const PENDING_GPS_KEY = 'livre_driver_pending_gps';
+const PENDING_GPS_MAX_AGE_MS = 5 * 60 * 1000;
 let lastNativeLocationAt = 0;
 let gpsSendControllers = new Set();
+let gpsPendingFlushInFlight = false;
 const gpsState = { provider: 'STOPPED', backend: 'UNKNOWN' };
 let marker      = null;
 let directionMarker = null;
@@ -878,6 +881,40 @@ async function changeStatus(status) {
 }
 
 /** Envía una posición GPS al backend */
+function queuePendingGpsLocation(lat, lng, accuracy, sessionEpoch = authEpoch) {
+  if (sessionEpoch !== authEpoch || !token) return;
+  try {
+    localStorage.setItem(PENDING_GPS_KEY, JSON.stringify({
+      latitude: Number(lat), longitude: Number(lng),
+      accuracy: accuracy == null ? null : Number(accuracy), savedAt: Date.now(),
+    }));
+  } catch (_) {}
+}
+
+function clearPendingGpsLocation(lat, lng) {
+  try {
+    const pending = JSON.parse(localStorage.getItem(PENDING_GPS_KEY) || 'null');
+    if (pending && Number(pending.latitude) === Number(lat) && Number(pending.longitude) === Number(lng)) {
+      localStorage.removeItem(PENDING_GPS_KEY);
+    }
+  } catch (_) {}
+}
+
+function flushPendingGpsLocation() {
+  if (gpsPendingFlushInFlight || DEMO || !token || navigator.onLine === false) return;
+  let pending;
+  try { pending = JSON.parse(localStorage.getItem(PENDING_GPS_KEY) || 'null'); } catch (_) { pending = null; }
+  if (!pending) return;
+  if (!Number.isFinite(Number(pending.latitude)) || !Number.isFinite(Number(pending.longitude)) || Date.now() - Number(pending.savedAt) > PENDING_GPS_MAX_AGE_MS) {
+    try { localStorage.removeItem(PENDING_GPS_KEY); } catch (_) {}
+    return;
+  }
+  const sessionEpoch = authEpoch;
+  gpsPendingFlushInFlight = true;
+  void sendLocation(pending.latitude, pending.longitude, pending.accuracy, sessionEpoch)
+    .finally(() => { gpsPendingFlushInFlight = false; });
+}
+
 async function sendLocation(lat, lng, accuracy = null, sessionEpoch = authEpoch) {
   if (sessionEpoch !== authEpoch || !token) return;
   const startedAt = performance.now();
@@ -918,9 +955,11 @@ async function sendLocation(lat, lng, accuracy = null, sessionEpoch = authEpoch)
     if (gpsTrip && tripUsesMapRoute(gpsTrip.status)) scheduleRouteRefresh();
     gpsState.backend = 'SYNCED';
     updateGpsPill();
+    clearPendingGpsLocation(lat, lng);
     diagLog('gps_send_end', { durationMs: Math.round(performance.now() - startedAt), result: 'ok' });
   } catch(e) {
     if (e?.name === 'AbortError' || sessionEpoch !== authEpoch || !token) return;
+    if (navigator.onLine === false || e?.name === 'TypeError') queuePendingGpsLocation(lat, lng, accuracy, sessionEpoch);
     diagLog('gps_send_end', { durationMs: Math.round(performance.now() - startedAt), result: 'error', error: String(e?.message || e).slice(0, 80) });
     if (String(e?.message || '').includes('driver-location:401')) {
       try { window.AndroidGps?.clearSession?.(); } catch (_) {}
@@ -974,6 +1013,7 @@ async function requestGpsWakeLock() {
 function restartGpsAfterBackground() {
   if (DEMO || !token || !$('appView') || $('appView').classList.contains('hidden')) return;
   const sessionEpoch = authEpoch;
+  flushPendingGpsLocation();
   diagLog('gps_recovery_start', { watcher: watchId !== null ? 'active' : 'missing' });
   if (gpsSuspended && watchId !== null) {
     navigator.geolocation?.clearWatch(watchId);
@@ -1008,6 +1048,7 @@ function startGps() {
     return;
   }
   requestGpsWakeLock();
+  flushPendingGpsLocation();
   const gpsEpoch = authEpoch;
   const opts = { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 };
   const onPos = p => {
@@ -2025,6 +2066,7 @@ function clearWebSession() {
   DEMO = false;
   try {
     localStorage.removeItem('livre_driver_token');
+    localStorage.removeItem(PENDING_GPS_KEY);
     sessionStorage.clear();
   } catch (e) {}
 }
@@ -2085,6 +2127,7 @@ window.addEventListener('focus', () => {
   startTripsPolling();
 });
 window.addEventListener('online', () => {
+  flushPendingGpsLocation();
   restartGpsAfterBackground();
   startTripsPolling();
 });

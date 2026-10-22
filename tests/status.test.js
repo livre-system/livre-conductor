@@ -242,6 +242,12 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /sessionEpoch !== authEpoch \|\| !token/);
     assert.match(source, /controller\.abort\(\)/);
     assert.match(source, /sendLocation\(lat, lng, p\.coords\.accuracy, gpsEpoch\)/);
+    assert.match(source, /const PENDING_GPS_KEY = 'livre_driver_pending_gps';/);
+    assert.match(source, /function queuePendingGpsLocation\(/);
+    assert.match(source, /function flushPendingGpsLocation\(/);
+    assert.match(source, /window\.addEventListener\('online', \(\) => \{/);
+    assert.match(source, /flushPendingGpsLocation\(\);/);
+    assert.match(source, /localStorage\.removeItem\(PENDING_GPS_KEY\)/);
     assert.match(source, /const requestEpoch = authEpoch;/);
     assert.match(source, /requestEpoch !== authEpoch/);
     assert.match(nativeSource, /SessionStore\.save\(MainActivity\.this, token, api\)/);
