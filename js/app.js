@@ -54,6 +54,26 @@ function stableDeviceId() {
 const deviceId = stableDeviceId();
 
 /* ── Estado global ──────────────────────────────────────────── */
+// Migración one-shot: las versiones antiguas no deben rehidratar viajes
+// operativos de otro momento o usuario. No se borra token, preferencias ni
+// identidad del dispositivo; sólo claves de estado de viajes conocidas.
+const CLIENT_STATE_VERSION = '20261021-trip-cache-v1';
+const LEGACY_TRIP_STATE_KEYS = [
+  'livre_driver_trips',
+  'livre_driver_selected_trip',
+  'livre_driver_active_trip',
+  'livre_driver_trip_cache',
+];
+function clearLegacyTripState() {
+  try {
+    if (localStorage.getItem('livre_driver_client_state_version') === CLIENT_STATE_VERSION) return;
+    LEGACY_TRIP_STATE_KEYS.forEach(key => localStorage.removeItem(key));
+    sessionStorage.clear();
+    localStorage.setItem('livre_driver_client_state_version', CLIENT_STATE_VERSION);
+  } catch (_) {}
+}
+clearLegacyTripState();
+
 let token       = localStorage.getItem('livre_driver_token');
 let authEpoch   = 0;
 let trips       = [];
@@ -448,6 +468,12 @@ function orderTripsNewestFirst(list) {
 
 const DRIVER_CARD_STATUSES = ['searching', 'assigned', 'arriving', 'in_progress'];
 
+function operationalTripsOnly(list) {
+  return Array.isArray(list)
+    ? list.filter(trip => trip && DRIVER_CARD_STATUSES.includes(trip.status))
+    : [];
+}
+
 function selectPrimaryTrip(list, current) {
   // Una solicitud nueva reemplaza solo otra solicitud pendiente. Si ya hay
   // un viaje aceptado/en curso, ese viaje sigue siendo la tarjeta principal.
@@ -760,9 +786,10 @@ async function loadTrips() {
     if (r.status === 401) { logout(); return false; }
     if (!r.ok) throw Error(r.status);
     const nextTrips = await r.json();
-    receivedCount = Array.isArray(nextTrips) ? nextTrips.length : null;
+    const operationalTrips = operationalTripsOnly(nextTrips);
+    receivedCount = operationalTrips.length;
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
-    trips = orderTripsNewestFirst(nextTrips.filter(t => !rejectedTripIds.has(String(t.id))));
+    trips = orderTripsNewestFirst(operationalTrips.filter(t => !rejectedTripIds.has(String(t.id))));
     // La lista ya está ordenada por la fecha real del pedido. La tarjeta
     // principal toma el pendiente más nuevo; los anteriores quedan en la cola.
     selected = selectPrimaryTrip(trips, selected);
