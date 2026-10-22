@@ -735,7 +735,19 @@ function demoReset() {
 
 /** Carga los viajes asignados al conductor */
 function tripsPollingAllowed() {
-  return !DEMO && !!token && !$('appView')?.classList.contains('hidden');
+  return !DEMO && !!token && navigator.onLine !== false && !$('appView')?.classList.contains('hidden');
+}
+
+function handleNetworkOnline() {
+  if (!token || $('appView')?.classList.contains('hidden')) return;
+  clearNotice();
+  startTripsPolling();
+  flushPendingGpsLocation();
+}
+
+function handleNetworkOffline() {
+  stopTripsPolling();
+  showNotice('Sin conexión. Se pausó la actualización de viajes; se reanudará al volver internet.');
 }
 
 function stopTripsPolling() {
@@ -2070,6 +2082,9 @@ function setNativeAppVisible(visible) {
   if (!NATIVE_SHELL || !window.AndroidGps?.setAppVisible) return;
   try { window.AndroidGps.setAppVisible(visible); } catch (e) {}
 }
+
+window.addEventListener('online', handleNetworkOnline);
+window.addEventListener('offline', handleNetworkOffline);
 
 function openApp() {
   const claims = tokenClaims();
