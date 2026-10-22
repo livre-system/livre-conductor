@@ -157,3 +157,36 @@ Railway es la única plataforma de despliegue activa para todos los servicios y 
 - La corrección vive en `js/app.js`, `css/styles.css` e `index.html`, con cache-busting `stage2-routes`.
 - Commit `eb55a4c` publicado en GitHub. Railway estaba temporalmente pausado al verificar; la disponibilidad HTTPS queda pendiente de un deploy posterior.
 - Validar con `node --check js/app.js` y `git diff --check`; no informar la corrección como disponible en producción hasta confirmar los assets por HTTPS.
+
+## Modelo real de la APK y del frontend remoto (2026-10-21)
+
+- Las APK de conductor no contienen una copia independiente del frontend: funcionan como contenedores WebView que cargan `https://livre-conductor-production.up.railway.app/`.
+- Cuando se corrige `index.html`, `css/styles.css` o `js/app.js`, el cambio corresponde al mismo frontend desplegado que ve el navegador y la WebView; no describirlo como una corrección de “otra APK” ni asumir que requiere recompilarla.
+- La capa nativa queda limitada a permisos, servicio persistente de ubicación, puente WebView y notificaciones del sistema. Solo requiere una nueva compilación si cambia esa capa nativa; los cambios visuales o de lógica web se validan y despliegan por HTTPS.
+- El GPS del conductor debe iniciar al abrir el panel y mantener el envío periódico al CRM aun sin viaje activo, sujeto a permisos, sesión y proveedor de ubicación. El guardado de recorrido de negocio sigue restringido a viajes aceptados y terminados.
+- No atribuir overlays, burbujas, asistentes o paneles flotantes del teléfono al frontend sin evidencia en DOM/CSS/JS; la APK no genera esas capas mediante el WebView.
+
+## Adaptación de paneles a distintos dispositivos (2026-10-21)
+
+- Los paneles `.sheet` deben usar alturas limitadas por `dvh` y `calc()`; no reintroducir alturas fijas que fallen con notch, barras del sistema o pantallas pequeñas.
+- Se ajustaron `--sheet-h`, `--alert-h` y `.sheet.active-mode` en `css/styles.css` para que el panel respete el alto visible y conserve scroll interno.
+- Commit publicado: `8a7b2ce` (`fix: make driver sheet responsive to viewport height`).
+- Validación: `node --check js/app.js`, `git diff --check`, comprobaciones de reglas responsive y verificación del CSS en `origin/main`.
+- Las capas externas visibles en capturas deben investigarse en el sistema/dispositivo; no corregirlas agregando overlays o permisos web inexistentes.
+
+## Contrato actual de viajes y notificaciones (2026-10-21)
+
+- `searching` es una oferta global y no debe mostrarse como tarjeta operativa del conductor.
+- La tarjeta, cola y selección del conductor solo aceptan `assigned`, `arriving` e `in_progress`; si no queda ninguno, el panel operativo debe quedar sin tarjeta residual.
+- La lista se ordena por `created_at` descendente, con `id` numérico como respaldo; el viaje `assigned` más nuevo se prioriza sin eliminar viajes asignados anteriores de la cola.
+- Las alertas nuevas se anuncian solo para viajes `assigned`; la carga inicial no debe repetir notificaciones ya existentes.
+- El rechazo o descarte local elimina la tarjeta de este dispositivo, pero no debe enviar mensajes al pasajero ni impedir que otros conductores vean el viaje disponible.
+- El canal Android de viajes es exactamente `livre_trips_v2` en `LocationService.java`, `MainActivity.java` y `PermissionGate.java`; no usar `livre_trips`.
+- Corrección publicada: commit `ab3887d` (`fix: restore driver trip and notification contracts`).
+- Validación local posterior: `node --test tests/*.test.js` → 38 pasaron, 0 fallaron; `node --check js/app.js` → OK; `git diff --check` → OK.
+
+## Límites de validación del entorno (2026-10-21)
+
+- El repositorio no incluye `gradlew` y el entorno utilizado no tiene Java/Gradle; por eso no se debe afirmar una compilación Android local ni una prueba en dispositivo a partir de estos tests web.
+- La suite disponible es de JavaScript y contratos estáticos: actualmente contiene 38 tests en 3 suites, todos pasan.
+- Para cambios nativos futuros, instalar o configurar explícitamente un JDK/Gradle y validar el artefacto solo si la modificación realmente afecta la capa nativa. Para cambios web, ejecutar la suite y verificar el asset remoto por HTTPS.
