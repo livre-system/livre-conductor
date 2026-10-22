@@ -248,6 +248,11 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /window\.addEventListener\('online', \(\) => \{/);
     assert.match(source, /flushPendingGpsLocation\(\);/);
     assert.match(source, /localStorage\.removeItem\(PENDING_GPS_KEY\)/);
+    assert.match(source, /const GPS_MAX_ACCURACY_METERS = 150;/);
+    assert.match(source, /function acceptGpsPosition\(/);
+    assert.match(source, /GPS_MAX_SPEED_MPS/);
+    assert.match(source, /if \(!acceptGpsPosition\(lat, lng, p\.coords\.accuracy\)\) return;/);
+    assert.match(source, /lastAcceptedGpsPosition = null;/);
     assert.match(source, /const requestEpoch = authEpoch;/);
     assert.match(source, /requestEpoch !== authEpoch/);
     assert.match(nativeSource, /SessionStore\.save\(MainActivity\.this, token, api\)/);

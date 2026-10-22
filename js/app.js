@@ -89,6 +89,10 @@ let gpsSuspended = false;
 const GPS_HEARTBEAT_MS = 30000;
 const PENDING_GPS_KEY = 'livre_driver_pending_gps';
 const PENDING_GPS_MAX_AGE_MS = 5 * 60 * 1000;
+const GPS_MAX_ACCURACY_METERS = 150;
+const GPS_MAX_SPEED_MPS = 55;
+const GPS_JUMP_CHECK_MAX_GAP_MS = 2 * 60 * 1000;
+let lastAcceptedGpsPosition = null;
 let lastNativeLocationAt = 0;
 let gpsSendControllers = new Set();
 let gpsPendingFlushInFlight = false;
@@ -881,6 +885,32 @@ async function changeStatus(status) {
 }
 
 /** Envía una posición GPS al backend */
+function acceptGpsPosition(lat, lng, accuracy, now = Date.now()) {
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+  const precision = accuracy == null ? null : Number(accuracy);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return false;
+  if (precision != null && (!Number.isFinite(precision) || precision > GPS_MAX_ACCURACY_METERS)) return false;
+
+  const previous = lastAcceptedGpsPosition;
+  if (previous) {
+    const elapsedMs = now - previous.at;
+    if (elapsedMs > 0 && elapsedMs <= GPS_JUMP_CHECK_MAX_GAP_MS) {
+      const radians = Math.PI / 180;
+      const dLat = (latitude - previous.lat) * radians;
+      const dLng = (longitude - previous.lng) * radians;
+      const a = Math.sin(dLat / 2) ** 2
+        + Math.cos(previous.lat * radians) * Math.cos(latitude * radians) * Math.sin(dLng / 2) ** 2;
+      const distanceM = 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const elapsedSeconds = elapsedMs / 1000;
+      const allowedDistanceM = Math.max(300, elapsedSeconds * GPS_MAX_SPEED_MPS);
+      if (distanceM > allowedDistanceM) return false;
+    }
+  }
+  lastAcceptedGpsPosition = { lat: latitude, lng: longitude, at: now };
+  return true;
+}
+
 function queuePendingGpsLocation(lat, lng, accuracy, sessionEpoch = authEpoch) {
   if (sessionEpoch !== authEpoch || !token) return;
   try {
@@ -1024,7 +1054,10 @@ function restartGpsAfterBackground() {
   if (watchId === null) startGps();
   else if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      p => sendLocation(p.coords.latitude, p.coords.longitude, p.coords.accuracy, sessionEpoch),
+      p => {
+        if (!acceptGpsPosition(p.coords.latitude, p.coords.longitude, p.coords.accuracy)) return;
+        void sendLocation(p.coords.latitude, p.coords.longitude, p.coords.accuracy, sessionEpoch);
+      },
       () => {},
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
     );
@@ -1054,6 +1087,7 @@ function startGps() {
   const onPos = p => {
     const lat = Number(p.coords.latitude);
     const lng = Number(p.coords.longitude);
+    if (!acceptGpsPosition(lat, lng, p.coords.accuracy)) return;
     diagLog('gps_position_callback');
     recordOwnGpsPoint(lat, lng);
     sendLocation(lat, lng, p.coords.accuracy, gpsEpoch);
@@ -1092,9 +1126,10 @@ function startGps() {
 }
 
 function stopGps() {
-  if (DEMO) { gpsState.provider = 'STOPPED'; gpsState.backend = 'UNKNOWN'; updateGpsPill(); return; }
+  if (DEMO) { gpsState.provider = 'STOPPED'; gpsState.backend = 'UNKNOWN'; lastAcceptedGpsPosition = null; updateGpsPill(); return; }
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   watchId = null;
+  lastAcceptedGpsPosition = null;
   gpsSendControllers.forEach(controller => controller.abort());
   gpsSendControllers.clear();
   if (gpsHeartbeatTimer) clearInterval(gpsHeartbeatTimer);
