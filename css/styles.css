@@ -27,8 +27,8 @@
   --modal-overlay: #0009;
   --radius-sm: 14px;
   --radius-lg: 24px;
-  --sheet-h:   220px;         /* altura del sheet en reposo */
-  --alert-h:   85dvh;         /* altura cuando llega un viaje */
+  --sheet-h:   min(220px, calc(100dvh - 140px)); /* evita tapar el mapa en pantallas bajas */
+  --alert-h:   min(85dvh, calc(100dvh - 76px));   /* deja visible la barra superior */
   --transition: .32s cubic-bezier(.4, 0, .2, 1);
 }
 
@@ -443,7 +443,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 
 /* Estado post-aceptación / en curso */
 .sheet.active-mode {
-  height: 390px;
+  height: min(390px, calc(100dvh - 96px));
 }
 
 .sheet-handle {
