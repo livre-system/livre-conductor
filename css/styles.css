@@ -868,7 +868,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 /* ── Conductor controls and preferences ─────────────────────── */
 :root { --font-scale: 1; }
 body { font-size: calc(16px * var(--font-scale)); }
-.settings-modal .settings-card, .sheet, .topbar, .login-wrap { zoom: var(--font-scale); }
+.settings-modal .settings-card, .login-wrap { zoom: var(--font-scale); }
 .topbar-logo-image { display: block; width: auto; height: 30px; max-width: 112px; object-fit: contain; }
 .header-icon-button { min-width: 34px; height: 34px; padding: 0 7px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--white); font-size: 17px; }
 .header-icon-button:hover { border-color: var(--accent); }
@@ -1080,6 +1080,91 @@ body[data-theme="light"] .leaflet-control-attribution { color: #596575 !importan
   .sheet-inner { padding-left: 16px; padding-right: 16px; }
   .operational-panel-buttons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .operational-panel-button { min-height: 54px; }
+}
+
+/* ── Mobile layout hardening ─────────────────────────────────
+   The map overlays must not compete for the same top-right space,
+   and the sheet must keep its real viewport width when font size
+   preferences are changed. */
+@media (max-width: 599px) {
+  .topbar {
+    min-height: 60px;
+    padding-top: max(6px, env(safe-area-inset-top));
+    padding-bottom: 6px;
+  }
+
+  .topbar-logo {
+    min-width: 0;
+  }
+
+  .topbar-logo-image {
+    max-width: 84px;
+  }
+
+  .topbar-right {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .route-guidance {
+    top: 12px;
+    left: 12px;
+    width: calc(100% - 24px);
+    max-height: 142px;
+    overflow: hidden;
+  }
+
+  .route-guidance-metrics {
+    gap: 16px;
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+
+  .map-toolbar {
+    top: 164px;
+    left: 12px;
+    right: 12px;
+    max-width: none;
+    justify-content: flex-start;
+  }
+
+  .map-tool {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .route-legend {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: none;
+    justify-content: center;
+    gap: 6px 10px;
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+
+  .sheet-inner {
+    min-width: 0;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+
+  .alert-actions,
+  .secondary-actions {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 350px) {
+  .topbar-logo-image { max-width: 72px; }
+  .topbar-right { gap: 2px; }
+  .header-icon-button { width: 31px; min-width: 31px; height: 31px; padding: 0 4px; }
+  .btn-logout { font-size: 11px; }
+  .route-guidance { max-height: 128px; padding: 11px 12px; }
+  .route-guidance-title { font-size: 15px; }
+  .map-toolbar { top: 146px; }
+  .map-tool { padding-left: 5px; padding-right: 5px; font-size: 9px; }
 }
 
 body[data-theme="light"] .operational-panel {
