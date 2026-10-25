@@ -381,12 +381,7 @@ function commercialFareValues(t) {
   return { customer, commission: customer - driver, driver };
 }
 
-function driverFareLabel(t) {
-  if (String(t?.service_type_id) === '2') return 'Tarifa conductor (0% comisión)';
-  if (t?.discount_percentage != null && Number.isFinite(Number(t.discount_percentage))) {
-    return `Tarifa conductor (${Number(t.discount_percentage)}% comisión)`;
-  }
-  if (t?.service_type_id != null) return 'Tarifa conductor (15% comisión)';
+function driverFareLabel() {
   return 'Tarifa conductor';
 }
 
