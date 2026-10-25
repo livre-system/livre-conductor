@@ -79,11 +79,12 @@ Railway es la única plataforma de despliegue activa para todos los servicios y 
 
 ## Regla comercial de tarifa visible (2026-10-20)
 
-- `service_type_id = "2"` identifica Livre Ahorro: la tarjeta debe mostrar el importe bruto del conductor y `0% comisión`.
-- Para otros servicios, mostrar 85% al conductor y 15% de comisión según el snapshot comercial vigente; no volver a descontar un `final_fare` ya neto.
-- El frontend debe priorizar `service_type_id` frente a `discount_percentage` o snapshots antiguos. Un snapshot obsoleto no puede forzar la etiqueta `15% comisión` en Ahorro.
-- El contrato esperado con Cloud usa `service_type_id`, `driver_fare` y `commission_percentage`; cualquier cambio debe validar importe y etiqueta, no sólo que el bundle compile.
-- La regresión de la tarjeta debe reproducir un snapshot Ahorro obsoleto (bruto `5054.00`, neto histórico `4295.90`) y comprobar que muestra el bruto y `0% comisión`.
+- `service_type_id = "2"` identifica Livre Ahorro: el cálculo debe conservar el importe bruto del conductor.
+- Para otros servicios, calcular 85% al conductor según el snapshot comercial vigente; no volver a descontar un `final_fare` ya neto.
+- El frontend debe priorizar `service_type_id` frente a `discount_percentage` o snapshots antiguos para calcular el importe. Un snapshot obsoleto no puede alterar el importe de Ahorro.
+- El contrato esperado con Cloud usa `service_type_id`, `driver_fare` y `commission_percentage`; cualquier cambio debe validar el importe, no sólo que el bundle compile.
+- La tarjeta del conductor no debe mostrar porcentajes ni la leyenda `comisión`; actualmente muestra únicamente `Tarifa conductor` y el importe.
+- La regresión de la tarjeta debe reproducir un snapshot Ahorro obsoleto (bruto `5054.00`, neto histórico `4295.90`) y comprobar que muestra el bruto sin exponer la comisión.
 - Antes de declarar resuelto un bug visual, verificar por HTTPS el asset publicado y, si hay credenciales legítimas, la respuesta autenticada de API. No inventar viajes ni credenciales.
 - Corrección coordinada publicada con Cloud: commit `23b434b` en este repositorio y `4b4b34f` en `livre-cloud`.
 
@@ -197,3 +198,13 @@ Railway es la única plataforma de despliegue activa para todos los servicios y 
 - Los envíos web de GPS se registran en `gpsSendControllers` y `stopGps()` los aborta al cerrar sesión o apagar el GPS.
 - El frontend ignora respuestas y errores de requests que ya no pertenecen a la sesión activa, evitando estados o avisos de una sesión anterior.
 - Corrección local en `js/app.js` y `tests/status.test.js`; todavía requiere deploy y verificación HTTPS cuando Railway vuelva.
+
+## Verificación responsive autenticada (2026-10-25)
+
+- Se verificó el frontend publicado en `https://livre-conductor-production.up.railway.app/` con una sesión legítima de conductor y viewport móvil de `390x844`.
+- La barra superior, el mapa, la tarjeta de viaje, los botones de aceptar/rechazar y la cola de otros pedidos entran correctamente en el viewport.
+- El bottom sheet conserva scroll interno para acceder al contenido inferior sin generar scroll horizontal.
+- Se comprobaron también anchos de `320`, `350` y `430` píxeles: `document.documentElement.scrollWidth` coincidió con el ancho del viewport y no hubo elementos fuera de pantalla.
+- La prueba mostró un aviso de GPS denegado por el permiso del navegador de automatización; no se tomó como fallo visual del frontend.
+- La sesión de prueba se cerró al terminar y no quedaron tokens en `localStorage`.
+- No hubo cambios de código por esta revisión responsive; la corrección de la etiqueta de tarifa está publicada en `5ddefb0`.
