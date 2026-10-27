@@ -50,7 +50,9 @@ import java.util.concurrent.TimeUnit;
 public class LocationService extends Service {
     private static final String TAG = "LivreLocation";
     private static final String LOCATION_CHANNEL = "livre_location";
-    private static final String TRIP_CHANNEL = "livre_trips_v2";
+    // v3 intentionally replaces the old channel: Android persists channel
+    // sound settings and will not repair a channel previously made silent.
+    private static final String TRIP_CHANNEL = "livre_trips_v3";
     private static final int FOREGROUND_ID = 7;
 
     private LocationManager manager;

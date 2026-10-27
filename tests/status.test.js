@@ -17,10 +17,10 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /operationalStatus = data\.status/);
   });
 
-  it('uses the same v2 trip notification channel as the native service', () => {
-    assert.match(nativeSource, /TRIPS_NOTIFICATION_CHANNEL\s*=\s*"livre_trips_v2"/);
-    assert.match(fs.readFileSync('android/app/src/main/java/com/livre/conductor/PermissionGate.java', 'utf8'), /getNotificationChannel\("livre_trips_v2"\)/);
-    assert.match(fs.readFileSync('android/app/src/main/java/com/livre/conductor/LocationService.java', 'utf8'), /TRIP_CHANNEL\s*=\s*"livre_trips_v2"/);
+  it('uses the same fresh v3 trip notification channel as the native service', () => {
+    assert.match(nativeSource, /TRIPS_NOTIFICATION_CHANNEL\s*=\s*"livre_trips_v3"/);
+    assert.match(fs.readFileSync('android/app/src/main/java/com/livre/conductor/PermissionGate.java', 'utf8'), /getNotificationChannel\("livre_trips_v3"\)/);
+    assert.match(fs.readFileSync('android/app/src/main/java/com/livre/conductor/LocationService.java', 'utf8'), /TRIP_CHANNEL\s*=\s*"livre_trips_v3"/);
   });
 
   it('loads the production frontend remotely without a bundled copy', () => {
