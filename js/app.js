@@ -1314,7 +1314,7 @@ function updateRouteDeviationUi() {
     ok: ['En ruta', 'ok'],
     warning: ['Revisá la calle', 'warning'],
     off_route: ['DESVÍO: calle incorrecta', 'off-route'],
-    unknown: ['Esperando GPS preciso', 'unknown'],
+    unknown: [gpsState.provider === 'ACTIVE' ? 'GPS activo · ubicando en la ruta' : 'Esperando GPS preciso', 'unknown'],
   };
   const [label, className] = labels[routeDeviation.level] || labels.unknown;
   status.textContent = routeDeviation.distanceM == null
@@ -1361,7 +1361,7 @@ function renderRouteGuidance() {
     <div class="route-guidance-kicker"></div>
     <div class="route-guidance-title"></div>
     <div class="route-guidance-address"></div>
-    <div class="route-guidance-status unknown">Esperando GPS preciso</div>
+    <div class="route-guidance-status unknown">${gpsState.provider === 'ACTIVE' ? 'GPS activo · ubicando en la ruta' : 'Esperando GPS preciso'}</div>
     <div class="route-guidance-metrics">
       <span><strong class="route-guidance-distance"></strong><small>por ruta</small></span>
       <span><strong class="route-guidance-duration"></strong><small>estimado</small></span>
