@@ -4,10 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'index.html'
-      - 'css/**'
-      - 'js/**'
       - 'android/**'
+      - 'tools/verify_release.py'
       - '.github/workflows/android-apk.yml'
   workflow_dispatch:
 

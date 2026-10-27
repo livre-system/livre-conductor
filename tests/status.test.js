@@ -23,6 +23,13 @@ describe('driver operational status synchronization', () => {
     assert.match(fs.readFileSync('android/app/src/main/java/com/livre/conductor/LocationService.java', 'utf8'), /TRIP_CHANNEL\s*=\s*"livre_trips_v2"/);
   });
 
+  it('loads the production frontend remotely without a bundled copy', () => {
+    assert.match(nativeSource, /WEB_URL\s*=\s*"https:\/\/livre-conductor-production\.up\.railway\.app\/"/);
+    assert.match(nativeSource, /WebSettings\.LOAD_NO_CACHE/);
+    assert.doesNotMatch(nativeSource, /file:\/\/\/android_asset|assets\/web/);
+    assert.strictEqual(fs.existsSync('android/app/src/main/assets/web'), false);
+  });
+
   it('keeps GPS startup independent from operational status', () => {
     assert.match(source, /startGps\(\);/);
     assert.match(source, /loadOperationalStatus\(\)\.then\(\(\) => startTripsPolling\(\)\)/);

@@ -29,6 +29,10 @@ def main():
     assert 'trip_horn' in service
     assert 'notified_trip_ids' in notification_store
     assert 'trip_id' in service and 'trip_id' in activity
+    assert 'https://livre-conductor-production.up.railway.app/' in activity
+    assert 'WebSettings.LOAD_NO_CACHE' in activity
+    assert not (ROOT / 'android/app/src/main/assets').exists()
+    assert not (ROOT / 'android/app/src/main/assets/web').exists()
     assert 'setAppVisible' in activity and 'clearSession' in activity
     assert 'ANDROID_KEYSTORE_BASE64' in workflow
     assert 'assembleRelease' in workflow and 'apksigner' in workflow

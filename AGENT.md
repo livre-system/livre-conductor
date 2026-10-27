@@ -159,11 +159,13 @@ Railway es la única plataforma de despliegue activa para todos los servicios y 
 - Commit `eb55a4c` publicado en GitHub. Railway estaba temporalmente pausado al verificar; la disponibilidad HTTPS queda pendiente de un deploy posterior.
 - Validar con `node --check js/app.js` y `git diff --check`; no informar la corrección como disponible en producción hasta confirmar los assets por HTTPS.
 
-## Modelo real de la APK y del frontend remoto (2026-10-21)
+## Modelo real de la APK y del frontend remoto (2026-10-27)
 
-- Las APK de conductor no contienen una copia independiente del frontend: funcionan como contenedores WebView que cargan `https://livre-conductor-production.up.railway.app/`.
-- Cuando se corrige `index.html`, `css/styles.css` o `js/app.js`, el cambio corresponde al mismo frontend desplegado que ve el navegador y la WebView; no describirlo como una corrección de “otra APK” ni asumir que requiere recompilarla.
-- La capa nativa queda limitada a permisos, servicio persistente de ubicación, puente WebView y notificaciones del sistema. Solo requiere una nueva compilación si cambia esa capa nativa; los cambios visuales o de lógica web se validan y despliegan por HTTPS.
+- La APK operativa debe ser únicamente un contenedor WebView que cargue `https://livre-conductor-production.up.railway.app/`; esa URL es la única fuente de verdad del frontend.
+- La capa nativa queda limitada a permisos, servicio persistente de ubicación, puente WebView y notificaciones del sistema. Los cambios visuales o de lógica web se despliegan por HTTPS y no requieren recompilar la APK.
+- El archivo histórico `app/app-debug-final-local-all-changes.apk` contiene una copia embebida antigua en `assets/web/` y no debe usarse como artefacto operativo. No representa el frontend remoto actual.
+- `MainActivity` usa `WebSettings.LOAD_NO_CACHE` y la verificación de release rechaza una carpeta `android/app/src/main/assets/web`; así se evita que una copia local vuelva a transformarse en un segundo frontend.
+- El workflow Android ya no se dispara por cambios en `index.html`, `css/` o `js/`; los cambios web se publican por Railway y las compilaciones APK quedan reservadas para cambios nativos.
 - El GPS del conductor debe iniciar al abrir el panel y mantener el envío periódico al CRM aun sin viaje activo, sujeto a permisos, sesión y proveedor de ubicación. El guardado de recorrido de negocio sigue restringido a viajes aceptados y terminados.
 - No atribuir overlays, burbujas, asistentes o paneles flotantes del teléfono al frontend sin evidencia en DOM/CSS/JS; la APK no genera esas capas mediante el WebView.
 

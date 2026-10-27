@@ -75,7 +75,9 @@ public class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setGeolocationEnabled(true);
         settings.setDatabaseEnabled(true);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        // The remote Railway frontend is the single source of truth. Do not
+        // let a stale WebView cache turn the APK into a second frontend.
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         webView.setWebViewClient(new ResilientWebViewClient());
         webView.setWebChromeClient(new WebChromeClient() {
 
