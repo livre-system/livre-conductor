@@ -210,3 +210,12 @@ Railway es la única plataforma de despliegue activa para todos los servicios y 
 - La prueba mostró un aviso de GPS denegado por el permiso del navegador de automatización; no se tomó como fallo visual del frontend.
 - La sesión de prueba se cerró al terminar y no quedaron tokens en `localStorage`.
 - No hubo cambios de código por esta revisión responsive; la corrección de la etiqueta de tarifa está publicada en `5ddefb0`.
+
+## APK v6: audio nativo igual al de la web (2026-10-28)
+
+- La notificación de viaje en segundo plano se genera desde `LocationService`, sin depender de que el WebView esté visible.
+- El GPS persistente continúa funcionando por el servicio nativo y no fue modificado.
+- La APK usa exactamente el mismo archivo de audio que la web: `assets/audio/car-horn.mp3`, copiado a `android/app/src/main/res/raw/car_horn.mp3`.
+- `LocationService`, `MainActivity` y `PermissionGate` usan el canal nuevo `livre_trips_v4`; el canal anterior no debe reutilizarse porque Android conserva su configuración de sonido.
+- La variante v6 fue generada y verificada mediante GitHub Actions. Commit: `a42d518`. Artefacto local: `app/nuevo/livre-conductor-v6.apk`.
+- La prueba real confirmó que la notificación aparece y reproduce el mismo sonido de bocina que la web.
