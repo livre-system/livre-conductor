@@ -26,7 +26,7 @@ def main():
     assert 'android.permission.ACCESS_BACKGROUND_LOCATION' in manifest
     assert 'android.permission.FOREGROUND_SERVICE_LOCATION' in manifest
     assert 'android:foregroundServiceType="location"' in manifest
-    assert 'trip_horn' in service
+    assert 'car_horn' in service
     assert 'notified_trip_ids' in notification_store
     assert 'trip_id' in service and 'trip_id' in activity
     assert 'https://livre-conductor-production.up.railway.app/' in activity
@@ -40,7 +40,7 @@ def main():
     assert 'const NATIVE_SHELL' in js
     assert 'window.AndroidGps.clearSession' in js
     assert 'window.AndroidGps.setAppVisible' in js
-    raw = ROOT / 'android/app/src/main/res/raw/trip_horn.wav'
+    raw = ROOT / 'android/app/src/main/res/raw/car_horn.mp3'
     assert raw.exists() and raw.stat().st_size > 1000
 
     if len(sys.argv) == 1:

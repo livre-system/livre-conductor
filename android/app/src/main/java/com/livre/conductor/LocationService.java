@@ -494,7 +494,7 @@ public class LocationService extends Service {
                 .setCategory(Notification.CATEGORY_CALL)
                 .setPriority(Notification.PRIORITY_HIGH)
                 .setVibrate(new long[]{0, 350, 180, 700})
-                .setSound(Uri.parse("android.resource://" + getPackageName() + "/" + com.livre.conductor.R.raw.trip_horn))
+                .setSound(Uri.parse("android.resource://" + getPackageName() + "/" + com.livre.conductor.R.raw.car_horn))
                 .build();
         getSystemService(NotificationManager.class).notify(requestCode, notification);
         android.util.Log.i(TAG, "Trip notification posted channel=" + TRIP_CHANNEL);
@@ -506,7 +506,7 @@ public class LocationService extends Service {
         NotificationChannel location = new NotificationChannel(LOCATION_CHANNEL, "Ubicación de Livre", NotificationManager.IMPORTANCE_LOW);
         location.setDescription("Mantiene activa la ubicación del conductor");
         manager.createNotificationChannel(location);
-        Uri sound = Uri.parse("android.resource://" + getPackageName() + "/" + com.livre.conductor.R.raw.trip_horn);
+        Uri sound = Uri.parse("android.resource://" + getPackageName() + "/" + com.livre.conductor.R.raw.car_horn);
         AudioAttributes audio = new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build();
         NotificationChannel trips = new NotificationChannel(TRIP_CHANNEL, "Nuevos viajes", NotificationManager.IMPORTANCE_HIGH);
         trips.setDescription("Avisa cuando hay un viaje nuevo asignado");
