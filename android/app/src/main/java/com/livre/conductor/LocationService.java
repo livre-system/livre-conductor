@@ -418,7 +418,11 @@ public class LocationService extends Service {
         long now = System.currentTimeMillis();
         for (int i = 0; i < trips.length(); i++) {
             JSONObject trip = trips.optJSONObject(i);
-            if (trip == null || !"assigned".equals(trip.optString("status"))) continue;
+            // Open requests are returned as `searching` to every eligible
+            // driver; once claimed, the same contract becomes `assigned`.
+            // Both states are new-trip offers and must alert in background.
+            String status = trip == null ? "" : trip.optString("status");
+            if (!"searching".equals(status) && !"assigned".equals(status)) continue;
             String id = trip.optString("id", "");
             if (id.isEmpty() || !TripNotificationStore.reserve(this, id, now)) continue;
             try {
