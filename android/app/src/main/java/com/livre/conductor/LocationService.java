@@ -50,9 +50,9 @@ import java.util.concurrent.TimeUnit;
 public class LocationService extends Service {
     private static final String TAG = "LivreLocation";
     private static final String LOCATION_CHANNEL = "livre_location";
-    // v3 intentionally replaces the old channel: Android persists channel
-    // sound settings and will not repair a channel previously made silent.
-    private static final String TRIP_CHANNEL = "livre_trips_v3";
+    // v4 intentionally replaces older channels: Android persists channel sound
+    // settings and will not repair a channel previously made silent.
+    private static final String TRIP_CHANNEL = "livre_trips_v4";
     private static final int FOREGROUND_ID = 7;
 
     private LocationManager manager;
@@ -507,7 +507,7 @@ public class LocationService extends Service {
         location.setDescription("Mantiene activa la ubicación del conductor");
         manager.createNotificationChannel(location);
         Uri sound = Uri.parse("android.resource://" + getPackageName() + "/" + com.livre.conductor.R.raw.trip_horn);
-        AudioAttributes audio = new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build();
+        AudioAttributes audio = new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build();
         NotificationChannel trips = new NotificationChannel(TRIP_CHANNEL, "Nuevos viajes", NotificationManager.IMPORTANCE_HIGH);
         trips.setDescription("Avisa cuando hay un viaje nuevo asignado");
         trips.enableVibration(true);
