@@ -250,11 +250,15 @@ public class LocationService extends Service {
 
     private void pollTripsIfBackground() {
         if (!PermissionGate.operational(this) || !SessionStore.isValid(this)) {
+            android.util.Log.w(TAG, "Trip poll detenido: permisos o sesión no operativos");
             stopSelf();
             return;
         }
         if (appVisible || token == null || api == null || !networkAvailable
-                || !SessionStore.hasCurrentSession(this, token, api)) return;
+                || !SessionStore.hasCurrentSession(this, token, api)) {
+            android.util.Log.d(TAG, "Trip poll omitido visible=" + appVisible + " network=" + networkAvailable);
+            return;
+        }
         if (System.currentTimeMillis() < retryNotBefore) return;
         if (!pollRunning.compareAndSet(false, true)) return;
         try {
@@ -263,12 +267,14 @@ public class LocationService extends Service {
             if (!SessionStore.hasCurrentSession(this, currentToken, currentApi)) return;
             JSONArray trips = getTrips(currentApi, currentToken);
             if (trips != null) {
+                android.util.Log.i(TAG, "Trip poll OK count=" + trips.length());
                 notifyNewAssignedTrips(trips);
                 resetRetryBackoff();
             }
         } catch (RequestFailure e) {
             handleRequestFailure(e);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            android.util.Log.e(TAG, "Trip poll error=" + e.getClass().getSimpleName(), e);
             scheduleRetry();
         } finally {
             pollRunning.set(false);
@@ -362,6 +368,7 @@ public class LocationService extends Service {
             connection.setReadTimeout(4500);
             connection.setRequestProperty("Authorization", "Bearer " + currentToken);
             int status = connection.getResponseCode();
+            android.util.Log.i(TAG, "GET /mobility/driver/trips HTTP " + status);
             if (status == 401) throw new RequestFailure(RequestFailure.Kind.UNAUTHORIZED);
             if (status == 403) throw new RequestFailure(RequestFailure.Kind.FORBIDDEN);
             if (status == 408) throw new RequestFailure(RequestFailure.Kind.TIMEOUT);
@@ -424,23 +431,37 @@ public class LocationService extends Service {
             String status = trip == null ? "" : trip.optString("status");
             if (!"searching".equals(status) && !"assigned".equals(status)) continue;
             String id = trip.optString("id", "");
-            if (id.isEmpty() || !TripNotificationStore.reserve(this, id, now)) continue;
+            android.util.Log.i(TAG, "Trip offer status=" + status + " id_present=" + !id.isEmpty());
+            if (id.isEmpty() || !TripNotificationStore.reserve(this, id, now)) {
+                android.util.Log.i(TAG, "Trip offer skipped empty_or_reserved=" + id.isEmpty());
+                continue;
+            }
             try {
                 notifyTrip(id, trip);
                 TripNotificationStore.markNotified(this, id, System.currentTimeMillis());
-            } catch (RuntimeException ignored) {
-                // Leave the reservation pending so a later poll can retry it.
+            } catch (RuntimeException e) {
+                android.util.Log.e(TAG, "Trip notification error=" + e.getClass().getSimpleName(), e);
+                // Leave the reservation pending so the normal poll can retry it.
             }
         }
     }
 
     private boolean tripNotificationsEnabled() {
         NotificationManager manager = getSystemService(NotificationManager.class);
-        if (manager == null) return false;
-        if (Build.VERSION.SDK_INT >= 24 && !manager.areNotificationsEnabled()) return false;
+        if (manager == null) {
+            android.util.Log.e(TAG, "Trip notification disabled: NotificationManager unavailable");
+            return false;
+        }
+        if (Build.VERSION.SDK_INT >= 24 && !manager.areNotificationsEnabled()) {
+            android.util.Log.w(TAG, "Trip notification disabled by Android");
+            return false;
+        }
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel channel = manager.getNotificationChannel(TRIP_CHANNEL);
-            return channel != null && channel.getImportance() != NotificationManager.IMPORTANCE_NONE;
+            boolean enabled = channel != null && channel.getImportance() != NotificationManager.IMPORTANCE_NONE;
+            android.util.Log.i(TAG, "Trip channel exists=" + (channel != null)
+                    + " importance=" + (channel == null ? -1 : channel.getImportance()) + " enabled=" + enabled);
+            return enabled;
         }
         return true;
     }
@@ -476,6 +497,7 @@ public class LocationService extends Service {
                 .setSound(Uri.parse("android.resource://" + getPackageName() + "/" + com.livre.conductor.R.raw.trip_horn))
                 .build();
         getSystemService(NotificationManager.class).notify(requestCode, notification);
+        android.util.Log.i(TAG, "Trip notification posted channel=" + TRIP_CHANNEL);
     }
 
     private void createChannels() {
