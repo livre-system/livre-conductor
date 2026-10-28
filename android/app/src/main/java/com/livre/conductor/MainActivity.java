@@ -28,7 +28,7 @@ import org.json.JSONObject;
 public class MainActivity extends Activity {
     public static final String ACTION_LOCATION_STATUS = "com.livre.conductor.LOCATION_STATUS";
     public static final String ACTION_SESSION_INVALIDATED = "com.livre.conductor.SESSION_INVALIDATED";
-    private static final String TRIPS_NOTIFICATION_CHANNEL = "livre_trips_v3";
+    private static final String TRIPS_NOTIFICATION_CHANNEL = "livre_trips_v4";
     private static final String WEB_URL = "https://livre-conductor-production.up.railway.app/";
     private static final int LOCATION_REQUEST = 41;
     private static final int BACKGROUND_LOCATION_REQUEST = 42;
