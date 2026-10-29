@@ -920,13 +920,13 @@ async function changeStatus(status, tripId = selected?.id) {
     });
     const statusCode = r.status;
     if (!r.ok) {
-      if (statusCode === 409) {
+      if (statusCode === 404 || statusCode === 409) {
         const lostTripId = normalizedTripId;
         trips = trips.filter(t => String(t.id) !== lostTripId);
         if (selected && String(selected.id) === lostTripId) selected = null;
         render();
-        showNotice('Ese viaje ya fue tomado por otro conductor.');
-        loadTrips();
+        showNotice('Ese viaje ya no está disponible.');
+        void loadTrips();
         return false;
       }
       throw Error(statusCode);
