@@ -620,7 +620,7 @@ function render() {
   if (isCompleted)   statusHtml = `<div class="active-status"><span class="active-status-dot" style="background:#8b8d96;box-shadow:none"></span><span class="active-status-text" style="color:#8b8d96">Viaje finalizado</span></div>`;
 
   let primaryBtn = '';
-  if (isArriving)    primaryBtn = `<button class="btn-primary green"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">LLEGUÉ — Iniciar viaje</button>`;
+  if (isArriving)    primaryBtn = `<button class="btn-primary green"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">LLEGUÉ — Iniciar viaje</button><button class="test-finish-button"${statusChangeInFlight ? ' disabled' : ''} onclick="finishTestTrip()">Cerrar prueba sin recorrido</button>`;
   if (isInProgress)  primaryBtn = `<button class="btn-primary"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">Finalizar viaje</button>`;
   if (isCompleted)   primaryBtn = `<button class="btn-primary" disabled>Viaje finalizado</button>`;
 
@@ -754,15 +754,35 @@ async function nextStatus() {
     void loadTripRoute('trip');
   }
   if (changed && next === 'completed') {
-    activeTripId = null;
-    clearTripRoute();
-    // El viaje terminado no debe quedar visible hasta el próximo polling.
-    trips = trips.filter(t => String(t.id) !== tripId);
-    selected = null;
-    document.body.classList.remove('trip-active');
-    render();
-    showNotice('Viaje finalizado correctamente.');
-    if (!DEMO) void loadTrips();
+    finishCompletedTrip(tripId);
+  }
+}
+
+function finishCompletedTrip(tripId) {
+  activeTripId = null;
+  clearTripRoute();
+  // El viaje terminado no debe quedar visible hasta el próximo polling.
+  trips = trips.filter(t => String(t.id) !== String(tripId));
+  selected = null;
+  document.body.classList.remove('trip-active');
+  render();
+  showNotice('Viaje finalizado correctamente.');
+  if (!DEMO) void loadTrips();
+}
+
+/** Cierra una prueba que quedó en camino sin exigir recorrido GPS real. */
+async function finishTestTrip() {
+  if (statusChangeInFlight || !selected || selected.status !== 'arriving') return;
+  const tripId = String(selected.id);
+  statusChangeInFlight = true;
+  render();
+  try {
+    const started = await changeStatus('in_progress', tripId);
+    if (!started) return;
+    const completed = await changeStatus('completed', tripId);
+    if (completed) finishCompletedTrip(tripId);
+  } finally {
+    statusChangeInFlight = false;
   }
 }
 
@@ -2216,6 +2236,8 @@ installAudioGestureUnlock();
 $('loginForm').onsubmit = login;
 $('toggleAuth').onclick = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
 $('logoutBtn').onclick = logout;
+$('themeToggle').onclick = toggleTheme;
+$('settingsButton').onclick = () => $('settingsModal').classList.remove('hidden');
 $('historyClose').onclick = () => $('historyModal').classList.add('hidden');
 $('historyRefresh').onclick = loadDriverHistory;
 $('historyModal').onclick = e => { if (e.target.id === 'historyModal') $('historyModal').classList.add('hidden'); };

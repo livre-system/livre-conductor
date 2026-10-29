@@ -2,6 +2,7 @@ const { describe, it } = require('node:test');
 const assert = require('assert');
 const fs = require('fs');
 const source = fs.readFileSync('js/app.js', 'utf8');
+const html = fs.readFileSync('index.html', 'utf8');
 const styles = fs.readFileSync('css/styles.css', 'utf8');
 const nativeSource = fs.readFileSync('android/app/src/main/java/com/livre/conductor/MainActivity.java', 'utf8');
 const sessionStoreSource = fs.readFileSync('android/app/src/main/java/com/livre/conductor/SessionStore.java', 'utf8');
@@ -296,6 +297,11 @@ describe('driver operational status synchronization', () => {
     assert.match(styles, /body\.trip-active \.sheet\.active-mode \{ height: min\(340px/);
     assert.match(styles, /body\.trip-active \.sheet\.active-mode \{[\s\S]*?bottom: 0;/);
     assert.match(styles, /body\.trip-active \.topbar \.header-icon-button \{ display: grid; \}/);
+    assert.match(html, /id="themeToggle"/);
+    assert.match(html, /id="settingsButton"/);
+    assert.match(source, /async function finishTestTrip\(\)/);
+    assert.match(source, /changeStatus\('in_progress', tripId\)/);
+    assert.match(source, /changeStatus\('completed', tripId\)/);
   });
 
   it('oculta el estado operativo compacto durante un viaje activo para no apretar la hoja', () => {
