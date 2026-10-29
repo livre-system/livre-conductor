@@ -969,10 +969,32 @@ body { font-size: var(--font-size-base); }
   text-overflow: ellipsis;
 }
 .topbar-status-select[data-operational-status="unavailable"] { border-color: #9aa0aa66; background: var(--surface); color: #c0c5ce; }
-.topbar-status-select[data-operational-status="out_of_service"] { border-color: #e8003d66; background: #30101a; color: #ff607e; }
-.topbar-status-select:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+.topbar-status-select[data-operational-status="out_of_service"] { border-color: #e8003d; background: #4f1826; color: #ff607e; }
+.topbar-status-select[data-operational-status="available"] { border-color: #2de08b; background: #174b38; color: #8ff0bd; }
+.topbar-status-select[data-operational-status="unavailable"] { border-color: #9aa0aa; background: #343942; color: #e1e4ea; }
 
-/* La oferta es la acción principal: sin panel operativo dentro de la tarjeta. */
+/* Las ofertas son pop-ups centrados; el bottom sheet queda reservado al viaje activo. */
+@media (max-width: 430px) {
+  .sheet.alert-mode {
+    top: 50%;
+    bottom: auto;
+    left: 50%;
+    right: auto;
+    width: min(88%, 430px);
+    height: auto;
+    max-height: min(78dvh, 560px);
+    transform: translate(-50%, -50%);
+    border: 1px solid var(--red);
+    border-radius: 18px;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, .58), 0 0 30px var(--red-dim);
+  }
+  .sheet.alert-mode .sheet-inner {
+    flex: 0 1 auto;
+    max-height: calc(min(78dvh, 560px) - 24px);
+    padding-bottom: 18px;
+  }
+}
+
 @media (max-width: 430px) {
   .sheet.alert-mode { height: min(58dvh, calc(100dvh - 86px)); }
   .sheet.alert-mode .sheet-inner { padding: 0 14px max(14px, env(safe-area-inset-bottom)); }
@@ -1012,6 +1034,18 @@ body { font-size: var(--font-size-base); }
 .compact-idle { padding: 6px 0 0; }
 .compact-idle .idle-sub { margin: 0 0 8px; }
 .driver-popup { min-width: 190px; color: #17191d; line-height: 1.5; font-size: 12px; }
+
+@media (max-width: 430px) {
+  .sheet.alert-mode {
+    height: auto;
+    max-height: min(78dvh, 560px);
+  }
+  .sheet.alert-mode .sheet-inner {
+    max-height: calc(min(78dvh, 560px) - 24px);
+    padding: 0 14px 18px;
+  }
+}
+
 .driver-popup strong { display: block; margin-bottom: 5px; color: #0b5db5; font-size: 14px; }
 .driver-popup-current strong { color: #13824d; }
 .settings-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px; background: var(--modal-overlay); }

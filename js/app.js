@@ -527,7 +527,9 @@ function render() {
   // `searching` es una oferta global entregada a cada conductor disponible.
   const t = selected && DRIVER_CARD_STATUSES.includes(selected.status)
     ? selected
-    : trips.find(x => ['scheduled', 'searching', 'assigned'].includes(x.status));
+    : selected?.status === 'completed'
+      ? selected
+      : trips.find(x => ['scheduled', 'searching', 'assigned'].includes(x.status));
   document.body.classList.toggle('trip-active', Boolean(t && ['arriving', 'in_progress'].includes(t.status)));
 
   const sheet  = $('sheet');
@@ -929,7 +931,11 @@ async function changeStatus(status, tripId = selected?.id) {
       }
       throw Error(statusCode);
     }
-    selected = await r.json();
+    const payload = await r.json().catch(() => null);
+    const returnedTrip = payload?.trip || payload;
+    selected = returnedTrip && returnedTrip.id != null && returnedTrip.status
+      ? returnedTrip
+      : { ...selected, status };
     trips = trips.map(t => String(t.id) === String(selected.id) ? selected : t);
     render();
     return true;
@@ -1856,14 +1862,18 @@ async function loadOperationalStatus() {
 
 async function changeOperationalStatus(status) {
   if (!OPERATIONAL_STATUS_LABELS[status]) return false;
-  if (DEMO) { operationalStatus = status; renderOperationalStatus(); return true; }
+  const previousStatus = operationalStatus;
+  operationalStatus = status;
+  updateOwnMarkerStyle();
+  renderOperationalStatus();
+  if (DEMO) return true;
   try {
     const r = await fetch(`${API}/mobility/driver/operational-status`, {
       method: 'PUT', headers: h(), body: JSON.stringify({ status }),
     });
-    if (r.status === 401) { logout(); return false; }
+    if (r.status === 401) { operationalStatus = previousStatus; renderOperationalStatus(); logout(); return false; }
     if (!r.ok) throw Error(r.status);
-    const data = await r.json();
+    const data = await r.json().catch(() => ({ status }));
     if (!OPERATIONAL_STATUS_LABELS[data.status]) throw Error('invalid-status');
     operationalStatus = data.status;
     updateOwnMarkerStyle();
@@ -1872,6 +1882,9 @@ async function changeOperationalStatus(status) {
     await loadTrips();
     return true;
   } catch (e) {
+    operationalStatus = previousStatus;
+    updateOwnMarkerStyle();
+    renderOperationalStatus();
     showNotice('No se pudo actualizar tu estado operativo.');
     return false;
   }
