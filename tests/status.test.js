@@ -314,7 +314,10 @@ describe('driver operational status synchronization', () => {
   });
 
   it('da prioridad visual al selector de estado operativo', () => {
-    assert.match(styles, /\.topbar-status-select \{[\s\S]*?min-height: 38px;[\s\S]*?font-size: 12px;[\s\S]*?font-weight: 900;[\s\S]*?text-transform: uppercase;/);
+    assert.match(styles, /\.topbar-status-select \{[\s\S]*?width: 176px;[\s\S]*?min-height: 38px;[\s\S]*?font-size: 12px;[\s\S]*?font-weight: 900;[\s\S]*?text-transform: uppercase;/);
+    assert.match(styles, /@media \(max-width: 430px\) \{\n  \.topbar-left \{ flex: 1 1 auto; min-width: 0; \}/);
+    assert.match(styles, /@media \(max-width: 599px\) \{\n  \.topbar-left \{ max-width: 64%; \}[\s\S]*?min-width: 145px;[\s\S]*?font-size: 11px;/);
+    assert.match(html, /value="out_of_service">Fuera serv\.<\/option>/);
   });
 
   it('mantiene la oferta centrada, compacta y sin tapar la tarifa', () => {
