@@ -313,6 +313,10 @@ describe('driver operational status synchronization', () => {
     assert.doesNotMatch(source, /Esperando un viaje/);
   });
 
+  it('da prioridad visual al selector de estado operativo', () => {
+    assert.match(styles, /\.topbar-status-select \{[\s\S]*?min-height: 38px;[\s\S]*?font-size: 12px;[\s\S]*?font-weight: 900;[\s\S]*?text-transform: uppercase;/);
+  });
+
   it('mantiene la oferta centrada, compacta y sin tapar la tarifa', () => {
     assert.match(styles, /\.sheet\.alert-mode \{[\s\S]*?width: min\(calc\(82vw \/ var\(--ui-scale\)\), 360px\);/);
     assert.match(styles, /\.sheet\.alert-mode \{[\s\S]*?max-height: none;/);

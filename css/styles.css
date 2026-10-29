@@ -923,6 +923,23 @@ button, input, select { touch-action: manipulation; }
   .alert-pulse { animation: none; }
 }
 
+/* El estado operativo es la acción principal del conductor. */
+.topbar-status-select {
+  width: 156px;
+  min-height: 38px;
+  padding: 7px 28px 7px 11px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+@media (max-width: 430px) {
+  .topbar-status-select { width: 148px; min-height: 36px; font-size: 11px; }
+}
+@media (max-width: 350px) {
+  .topbar-status-select { width: 128px; padding-left: 8px; padding-right: 22px; font-size: 10px; }
+}
+
 /* ── Modo viaje activo: una sola jerarquía visual ────────────── */
 body.trip-active .topbar .header-icon-button { display: none; }
 body.trip-active .map-toolbar { display: none; }
