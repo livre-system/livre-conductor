@@ -87,6 +87,8 @@ let gpsRecoveryTimer = null;
 let gpsHeartbeatTimer = null;
 let gpsSuspended = false;
 const GPS_HEARTBEAT_MS = 30000;
+const GPS_WATCHDOG_MS = 15000;
+const GPS_MAX_CALLBACK_GAP_MS = 90000;
 const PENDING_GPS_KEY = 'livre_driver_pending_gps';
 const PENDING_GPS_MAX_AGE_MS = 5 * 60 * 1000;
 const GPS_MAX_ACCURACY_METERS = 150;
@@ -1149,6 +1151,16 @@ function restartGpsAfterBackground() {
   }
 }
 
+function watchdogGps() {
+  if (DEMO || !token || !$('appView') || $('appView').classList.contains('hidden')) return;
+  if (document.visibilityState !== 'visible') return;
+  const stale = watchId === null || (lastAcceptedGpsPosition && Date.now() - lastAcceptedGpsPosition.at > GPS_MAX_CALLBACK_GAP_MS);
+  if (!stale) return;
+  diagLog('gps_watchdog_restart', { watcher: watchId !== null ? 'stale' : 'missing' });
+  gpsSuspended = true;
+  restartGpsAfterBackground();
+}
+
 function startGps() {
   // ── DEMO ────────────────────────────────────────────────────
   if (DEMO) { demoStartGps(); return; }
@@ -1205,8 +1217,8 @@ function startGps() {
   }
   if (!gpsRecoveryTimer) {
     gpsRecoveryTimer = setInterval(() => {
-      if (document.visibilityState === 'visible') restartGpsAfterBackground();
-    }, 10000);
+      if (document.visibilityState === 'visible') watchdogGps();
+    }, GPS_WATCHDOG_MS);
   }
 }
 
@@ -2248,6 +2260,11 @@ window.addEventListener('pageshow', () => {
   restartGpsAfterBackground();
   startTripsPolling();
 });
+window.onNativeAppResume = () => {
+  gpsSuspended = true;
+  restartGpsAfterBackground();
+  startTripsPolling();
+};
 window.addEventListener('focus', () => {
   restartGpsAfterBackground();
   startTripsPolling();

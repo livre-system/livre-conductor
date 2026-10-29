@@ -281,6 +281,16 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /device_id: deviceId/);
   });
 
+  it('recovers the web GPS watcher after WebView/browser suspension without a manual reload', () => {
+    assert.match(source, /const GPS_WATCHDOG_MS = 15000;/);
+    assert.match(source, /const GPS_MAX_CALLBACK_GAP_MS = 90000;/);
+    assert.match(source, /function watchdogGps\(\)/);
+    assert.match(source, /gps_watchdog_restart/);
+    assert.match(source, /window\.onNativeAppResume = \(\) =>/);
+    assert.match(source, /watchdogGps\(\);/);
+    assert.match(nativeSource, /webView\.evaluateJavascript\("window\.onNativeAppResume/);
+  });
+
   it('prevents duplicate acceptance and keeps the accepted trip identity stable', () => {
     assert.match(source, /let acceptInFlight = false/);
     assert.match(source, /if \(acceptInFlight \|\| !selected\) return;/);

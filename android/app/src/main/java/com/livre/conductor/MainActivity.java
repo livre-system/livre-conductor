@@ -217,6 +217,9 @@ public class MainActivity extends Activity {
         warnIfTripNotificationsDisabled();
         reviewPermissionState();
         deliverPendingTrip();
+        if (webView != null) {
+            webView.evaluateJavascript("window.onNativeAppResume && window.onNativeAppResume()", null);
+        }
     }
 
     @Override protected void onPause() {
