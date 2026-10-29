@@ -134,6 +134,7 @@ let tripsPollEpoch = 0;
 const TRIPS_POLL_MS = 5000;
 let pendingNativeTripId = null;
 let acceptInFlight = false;
+let statusChangeInFlight = false;
 let authMode    = 'login';
 let operationalStatus = 'available';
 let currentDriverSnapshot = null;
@@ -619,8 +620,8 @@ function render() {
   if (isCompleted)   statusHtml = `<div class="active-status"><span class="active-status-dot" style="background:#8b8d96;box-shadow:none"></span><span class="active-status-text" style="color:#8b8d96">Viaje finalizado</span></div>`;
 
   let primaryBtn = '';
-  if (isArriving)    primaryBtn = `<button class="btn-primary green" onclick="nextStatus()">LLEGUÉ — Iniciar viaje</button>`;
-  if (isInProgress)  primaryBtn = `<button class="btn-primary" onclick="nextStatus()">Finalizar viaje</button>`;
+  if (isArriving)    primaryBtn = `<button class="btn-primary green"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">LLEGUÉ — Iniciar viaje</button>`;
+  if (isInProgress)  primaryBtn = `<button class="btn-primary"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">Finalizar viaje</button>`;
   if (isCompleted)   primaryBtn = `<button class="btn-primary" disabled>Viaje finalizado</button>`;
 
   inner.innerHTML = `
@@ -741,16 +742,27 @@ function dismissTrip() {
 }
 
 async function nextStatus() {
-  if (!selected) return;
+  if (statusChangeInFlight || !selected) return;
   const next = { arriving: 'in_progress', in_progress: 'completed' }[selected.status];
   if (!next) return;
-  const changed = await changeStatus(next);
+  const tripId = String(selected.id);
+  statusChangeInFlight = true;
+  render();
+  const changed = await changeStatus(next, tripId);
+  statusChangeInFlight = false;
   if (changed && next === 'in_progress') {
     await loadTripRoute('trip');
   }
   if (changed && next === 'completed') {
     activeTripId = null;
     clearTripRoute();
+    // El viaje terminado no debe quedar visible hasta el próximo polling.
+    trips = trips.filter(t => String(t.id) !== tripId);
+    selected = null;
+    document.body.classList.remove('trip-active');
+    render();
+    showNotice('Viaje finalizado correctamente.');
+    void loadTrips();
   }
 }
 
@@ -936,6 +948,9 @@ async function changeStatus(status, tripId = selected?.id) {
     selected = returnedTrip && returnedTrip.id != null && returnedTrip.status
       ? returnedTrip
       : { ...selected, status };
+    if (status === 'completed' || status === 'cancelled') {
+      selected = { ...selected, status };
+    }
     trips = trips.map(t => String(t.id) === String(selected.id) ? selected : t);
     render();
     return true;

@@ -293,8 +293,9 @@ describe('driver operational status synchronization', () => {
   it('simplifica la pantalla durante un viaje activo', () => {
     assert.match(source, /document\.body\.classList\.toggle\('trip-active'/);
     assert.match(styles, /body\.trip-active \.map-toolbar \{ display: none; \}/);
-    assert.match(styles, /body\.trip-active \.topbar \.header-icon-button \{ display: none; \}/);
     assert.match(styles, /body\.trip-active \.sheet\.active-mode \{ height: min\(340px/);
+    assert.match(styles, /body\.trip-active \.sheet\.active-mode \{[\s\S]*?bottom: 0;/);
+    assert.match(styles, /body\.trip-active \.topbar \.header-icon-button \{ display: grid; \}/);
   });
 
   it('oculta el estado operativo compacto durante un viaje activo para no apretar la hoja', () => {
