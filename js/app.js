@@ -138,7 +138,7 @@ let authMode    = 'login';
 let operationalStatus = 'available';
 let currentDriverSnapshot = null;
 const PREFS_KEY = 'livre_driver_preferences';
-const DEFAULT_PREFS = { theme: 'dark', tone: 'car_horn', volume: 70, fontScale: '1' };
+const DEFAULT_PREFS = { theme: 'dark', tone: 'car_horn', volume: 70, fontScale: '16' };
 let preferences = { ...DEFAULT_PREFS };
 
 const OPERATIONAL_STATUS_LABELS = {
@@ -333,16 +333,20 @@ function loadPreferences() {
   if (!['dark', 'light'].includes(preferences.theme)) preferences.theme = DEFAULT_PREFS.theme;
   if (!['car_horn', 'bell'].includes(preferences.tone)) preferences.tone = DEFAULT_PREFS.tone;
   if (!Number.isFinite(Number(preferences.volume))) preferences.volume = DEFAULT_PREFS.volume;
-  const fontScale = Number(preferences.fontScale);
-  if (!Number.isFinite(fontScale) || fontScale < 0.85 || fontScale > 1.3) preferences.fontScale = DEFAULT_PREFS.fontScale;
-  document.documentElement.style.setProperty('--font-scale', preferences.fontScale);
+  let fontScale = Number(preferences.fontScale);
+  // Migra el porcentaje anterior (0.85–1.3) al mismo rango en px del CRM.
+  if (fontScale >= 0.85 && fontScale <= 1.3) fontScale = Math.round(fontScale * 16);
+  if (!Number.isFinite(fontScale) || fontScale < 12 || fontScale > 22) fontScale = Number(DEFAULT_PREFS.fontScale);
+  preferences.fontScale = String(fontScale);
+  document.documentElement.style.setProperty('--font-size-base', `${fontScale}px`);
+  document.documentElement.style.setProperty('--ui-scale', String(fontScale / 16));
   document.body.dataset.theme = preferences.theme;
   const themeMeta = document.querySelector('meta[name="theme-color"]');
   if (themeMeta) themeMeta.content = preferences.theme === 'light' ? '#f7f8fa' : '#07080a';
   if ($('themeToggle')) $('themeToggle').textContent = preferences.theme === 'light' ? '☾' : '☼';
   if ($('arrivalTone')) $('arrivalTone').value = preferences.tone;
   if ($('volumeRange')) { $('volumeRange').value = preferences.volume; $('volumeValue').textContent = `${preferences.volume}%`; }
-  if ($('fontScaleRange')) { $('fontScaleRange').value = preferences.fontScale; $('fontScaleValue').textContent = `${Math.round(Number(preferences.fontScale) * 100)}%`; }
+  if ($('fontScaleRange')) { $('fontScaleRange').value = preferences.fontScale; $('fontScaleValue').textContent = `${preferences.fontScale}px`; }
 }
 function savePreferences() { localStorage.setItem(PREFS_KEY, JSON.stringify(preferences)); }
 function toggleTheme() { preferences.theme = preferences.theme === 'light' ? 'dark' : 'light'; savePreferences(); loadPreferences(); }
@@ -2208,7 +2212,7 @@ $('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') $('sett
 $('tonePreview').onclick = () => { unlockAlertAudio(); beep(); };
 $('arrivalTone').onchange = e => { preferences.tone = e.target.value; alertAudioUnlocked = false; alertAudioUnlockPromise = null; alertAudio = null; savePreferences(); void unlockAlertAudio(); };
 $('volumeRange').oninput = e => { preferences.volume = Number(e.target.value); if (alertAudio) alertAudio.volume = preferences.volume / 100; $('volumeValue').textContent = `${preferences.volume}%`; savePreferences(); };
-$('fontScaleRange').oninput = e => { preferences.fontScale = Number(e.target.value); $('fontScaleValue').textContent = `${Math.round(preferences.fontScale * 100)}%`; savePreferences(); loadPreferences(); };
+$('fontScaleRange').oninput = e => { preferences.fontScale = String(Number(e.target.value)); $('fontScaleValue').textContent = `${preferences.fontScale}px`; savePreferences(); loadPreferences(); };
 
 document.addEventListener('visibilitychange', () => {
   setNativeAppVisible(document.visibilityState === 'visible');

@@ -947,9 +947,11 @@ body.trip-active .fare-row { padding: 10px 14px; margin-bottom: 12px; }
 body.trip-active .fare-value { font-size: 20px; }
 body.trip-active .btn-primary { min-height: 52px; }
 
-:root { --font-scale: 1; }
-body { font-size: calc(16px * var(--font-scale)); }
-.settings-modal .settings-card, .login-wrap { zoom: var(--font-scale); }
+:root { --font-size-base: 16px; --ui-scale: 1; }
+html { font-size: var(--font-size-base); }
+body { font-size: var(--font-size-base); }
+#appView, #loginView { zoom: var(--ui-scale); }
+.settings-modal .settings-card { zoom: 1; }
 .topbar-logo-image { display: block; width: auto; height: 30px; max-width: 112px; object-fit: contain; }
 .header-icon-button { min-width: 34px; height: 34px; padding: 0 7px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--white); font-size: 17px; }
 .header-icon-button:hover { border-color: var(--accent); }
