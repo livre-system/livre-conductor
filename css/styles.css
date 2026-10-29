@@ -448,6 +448,7 @@ button, input, select { touch-action: manipulation; }
   display: flex;
   flex-direction: column;
 }
+.sheet.empty-state { display: none; }
 
 /* Estado alerta (llega un viaje) */
 .sheet.alert-mode {
@@ -956,7 +957,7 @@ body { font-size: var(--font-size-base); }
 .header-icon-button { min-width: 34px; height: 34px; padding: 0 7px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--white); font-size: 17px; }
 .topbar-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .topbar-status-select {
-  width: 104px;
+  width: 138px;
   min-height: 30px;
   padding: 5px 24px 5px 8px;
   border: 1px solid #2de08b66;
@@ -966,7 +967,8 @@ body { font-size: var(--font-size-base); }
   font-size: 10px;
   font-weight: 800;
   white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
 }
 .topbar-status-select[data-operational-status="unavailable"] { border-color: #9aa0aa66; background: var(--surface); color: #c0c5ce; }
 .topbar-status-select[data-operational-status="out_of_service"] { border-color: #e8003d; background: #4f1826; color: #ff607e; }
@@ -980,9 +982,9 @@ body { font-size: var(--font-size-base); }
     bottom: auto;
     left: 50%;
     right: auto;
-    width: min(88%, 430px);
+    width: min(68%, 320px);
     height: auto;
-    max-height: min(78dvh, 560px);
+    max-height: min(48dvh, 390px);
     transform: translate(-50%, -50%);
     border: 1px solid var(--red);
     border-radius: 18px;
@@ -990,13 +992,13 @@ body { font-size: var(--font-size-base); }
   }
   .sheet.alert-mode .sheet-inner {
     flex: 0 1 auto;
-    max-height: calc(min(78dvh, 560px) - 24px);
+    max-height: calc(min(48dvh, 390px) - 24px);
     padding-bottom: 18px;
   }
 }
 
 @media (max-width: 430px) {
-  .sheet.alert-mode { height: min(58dvh, calc(100dvh - 86px)); }
+  .sheet.alert-mode { height: auto; }
   .sheet.alert-mode .sheet-inner { padding: 0 14px max(14px, env(safe-area-inset-bottom)); }
   .sheet.alert-mode .alert-badge { margin-bottom: 5px; padding: 3px 8px; font-size: 9px; }
   .sheet.alert-mode .alert-title { margin-bottom: 7px; font-size: clamp(18px, 5vw, 22px); }
@@ -1038,10 +1040,10 @@ body { font-size: var(--font-size-base); }
 @media (max-width: 430px) {
   .sheet.alert-mode {
     height: auto;
-    max-height: min(78dvh, 560px);
+    max-height: min(48dvh, 390px);
   }
   .sheet.alert-mode .sheet-inner {
-    max-height: calc(min(78dvh, 560px) - 24px);
+    max-height: calc(min(48dvh, 390px) - 24px);
     padding: 0 14px 18px;
   }
 }

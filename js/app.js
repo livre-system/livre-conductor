@@ -537,7 +537,7 @@ function render() {
 
   // ── Sin viaje ────────────────────────────────────────────── */
   if (!t) {
-    sheet.className = 'sheet';
+    sheet.className = 'sheet empty-state';
     inner.innerHTML = `
       ${operationalControlsHtml()}
       <div id="notice" class="notice hidden"></div>`;
