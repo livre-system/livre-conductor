@@ -333,7 +333,8 @@ function loadPreferences() {
   if (!['dark', 'light'].includes(preferences.theme)) preferences.theme = DEFAULT_PREFS.theme;
   if (!['car_horn', 'bell'].includes(preferences.tone)) preferences.tone = DEFAULT_PREFS.tone;
   if (!Number.isFinite(Number(preferences.volume))) preferences.volume = DEFAULT_PREFS.volume;
-  if (!['0.9', '1', '1.1', '1.2'].includes(String(preferences.fontScale))) preferences.fontScale = DEFAULT_PREFS.fontScale;
+  const fontScale = Number(preferences.fontScale);
+  if (!Number.isFinite(fontScale) || fontScale < 0.85 || fontScale > 1.3) preferences.fontScale = DEFAULT_PREFS.fontScale;
   document.documentElement.style.setProperty('--font-scale', preferences.fontScale);
   document.body.dataset.theme = preferences.theme;
   const themeMeta = document.querySelector('meta[name="theme-color"]');

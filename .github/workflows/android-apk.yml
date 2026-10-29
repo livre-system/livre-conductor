@@ -55,14 +55,14 @@ jobs:
           APK=android/app/build/outputs/apk/release/app-release.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.livre.conductor' versionCode='3' versionName='2.0.0'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.livre.conductor' versionCode='4' versionName='2.1.0'"
           sha256sum "$APK" | tee "$APK.sha256"
-          cp "$APK" "android/app/build/outputs/apk/release/livre-conductor-v2.0.0-${GITHUB_SHA::8}.apk"
-          cp "$APK.sha256" "android/app/build/outputs/apk/release/livre-conductor-v2.0.0-${GITHUB_SHA::8}.apk.sha256"
+          cp "$APK" "android/app/build/outputs/apk/release/livre-conductor-v7-${GITHUB_SHA::8}.apk"
+          cp "$APK.sha256" "android/app/build/outputs/apk/release/livre-conductor-v7-${GITHUB_SHA::8}.apk.sha256"
       - uses: actions/upload-artifact@v4
         with:
-          name: livre-conductor-v2.0.0-${{ github.sha }}
+          name: livre-conductor-v7-${{ github.sha }}
           path: |
-            android/app/build/outputs/apk/release/livre-conductor-v2.0.0-*.apk
-            android/app/build/outputs/apk/release/livre-conductor-v2.0.0-*.apk.sha256
+            android/app/build/outputs/apk/release/livre-conductor-v7-*.apk
+            android/app/build/outputs/apk/release/livre-conductor-v7-*.apk.sha256
           if-no-files-found: error

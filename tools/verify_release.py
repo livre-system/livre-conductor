@@ -20,7 +20,7 @@ def main():
     js = text("js/app.js")
 
     assert "applicationId 'com.livre.conductor'" in build
-    assert "versionCode 3" in build and "versionName '2.0.0'" in build
+    assert "versionCode 4" in build and "versionName '2.1.0'" in build
     assert "signingConfig signingConfigs.release" in build
     assert 'android.permission.POST_NOTIFICATIONS' in manifest
     assert 'android.permission.ACCESS_BACKGROUND_LOCATION' in manifest
