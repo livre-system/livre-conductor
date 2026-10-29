@@ -1462,3 +1462,139 @@ body[data-theme="light"] .trip-queue {
   background: #fff;
   border-color: #d7dde5;
 }
+
+/* ── Limpieza final del mapa y acciones de viaje ─────────────── */
+.route-guidance,
+.route-legend,
+.map-toolbar {
+  display: none !important;
+}
+
+/* La oferta es una ventana centrada, no una tarjeta que entra desde abajo. */
+.sheet.alert-mode {
+  position: fixed;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  left: 50%;
+  width: min(calc(92vw / var(--ui-scale)), 480px);
+  height: min(620px, calc(100dvh - 96px));
+  min-height: 430px;
+  max-height: calc(100dvh - 96px);
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--red);
+  border-radius: 24px;
+  box-shadow: 0 24px 70px #000b, 0 0 0 100vmax #0007;
+  overflow: hidden;
+  transition: none;
+}
+.sheet.alert-mode .sheet-handle { display: flex; }
+.sheet.alert-mode .sheet-inner {
+  min-height: 0;
+  padding: 0 20px max(20px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+.sheet.alert-mode .trip-alert { padding-top: 10px; }
+.sheet.alert-mode .alert-title {
+  margin-bottom: 20px;
+  font-size: clamp(27px, 7vw, 34px);
+}
+.sheet.alert-mode .route-card { padding: 16px; margin-bottom: 14px; }
+.sheet.alert-mode .stop-address { font-size: 15px; }
+.sheet.alert-mode .fare-row { padding: 13px 16px; margin-bottom: 14px; }
+.sheet.alert-mode .alert-actions { gap: 10px; }
+.sheet.alert-mode .btn-accept,
+.sheet.alert-mode .btn-reject { min-height: 58px; font-size: 13px; }
+.sheet.alert-mode .alert-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding-top: 8px;
+  background: var(--sheet);
+}
+
+/* En un viaje activo queda solo el estado y la próxima acción. */
+body.trip-active .sheet.active-mode {
+  position: fixed;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  max-height: 112px;
+  border: 0;
+  border-radius: 18px 18px 0 0;
+  background: #0b0d12f2;
+  box-shadow: 0 -12px 30px #0005;
+  transform: none;
+  transition: none;
+}
+body.trip-active .sheet.active-mode .sheet-handle { display: none; }
+body.trip-active .sheet.active-mode .sheet-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 42%);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px max(10px, env(safe-area-inset-bottom));
+  overflow: hidden;
+}
+body.trip-active .sheet.active-mode .active-trip { display: contents; }
+body.trip-active .sheet.active-mode .trip-summary,
+body.trip-active .sheet.active-mode .fare-row,
+body.trip-active .sheet.active-mode .final-fare-card,
+body.trip-active .sheet.active-mode .trip-queue,
+body.trip-active .sheet.active-mode .notice { display: none !important; }
+body.trip-active .sheet.active-mode .active-status {
+  grid-column: 1;
+  margin: 0;
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 12px;
+}
+body.trip-active .sheet.active-mode .active-status-text {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.trip-active .sheet.active-mode .primary-actions {
+  grid-column: 2;
+  margin: 0;
+}
+body.trip-active .sheet.active-mode .btn-primary {
+  min-height: 48px;
+  font-size: 12px;
+}
+
+@media (max-width: 430px) {
+  .sheet.alert-mode {
+    width: min(calc(92vw / var(--ui-scale)), 480px);
+    height: min(590px, calc(100dvh - 84px));
+    min-height: 410px;
+  }
+  .sheet.alert-mode .sheet-inner { padding-inline: 16px; }
+}
+
+@media (max-width: 350px) {
+  body.trip-active .sheet.active-mode .sheet-inner {
+    grid-template-columns: minmax(0, 1fr) minmax(136px, 44%);
+    gap: 7px;
+    padding-inline: 9px;
+  }
+  body.trip-active .sheet.active-mode .btn-primary { font-size: 10px; }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .sheet.alert-mode {
+    height: calc(100dvh / var(--ui-scale) - 24px);
+    min-height: 0;
+    max-height: calc(100dvh / var(--ui-scale) - 24px);
+  }
+  .sheet.alert-mode .alert-title { margin-bottom: 10px; font-size: 25px; }
+  .sheet.alert-mode .route-card { padding: 10px 12px; margin-bottom: 9px; }
+  .sheet.alert-mode .route-stop + .route-stop { margin-top: 9px; }
+  .sheet.alert-mode .fare-row { padding: 8px 12px; margin-bottom: 9px; }
+  .sheet.alert-mode .btn-accept,
+  .sheet.alert-mode .btn-reject { min-height: 48px; }
+}

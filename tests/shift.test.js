@@ -15,7 +15,7 @@ function historyTotals(data) {
 
 describe('driver history and shift closure', () => {
   it('offers a history view with date filters and totals', () => {
-    assert.match(html, /historyButton/);
+    assert.doesNotMatch(html, /id="historyButton"/);
     assert.match(html, /historyModal/);
     assert.match(source, /async function loadDriverHistory\(\)/);
     assert.match(source, /date_from/);

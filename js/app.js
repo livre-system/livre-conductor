@@ -653,7 +653,6 @@ function render() {
 
       ${tripQueueHtml(t)}
     </div>
-    ${operationalStatusCompactHtml()}
     <div id="notice" class="notice hidden"></div>`;
 
   bindTripQueue();
@@ -751,7 +750,8 @@ async function nextStatus() {
   const changed = await changeStatus(next, tripId);
   statusChangeInFlight = false;
   if (changed && next === 'in_progress') {
-    await loadTripRoute('trip');
+    // La ruta es auxiliar: no debe bloquear el botón de finalización.
+    void loadTripRoute('trip');
   }
   if (changed && next === 'completed') {
     activeTripId = null;
@@ -762,7 +762,7 @@ async function nextStatus() {
     document.body.classList.remove('trip-active');
     render();
     showNotice('Viaje finalizado correctamente.');
-    void loadTrips();
+    if (!DEMO) void loadTrips();
   }
 }
 
@@ -1568,23 +1568,8 @@ async function loadTripRoute(phase) {
 function initMap() {
   map = L.map('map', { zoomControl: false, maxBounds: BAHIA_BLANCA_BOUNDS, maxBoundsViscosity: 0.85 })
           .setView([-38.718, -62.266], 14);
-  const routeGuidance = document.createElement('aside');
-  routeGuidance.id = 'routeGuidance';
-  routeGuidance.className = 'route-guidance';
-  routeGuidance.hidden = true;
-  map.getContainer().appendChild(routeGuidance);
-  const routeLegend = document.createElement('div');
-  routeLegend.id = 'routeLegend';
-  routeLegend.className = 'route-legend';
-  routeLegend.innerHTML = '<span><i class="route-legend-swatch pickup"></i>Retiro del cliente</span><span><i class="route-legend-swatch trip"></i>Traslado al destino</span>';
-  map.getContainer().appendChild(routeLegend);
-  const mapToolbar = document.createElement('div');
-  mapToolbar.className = 'map-toolbar';
-  mapToolbar.innerHTML = '<button id="mapFollowButton" class="map-tool active" type="button" aria-pressed="true">◎ Siguiendo</button><button id="mapFitButton" class="map-tool" type="button">⌗ Ver ruta</button><button id="mapTraceButton" class="map-tool active" type="button" aria-pressed="true">Trazo visible</button>';
-  map.getContainer().appendChild(mapToolbar);
-  $('mapFollowButton').onclick = centerOnOwnLocation;
-  $('mapFitButton').onclick = fitActiveMapContent;
-  $('mapTraceButton').onclick = toggleOwnTrace;
+  // El mapa queda limpio: no se montan paneles, leyendas ni controles
+  // flotantes adicionales durante el viaje.
   updateMapFollowButton();
   map.on('dragstart', () => { followOwnLocation = false; updateMapFollowButton(); });
   L.control.zoom({ position: 'topright' }).addTo(map);
@@ -2231,12 +2216,9 @@ installAudioGestureUnlock();
 $('loginForm').onsubmit = login;
 $('toggleAuth').onclick = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
 $('logoutBtn').onclick = logout;
-$('themeToggle').onclick = toggleTheme;
-$('historyButton').onclick = openHistory;
 $('historyClose').onclick = () => $('historyModal').classList.add('hidden');
 $('historyRefresh').onclick = loadDriverHistory;
 $('historyModal').onclick = e => { if (e.target.id === 'historyModal') $('historyModal').classList.add('hidden'); };
-$('settingsButton').onclick = () => $('settingsModal').classList.remove('hidden');
 $('settingsClose').onclick = () => $('settingsModal').classList.add('hidden');
 $('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') $('settingsModal').classList.add('hidden'); };
 $('tonePreview').onclick = () => { unlockAlertAudio(); beep(); };
