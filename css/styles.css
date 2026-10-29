@@ -884,6 +884,28 @@ button, input, select { touch-action: manipulation; }
   .sheet-inner { padding-left: 16px; padding-right: 16px; }
   .map-toolbar { top: 58px; right: 12px; max-width: calc(100% - 24px); }
   .map-tool { min-height: 32px; padding: 6px 8px; font-size: 10px; }
+
+  /* Oferta compacta: toda la decisión debe entrar sin scroll ni botones cortados. */
+  .sheet.alert-mode { height: min(62dvh, calc(100dvh - 120px)); }
+  .sheet.alert-mode .sheet-inner { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  .sheet.alert-mode .operational-panel { margin-bottom: 7px; padding: 8px; }
+  .sheet.alert-mode .operational-panel-title { margin-bottom: 6px; font-size: 10px; }
+  .sheet.alert-mode .operational-panel-buttons { gap: 5px; }
+  .sheet.alert-mode .operational-panel-button { min-height: 39px; font-size: 10px; }
+  .sheet.alert-mode .trip-alert { padding: 4px 0; }
+  .sheet.alert-mode .alert-badge { margin-bottom: 9px; padding: 4px 9px; font-size: 10px; }
+  .sheet.alert-mode .alert-title { margin-bottom: 12px; font-size: clamp(21px, 6vw, 27px); }
+  .sheet.alert-mode .route-card { padding: 12px; margin-bottom: 10px; }
+  .sheet.alert-mode .route-stop { grid-template-columns: 16px 1fr; gap: 9px; }
+  .sheet.alert-mode .route-stop + .route-stop { margin-top: 10px; }
+  .sheet.alert-mode .stop-dot { width: 10px; height: 10px; }
+  .sheet.alert-mode .stop-label { margin-bottom: 2px; font-size: 9px; }
+  .sheet.alert-mode .stop-address { font-size: 14px; }
+  .sheet.alert-mode .fare-row { padding: 10px 12px; margin-bottom: 10px; }
+  .sheet.alert-mode .fare-value { font-size: 18px; }
+  .sheet.alert-mode .alert-actions { gap: 7px; }
+  .sheet.alert-mode .btn-accept,
+  .sheet.alert-mode .btn-reject { min-height: 48px; font-size: 13px; }
 }
 
 @media (max-width: 350px) {
