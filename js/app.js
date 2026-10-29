@@ -354,6 +354,13 @@ function operationalControlsHtml() {
   </div></div>`;
 }
 
+function operationalStatusCompactHtml() {
+  return `<div class="operational-status-compact" aria-label="Estado operativo actual">
+    <span class="operational-status-compact-dot" data-operational-dot></span>
+    <span>Estado operativo: <strong data-operational-label></strong></span>
+  </div>`;
+}
+
 /* ── Formatear tarifa ───────────────────────────────────────── */
 function formatFare(t) {
   const v = t?.driver_fare ?? t?.fare;
@@ -630,10 +637,11 @@ function render() {
 
       ${tripQueueHtml(t)}
     </div>
-    ${operationalControlsHtml()}
+    ${operationalStatusCompactHtml()}
     <div id="notice" class="notice hidden"></div>`;
 
   bindTripQueue();
+  renderOperationalStatus();
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1780,6 +1788,12 @@ function renderOperationalStatus() {
   document.querySelectorAll('[data-operational-status]').forEach(item => {
     item.classList.toggle('selected', item.dataset.operationalStatus === operationalStatus);
     item.onclick = async () => await changeOperationalStatus(item.dataset.operationalStatus);
+  });
+  document.querySelectorAll('[data-operational-label]').forEach(item => {
+    item.textContent = OPERATIONAL_STATUS_LABELS[operationalStatus] || 'No informado';
+  });
+  document.querySelectorAll('[data-operational-dot]').forEach(item => {
+    item.dataset.operationalStatus = operationalStatus;
   });
 }
 

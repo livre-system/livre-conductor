@@ -28,6 +28,6 @@ describe('responsive conductor shell', () => {
   });
 
   it('busts the deployed stylesheet after responsive changes', () => {
-    assert.match(html, /css\/styles\.css\?v=responsive-20261027-safearea/);
+    assert.match(html, /css\/styles\.css\?v=operational-mobile-20261029/);
   });
 });

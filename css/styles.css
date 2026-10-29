@@ -888,6 +888,12 @@ body { font-size: calc(16px * var(--font-scale)); }
 .header-icon-button { min-width: 34px; height: 34px; padding: 0 7px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--white); font-size: 17px; }
 .header-icon-button:hover { border-color: var(--accent); }
 .operational-panel { margin: 0 0 10px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: #111319e8; }
+.operational-status-compact { display: flex; align-items: center; gap: 7px; margin: 2px 0 0; padding: 8px 2px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+.operational-status-compact strong { color: var(--white); font-weight: 800; }
+.operational-status-compact-dot { width: 8px; height: 8px; border-radius: 50%; background: #9aa0aa; flex-shrink: 0; }
+.operational-status-compact-dot[data-operational-status="available"] { background: #2de08b; box-shadow: 0 0 8px #2de08b99; }
+.operational-status-compact-dot[data-operational-status="out_of_service"] { background: #e8003d; box-shadow: 0 0 8px #e8003d99; }
+.operational-status-compact-dot[data-operational-status="unavailable"] { background: #9aa0aa; }
 .operational-panel-title { margin-bottom: 8px; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
 .operational-panel-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 .operational-panel-button { min-height: 48px; padding: 6px 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface2); color: var(--white); font-size: 11px; font-weight: 800; line-height: 1.15; }
