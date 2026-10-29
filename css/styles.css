@@ -954,6 +954,43 @@ body { font-size: var(--font-size-base); }
 .settings-modal .settings-card { zoom: 1; }
 .topbar-logo-image { display: block; width: auto; height: 30px; max-width: 112px; object-fit: contain; }
 .header-icon-button { min-width: 34px; height: 34px; padding: 0 7px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--white); font-size: 17px; }
+.topbar-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.topbar-status-select {
+  width: 104px;
+  min-height: 30px;
+  padding: 5px 24px 5px 8px;
+  border: 1px solid #2de08b66;
+  border-radius: 999px;
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.topbar-status-select[data-operational-status="unavailable"] { border-color: #9aa0aa66; background: var(--surface); color: #c0c5ce; }
+.topbar-status-select[data-operational-status="out_of_service"] { border-color: #e8003d66; background: #30101a; color: #ff607e; }
+.topbar-status-select:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* La oferta es la acción principal: sin panel operativo dentro de la tarjeta. */
+@media (max-width: 430px) {
+  .sheet.alert-mode { height: min(58dvh, calc(100dvh - 86px)); }
+  .sheet.alert-mode .sheet-inner { padding: 0 14px max(14px, env(safe-area-inset-bottom)); }
+  .sheet.alert-mode .alert-badge { margin-bottom: 5px; padding: 3px 8px; font-size: 9px; }
+  .sheet.alert-mode .alert-title { margin-bottom: 7px; font-size: clamp(18px, 5vw, 22px); }
+  .sheet.alert-mode .route-card { padding: 8px 10px; margin-bottom: 7px; }
+  .sheet.alert-mode .route-stop { grid-template-columns: 14px 1fr; gap: 7px; }
+  .sheet.alert-mode .route-stop + .route-stop { margin-top: 7px; }
+  .sheet.alert-mode .stop-dot { width: 8px; height: 8px; }
+  .sheet.alert-mode .stop-label { margin-bottom: 1px; font-size: 8px; }
+  .sheet.alert-mode .stop-address { font-size: 12px; }
+  .sheet.alert-mode .fare-row { padding: 7px 10px; margin-bottom: 7px; }
+  .sheet.alert-mode .fare-label { font-size: 9px; }
+  .sheet.alert-mode .fare-value { font-size: 15px; }
+  .sheet.alert-mode .alert-actions { gap: 6px; }
+  .sheet.alert-mode .btn-accept,
+  .sheet.alert-mode .btn-reject { min-height: 42px; font-size: 11px; }
+}
 .header-icon-button:hover { border-color: var(--accent); }
 .operational-panel { margin: 0 0 10px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: #111319e8; }
 .operational-status-compact { display: flex; align-items: center; gap: 7px; margin: 2px 0 0; padding: 8px 2px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }

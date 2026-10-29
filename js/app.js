@@ -138,7 +138,7 @@ let authMode    = 'login';
 let operationalStatus = 'available';
 let currentDriverSnapshot = null;
 const PREFS_KEY = 'livre_driver_preferences';
-const DEFAULT_PREFS = { theme: 'dark', tone: 'car_horn', volume: 70, fontScale: '16' };
+const DEFAULT_PREFS = { theme: 'dark', tone: 'car_horn', volume: 70, fontScale: '12' };
 let preferences = { ...DEFAULT_PREFS };
 
 const OPERATIONAL_STATUS_LABELS = {
@@ -351,11 +351,7 @@ function loadPreferences() {
 function savePreferences() { localStorage.setItem(PREFS_KEY, JSON.stringify(preferences)); }
 function toggleTheme() { preferences.theme = preferences.theme === 'light' ? 'dark' : 'light'; savePreferences(); loadPreferences(); }
 function operationalControlsHtml() {
-  return `<div class="operational-panel" aria-label="Estado operativo"><div class="operational-panel-title">Estado operativo</div><div class="operational-panel-buttons">
-    <button type="button" class="operational-panel-button" data-operational-status="available">Disponible</button>
-    <button type="button" class="operational-panel-button" data-operational-status="unavailable">No disponible</button>
-    <button type="button" class="operational-panel-button" data-operational-status="out_of_service">Fuera de servicio</button>
-  </div></div>`;
+  return '';
 }
 
 function operationalStatusCompactHtml() {
@@ -1819,6 +1815,12 @@ function announceNewTrip(t) {
 }
 
 function renderOperationalStatus() {
+  const select = $('operationalStatusSelect');
+  if (select) {
+    select.value = operationalStatus;
+    select.onchange = async () => await changeOperationalStatus(select.value);
+    select.dataset.operationalStatus = operationalStatus;
+  }
   document.querySelectorAll('[data-operational-status]').forEach(item => {
     item.classList.toggle('selected', item.dataset.operationalStatus === operationalStatus);
     item.onclick = async () => await changeOperationalStatus(item.dataset.operationalStatus);

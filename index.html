@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07080a">
   <title>Livre · Conductor</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="css/styles.css?v=operational-mobile-20261029-scale3">
+  <link rel="stylesheet" href="css/styles.css?v=operational-mobile-20261029-scale5">
 </head>
 <body>
 
@@ -48,8 +48,15 @@
 
   <!-- Topbar -->
   <header class="topbar">
-    <div class="topbar-logo">
-      <img src="assets/logo_livre.png" alt="Livre" class="topbar-logo-image">
+    <div class="topbar-left">
+      <div class="topbar-logo">
+        <img src="assets/logo_livre.png" alt="Livre" class="topbar-logo-image">
+      </div>
+      <select id="operationalStatusSelect" class="topbar-status-select" aria-label="Estado operativo">
+        <option value="available">Disponible</option>
+        <option value="unavailable">No disponible</option>
+        <option value="out_of_service">Fuera de servicio</option>
+      </select>
     </div>
     <div class="topbar-right">
       <div id="gpsPill" class="gps-pill inactive">
@@ -110,6 +117,6 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/app.js?v=operational-mobile-20261029-scale3"></script>
+<script src="js/app.js?v=operational-mobile-20261029-scale4"></script>
 </body>
 </html>
