@@ -1599,15 +1599,4 @@ body.trip-active .sheet.active-mode .btn-primary {
   .sheet.alert-mode .btn-reject { min-height: 48px; }
 }
 
-.test-finish-button {
-  min-height: 36px;
-  padding: 7px 10px;
-  border: 1px dashed #d59a38;
-  border-radius: 10px;
-  background: transparent;
-  color: #e6b55a;
-  font-size: 10px;
-  font-weight: 800;
-}
-.test-finish-button:disabled { opacity: .55; }
 body.trip-active .topbar .header-icon-button { display: grid; place-items: center; }

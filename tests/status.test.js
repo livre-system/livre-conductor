@@ -299,10 +299,6 @@ describe('driver operational status synchronization', () => {
     assert.match(styles, /body\.trip-active \.topbar \.header-icon-button \{ display: grid; \}/);
     assert.match(html, /id="themeToggle"/);
     assert.match(html, /id="settingsButton"/);
-    assert.match(source, /async function finishTestTrip\(\)/);
-    assert.match(source, /changeStatus\('in_progress', tripId\)/);
-    assert.match(source, /changeStatus\('completed', tripId\)/);
-    assert.match(source, /!\['arriving', 'in_progress'\]\.includes\(selected\.status\)/);
     assert.match(source, /El backend rechazó el cambio/);
     assert.match(source, /if \(statusCode === 404\) \{/);
   });

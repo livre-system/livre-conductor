@@ -620,8 +620,8 @@ function render() {
   if (isCompleted)   statusHtml = `<div class="active-status"><span class="active-status-dot" style="background:#8b8d96;box-shadow:none"></span><span class="active-status-text" style="color:#8b8d96">Viaje finalizado</span></div>`;
 
   let primaryBtn = '';
-  if (isArriving)    primaryBtn = `<button class="btn-primary green"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">LLEGUÉ — Iniciar viaje</button><button class="test-finish-button"${statusChangeInFlight ? ' disabled' : ''} onclick="finishTestTrip()">Cerrar prueba sin recorrido</button>`;
-  if (isInProgress)  primaryBtn = `<button class="btn-primary"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">Finalizar viaje</button><button class="test-finish-button"${statusChangeInFlight ? ' disabled' : ''} onclick="finishTestTrip()">Cerrar prueba sin recorrido</button>`;
+  if (isArriving)    primaryBtn = `<button class="btn-primary green"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">LLEGUÉ — Iniciar viaje</button>`;
+  if (isInProgress)  primaryBtn = `<button class="btn-primary"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">Finalizar viaje</button>`;
   if (isCompleted)   primaryBtn = `<button class="btn-primary" disabled>Viaje finalizado</button>`;
 
   inner.innerHTML = `
@@ -770,24 +770,6 @@ function finishCompletedTrip(tripId) {
   if (!DEMO) void loadTrips();
 }
 
-/** Cierra una prueba que quedó en camino sin exigir recorrido GPS real. */
-async function finishTestTrip() {
-  if (statusChangeInFlight || !selected || !['arriving', 'in_progress'].includes(selected.status)) return;
-  const tripId = String(selected.id);
-  statusChangeInFlight = true;
-  render();
-  try {
-    if (selected.status === 'arriving') {
-      const started = await changeStatus('in_progress', tripId);
-      if (!started) return;
-    }
-    const completed = await changeStatus('completed', tripId);
-    if (completed) finishCompletedTrip(tripId);
-  } finally {
-    statusChangeInFlight = false;
-    render();
-  }
-}
 
 /** Solo en DEMO: reinicia el viaje mock para poder recorrer el flujo de nuevo */
 function demoReset() {
