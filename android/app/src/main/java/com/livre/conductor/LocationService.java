@@ -197,10 +197,10 @@ public class LocationService extends Service {
         try {
             if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 android.util.Log.w(TAG, "Fused sin callback: activando GPS_PROVIDER como fallback");
-                manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000L, 10f, listener, Looper.getMainLooper());
+                manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000L, 0f, listener, Looper.getMainLooper());
             } else if (manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 android.util.Log.w(TAG, "GPS_PROVIDER no disponible: activando NETWORK_PROVIDER fallback");
-                manager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 15000L, 100f, listener, Looper.getMainLooper());
+                manager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 15000L, 0f, listener, Looper.getMainLooper());
             } else {
                 android.util.Log.e(TAG, "Sin proveedor GPS/NETWORK habilitado");
             }
