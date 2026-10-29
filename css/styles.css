@@ -900,7 +900,31 @@ button, input, select { touch-action: manipulation; }
   .alert-pulse { animation: none; }
 }
 
-/* ── Conductor controls and preferences ─────────────────────── */
+/* ── Modo viaje activo: una sola jerarquía visual ────────────── */
+body.trip-active .topbar .header-icon-button { display: none; }
+body.trip-active .map-toolbar { display: none; }
+body.trip-active .route-guidance {
+  top: 12px;
+  left: 12px;
+  width: min(286px, calc(100% - 24px));
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+body.trip-active .route-guidance-kicker { font-size: 9px; }
+body.trip-active .route-guidance-title { font-size: 15px; }
+body.trip-active .route-guidance-address { margin-top: 3px; }
+body.trip-active .route-guidance-status { margin-top: 6px; padding: 3px 7px; font-size: 10px; }
+body.trip-active .route-guidance-metrics { gap: 16px; margin-top: 8px; padding-top: 7px; }
+body.trip-active .route-guidance-metrics strong { font-size: 14px; }
+body.trip-active .sheet.active-mode { height: min(340px, calc(100dvh - 145px)); }
+body.trip-active .sheet-inner { padding-left: 16px; padding-right: 16px; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+body.trip-active .active-status { margin-bottom: 10px; padding: 10px 12px; }
+body.trip-active .active-status-text { font-size: 12px; }
+body.trip-active .trip-summary { padding: 10px 12px; margin-bottom: 10px; gap: 8px; }
+body.trip-active .fare-row { padding: 10px 14px; margin-bottom: 12px; }
+body.trip-active .fare-value { font-size: 20px; }
+body.trip-active .btn-primary { min-height: 52px; }
+
 :root { --font-scale: 1; }
 body { font-size: calc(16px * var(--font-scale)); }
 .settings-modal .settings-card, .login-wrap { zoom: var(--font-scale); }

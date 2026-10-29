@@ -528,6 +528,7 @@ function render() {
   const t = selected && DRIVER_CARD_STATUSES.includes(selected.status)
     ? selected
     : trips.find(x => ['scheduled', 'searching', 'assigned'].includes(x.status));
+  document.body.classList.toggle('trip-active', Boolean(t && ['arriving', 'in_progress'].includes(t.status)));
 
   const sheet  = $('sheet');
   const inner  = $('sheetInner');

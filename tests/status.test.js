@@ -2,6 +2,7 @@ const { describe, it } = require('node:test');
 const assert = require('assert');
 const fs = require('fs');
 const source = fs.readFileSync('js/app.js', 'utf8');
+const styles = fs.readFileSync('css/styles.css', 'utf8');
 const nativeSource = fs.readFileSync('android/app/src/main/java/com/livre/conductor/MainActivity.java', 'utf8');
 const sessionStoreSource = fs.readFileSync('android/app/src/main/java/com/livre/conductor/SessionStore.java', 'utf8');
 
@@ -287,6 +288,13 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /if \(!changed \|\| !selected \|\| String\(selected\.id\) !== tripId\) return;/);
     assert.match(source, /finally \{\n    acceptInFlight = false;/);
     assert.match(source, /String\(t\.id\) !== lostTripId/);
+  });
+
+  it('simplifica la pantalla durante un viaje activo', () => {
+    assert.match(source, /document\.body\.classList\.toggle\('trip-active'/);
+    assert.match(styles, /body\.trip-active \.map-toolbar \{ display: none; \}/);
+    assert.match(styles, /body\.trip-active \.topbar \.header-icon-button \{ display: none; \}/);
+    assert.match(styles, /body\.trip-active \.sheet\.active-mode \{ height: min\(340px/);
   });
 
   it('oculta el estado operativo compacto durante un viaje activo para no apretar la hoja', () => {
