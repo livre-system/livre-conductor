@@ -302,6 +302,9 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /async function finishTestTrip\(\)/);
     assert.match(source, /changeStatus\('in_progress', tripId\)/);
     assert.match(source, /changeStatus\('completed', tripId\)/);
+    assert.match(source, /!\['arriving', 'in_progress'\]\.includes\(selected\.status\)/);
+    assert.match(source, /El backend rechazó el cambio/);
+    assert.match(source, /if \(statusCode === 404\) \{/);
   });
 
   it('oculta el estado operativo compacto durante un viaje activo para no apretar la hoja', () => {

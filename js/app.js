@@ -621,7 +621,7 @@ function render() {
 
   let primaryBtn = '';
   if (isArriving)    primaryBtn = `<button class="btn-primary green"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">LLEGUÉ — Iniciar viaje</button><button class="test-finish-button"${statusChangeInFlight ? ' disabled' : ''} onclick="finishTestTrip()">Cerrar prueba sin recorrido</button>`;
-  if (isInProgress)  primaryBtn = `<button class="btn-primary"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">Finalizar viaje</button>`;
+  if (isInProgress)  primaryBtn = `<button class="btn-primary"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">Finalizar viaje</button><button class="test-finish-button"${statusChangeInFlight ? ' disabled' : ''} onclick="finishTestTrip()">Cerrar prueba sin recorrido</button>`;
   if (isCompleted)   primaryBtn = `<button class="btn-primary" disabled>Viaje finalizado</button>`;
 
   inner.innerHTML = `
@@ -772,17 +772,20 @@ function finishCompletedTrip(tripId) {
 
 /** Cierra una prueba que quedó en camino sin exigir recorrido GPS real. */
 async function finishTestTrip() {
-  if (statusChangeInFlight || !selected || selected.status !== 'arriving') return;
+  if (statusChangeInFlight || !selected || !['arriving', 'in_progress'].includes(selected.status)) return;
   const tripId = String(selected.id);
   statusChangeInFlight = true;
   render();
   try {
-    const started = await changeStatus('in_progress', tripId);
-    if (!started) return;
+    if (selected.status === 'arriving') {
+      const started = await changeStatus('in_progress', tripId);
+      if (!started) return;
+    }
     const completed = await changeStatus('completed', tripId);
     if (completed) finishCompletedTrip(tripId);
   } finally {
     statusChangeInFlight = false;
+    render();
   }
 }
 
@@ -952,13 +955,17 @@ async function changeStatus(status, tripId = selected?.id) {
     });
     const statusCode = r.status;
     if (!r.ok) {
+      const errorBody = await r.json().catch(() => null);
+      const detail = typeof errorBody?.detail === 'string' ? errorBody.detail : `HTTP ${statusCode}`;
       if (statusCode === 404 || statusCode === 409) {
         const lostTripId = normalizedTripId;
-        trips = trips.filter(t => String(t.id) !== lostTripId);
-        if (selected && String(selected.id) === lostTripId) selected = null;
+        if (statusCode === 404) {
+          trips = trips.filter(t => String(t.id) !== lostTripId);
+          if (selected && String(selected.id) === lostTripId) selected = null;
+        }
         render();
-        showNotice('Ese viaje ya no está disponible.');
-        void loadTrips();
+        showNotice(`${statusCode === 409 ? 'El backend rechazó el cambio' : 'Ese viaje ya no está disponible'}: ${detail}`);
+        if (statusCode === 404) void loadTrips();
         return false;
       }
       throw Error(statusCode);
@@ -975,7 +982,7 @@ async function changeStatus(status, tripId = selected?.id) {
     render();
     return true;
   } catch(e) {
-    showNotice('No se pudo actualizar el estado del viaje.');
+    showNotice(`No se pudo actualizar el estado del viaje: ${e?.message || 'error de conexión'}`);
     return false;
   }
 }
