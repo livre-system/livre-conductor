@@ -113,6 +113,7 @@ let plannedRoutePoints = [];
 let routeDeviation = { level: 'unknown', distanceM: null, consecutive: 0 };
 let routeRequestController = null;
 let routeRequestTimeout = null;
+let routeRequestPhase = '';
 let routeRequestSequence = 0;
 const routeCache = new Map();
 let ownTraceLine = null;
@@ -1498,6 +1499,7 @@ function clearTripRoute() {
   if (routeRequestTimeout) clearTimeout(routeRequestTimeout);
   routeRequestController = null;
   routeRequestTimeout = null;
+  routeRequestPhase = '';
   if (routeRefreshTimer) clearTimeout(routeRefreshTimer);
   routeRefreshTimer = null;
   if (routeCasing && map) map.removeLayer(routeCasing);
@@ -1542,32 +1544,35 @@ async function loadTripRoute(phase) {
   if (DEMO || !selected || !map) return false;
   const tripId = String(selected.id);
   const requestSequence = ++routeRequestSequence;
+  if (routeRequestController && routeRequestPhase === phase) return false;
   if (routeRequestController) routeRequestController.abort();
   if (routeRequestTimeout) clearTimeout(routeRequestTimeout);
-  routeRequestController = null;
+  routeRequestController = new AbortController();
+  routeRequestPhase = phase;
   routeRequestTimeout = null;
+  const batchController = routeRequestController;
   try {
     const phases = ['pickup', 'trip'];
     const routes = await Promise.all(phases.map(async routePhase => {
       const cacheKey = `${tripId}:${routePhase}`;
       const cachedRoute = routePhase === 'trip' ? routeCache.get(cacheKey) : null;
       if (cachedRoute) return [routePhase, cachedRoute];
-      const controller = new AbortController();
-      routeRequestController = controller;
-      routeRequestTimeout = setTimeout(() => controller.abort(), 12000);
-      const response = await fetch(`${API}/mobility/driver/trips/${tripId}/route?phase=${routePhase}`, {
-        headers: h(),
-        signal: controller.signal,
-      });
-      if (routeRequestTimeout) clearTimeout(routeRequestTimeout);
-      routeRequestTimeout = null;
-      if (!response.ok) throw Error(`${routePhase}:${response.status}`);
-      const route = await response.json();
-      if (routePhase === 'trip') {
-        routeCache.set(cacheKey, route);
-        if (routeCache.size > 20) routeCache.delete(routeCache.keys().next().value);
+      const timeoutId = setTimeout(() => batchController.abort(), 12000);
+      try {
+        const response = await fetch(`${API}/mobility/driver/trips/${tripId}/route?phase=${routePhase}`, {
+          headers: h(),
+          signal: batchController.signal,
+        });
+        if (!response.ok) throw Error(`${routePhase}:${response.status}`);
+        const route = await response.json();
+        if (routePhase === 'trip') {
+          routeCache.set(cacheKey, route);
+          if (routeCache.size > 20) routeCache.delete(routeCache.keys().next().value);
+        }
+        return [routePhase, route];
+      } finally {
+        clearTimeout(timeoutId);
       }
-      return [routePhase, route];
     }));
     if (requestSequence !== routeRequestSequence || !selected || String(selected.id) !== tripId) return false;
     clearTripRoute();
@@ -1617,6 +1622,10 @@ async function loadTripRoute(phase) {
     diagLog('trip_routes_loaded', { activePhase: phase, pickupPoints: routeLayers.pickup.points.length, tripPoints: routeLayers.trip.points.length });
     return true;
   } catch (error) {
+    if (routeRequestController === batchController) {
+      routeRequestController = null;
+      routeRequestPhase = '';
+    }
     if (requestSequence !== routeRequestSequence || error?.name === 'AbortError') return false;
     diagLog('trip_routes_failed', { activePhase: phase, status: String(error?.message || error).slice(0, 80) });
     showNotice('El viaje aceptó correctamente, pero todavía no se pudieron trazar las dos rutas.');

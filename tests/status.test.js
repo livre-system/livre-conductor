@@ -361,6 +361,14 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /document\.querySelector\('\[data-closures\]'\)\?\.remove\(\)/);
   });
 
+  it('evita que el refresco de rutas aborte una solicitud de la misma fase', () => {
+    assert.match(source, /let routeRequestPhase = ''/);
+    assert.match(source, /if \(routeRequestController && routeRequestPhase === phase\) return false;/);
+    assert.match(source, /const batchController = routeRequestController;/);
+    assert.match(source, /signal: batchController\.signal/);
+    assert.match(source, /const timeoutId = setTimeout\(\(\) => batchController\.abort\(\), 12000\)/);
+  });
+
   it('keeps preference values valid and accepts all configured alert tones', () => {
     assert.match(source, /Object\.prototype\.hasOwnProperty\.call\(TONE_SOURCES, preferences\.tone\)/);
     assert.match(source, /preferences\.volume = Math\.max\(0, Math\.min\(100, Number\(preferences\.volume\)\)\);/);
