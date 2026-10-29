@@ -165,7 +165,9 @@ public class LocationService extends Service {
         try {
             LocationRequest request = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000L)
                     .setMinUpdateIntervalMillis(5000L)
-                    .setMinUpdateDistanceMeters(10f)
+                    // El envío debe ocurrir también con el vehículo detenido.
+                    // La frecuencia la gobierna el intervalo; no exigir distancia.
+                    .setMinUpdateDistanceMeters(0f)
                     .build();
             fused.requestLocationUpdates(request, fusedCallback, Looper.getMainLooper())
                     .addOnSuccessListener(unused -> {
