@@ -406,7 +406,7 @@ function finalFareHtml(t) {
 }
 
 function tripQueueHtml(current) {
-  const pending = trips.filter(t => ['searching', 'assigned'].includes(t.status) && String(t.id) !== String(current?.id));
+  const pending = trips.filter(t => ['scheduled', 'searching', 'assigned'].includes(t.status) && String(t.id) !== String(current?.id));
   if (!pending.length) return '';
   return `<section class="trip-queue" aria-label="Pedidos nuevos">
     <div class="trip-queue-heading">
@@ -442,7 +442,7 @@ function bindTripQueue() {
 
 function clearPendingTrips() {
   const pendingIds = trips
-    .filter(t => ['searching', 'assigned'].includes(t.status) && String(t.id) !== String(selected?.id))
+    .filter(t => ['scheduled', 'searching', 'assigned'].includes(t.status) && String(t.id) !== String(selected?.id))
     .map(t => String(t.id));
   pendingIds.forEach(id => rememberRejectedTrip(id));
   trips = trips.filter(t => !pendingIds.includes(String(t.id)));
@@ -452,7 +452,7 @@ function clearPendingTrips() {
 }
 
 function selectNextPendingTrip() {
-  const next = trips.find(t => ['searching', 'assigned'].includes(t.status));
+  const next = trips.find(t => ['scheduled', 'searching', 'assigned'].includes(t.status));
   selected = next || null;
   render();
   return next;
@@ -461,6 +461,15 @@ function selectNextPendingTrip() {
 function serviceTypeLabel(t) {
   if (t?.service_type_name) return t.service_type_name;
   return String(t?.service_type_id) === '1' ? 'Premium' : String(t?.service_type_id) === '2' ? 'Ahorro' : null;
+}
+
+function scheduledTripLabel(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat('es-AR', {
+    dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Argentina/Buenos_Aires',
+  }).format(date);
 }
 
 // El API debe ordenar por fecha, pero la UI no depende del orden accidental
@@ -478,7 +487,7 @@ function orderTripsNewestFirst(list) {
   });
 }
 
-const DRIVER_CARD_STATUSES = ['searching', 'assigned', 'arriving', 'in_progress'];
+const DRIVER_CARD_STATUSES = ['scheduled', 'searching', 'assigned', 'arriving', 'in_progress'];
 
 function operationalTripsOnly(list) {
   return Array.isArray(list)
@@ -495,13 +504,14 @@ function selectPrimaryTrip(list, current) {
   // podía dejar origen/destino/status de una respuesta anterior en pantalla.
   const latestCurrent = current && list.find(t => String(t.id) === String(current.id));
   if (latestCurrent && ['arriving', 'in_progress'].includes(latestCurrent.status)) return latestCurrent;
-  return list.find(t => ['searching', 'assigned'].includes(t.status)) || null;
+  return list.find(t => ['scheduled', 'searching', 'assigned'].includes(t.status)) || null;
 }
 
 /* ══════════════════════════════════════════════════════════════
    RENDER — la pantalla cambia según el estado del viaje
 ══════════════════════════════════════════════════════════════ */
 const STATUS_LABEL = {
+  scheduled:   'Viaje programado',
   assigned:    'Viaje recibido',
   arriving:    'En camino al pasajero',
   in_progress: 'Viaje en curso',
@@ -520,7 +530,7 @@ function render() {
   // `searching` es una oferta global entregada a cada conductor disponible.
   const t = selected && DRIVER_CARD_STATUSES.includes(selected.status)
     ? selected
-    : trips.find(x => ['searching', 'assigned'].includes(x.status));
+    : trips.find(x => ['scheduled', 'searching', 'assigned'].includes(x.status));
 
   const sheet  = $('sheet');
   const inner  = $('sheetInner');
@@ -539,16 +549,19 @@ function render() {
   const st = t.status;
 
   // ── Viaje asignado (alerta) ──────────────────────────────── */
-  if (st === 'searching' || st === 'assigned') {
+  if (st === 'scheduled' || st === 'searching' || st === 'assigned') {
+    const isScheduled = Boolean(t.scheduled_at);
+    const scheduledAccepted = isScheduled && st === 'assigned';
     sheet.className = 'sheet alert-mode';
     inner.innerHTML = `
       ${operationalControlsHtml()}
       <div class="trip-alert">
         <div class="alert-badge">
           <span class="alert-pulse"></span>
-          ${DEMO ? '🧪 DEMO — ' : ''}Viaje recibido
+          ${DEMO ? '🧪 DEMO — ' : ''}${isScheduled ? 'VIAJE PROGRAMADO' : 'Viaje recibido'}
         </div>
-        <div class="alert-title">¿Aceptás este viaje?</div>
+        <div class="alert-title">${scheduledAccepted ? 'Viaje programado aceptado' : isScheduled ? '¿Aceptás este viaje programado?' : '¿Aceptás este viaje?'}</div>
+        ${isScheduled ? `<div class="scheduled-trip-highlight"><small>HORA EXACTA DEL VIAJE</small><strong>${esc(scheduledTripLabel(t.scheduled_at))}</strong></div>` : ''}
 
         <div class="route-card">
           <div class="route-stop">
@@ -579,7 +592,9 @@ function render() {
         ${driverFareHtml(t)}
 
         <div class="alert-actions">
-          <button class="btn-accept" onclick="acceptTrip()">✓ ACEPTAR</button>
+          ${scheduledAccepted
+            ? '<button class="btn-accept" disabled>✓ VIAJE ACEPTADO</button><button class="btn-primary green" onclick="startScheduledTrip()">→ SALIR HACIA EL ORIGEN</button>'
+            : '<button class="btn-accept" onclick="acceptTrip()">✓ ACEPTAR</button>'}
           ${st === 'assigned'
             ? '<button class="btn-reject" onclick="rejectTrip()">✕ Rechazar</button>'
             : '<button class="btn-reject" onclick="dismissTrip()">✕ No aceptar</button>'}
@@ -652,8 +667,13 @@ async function acceptTrip() {
   const tripId = String(selected.id);
   acceptInFlight = true;
   try {
-    const changed = await changeStatus('arriving', tripId);
+    const scheduled = selected.status === 'scheduled';
+    const changed = await changeStatus(scheduled ? 'assigned' : 'arriving', tripId);
     if (!changed || !selected || String(selected.id) !== tripId) return;
+    if (scheduled) {
+      speak('Viaje programado aceptado. La hora exacta está en pantalla.');
+      return;
+    }
     activeTripId = tripId;
     startGps();
     const gpsSync = requestImmediateGpsSync();
@@ -664,6 +684,18 @@ async function acceptTrip() {
   } finally {
     acceptInFlight = false;
   }
+}
+
+async function startScheduledTrip() {
+  if (!selected || selected.status !== 'assigned') return;
+  const tripId = String(selected.id);
+  const changed = await changeStatus('arriving', tripId);
+  if (!changed) return;
+  activeTripId = tripId;
+  startGps();
+  requestImmediateGpsSync();
+  loadTripRoute('pickup');
+  speak('Saliendo hacia el origen.');
 }
 
 function rememberRejectedTrip(id) {
@@ -846,10 +878,10 @@ async function loadTrips() {
     }
     // Anunciar cada ID nuevo evita que el primero silencie los siguientes.
     announcedTripIds.forEach(id => {
-      if (!trips.some(t => String(t.id) === id && ['searching', 'assigned'].includes(t.status)))
+      if (!trips.some(t => String(t.id) === id && ['scheduled', 'searching', 'assigned'].includes(t.status)))
         announcedTripIds.delete(id);
     });
-    const freshTrips = trips.filter(t => ['searching', 'assigned'].includes(t.status) && !announcedTripIds.has(String(t.id)));
+    const freshTrips = trips.filter(t => ['scheduled', 'searching', 'assigned'].includes(t.status) && !announcedTripIds.has(String(t.id)));
     if (!initialTripsLoaded) freshTrips.length = 0;
     freshTrips.forEach(announceNewTrip);
     initialTripsLoaded = true;

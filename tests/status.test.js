@@ -42,25 +42,25 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /function announceNewTrip\(t\)/);
     assert.match(source, /operationalStatus === 'out_of_service' \|\| !t/);
     assert.match(source, /function selectPrimaryTrip\(list, current\)/);
-    assert.match(source, /return list\.find\(t => \['searching', 'assigned'\]\.includes\(t\.status\)\) \|\| null/);
+    assert.match(source, /return list\.find\(t => \['scheduled', 'searching', 'assigned'\]\.includes\(t\.status\)\) \|\| null/);
     assert.match(source, /selected\.status === 'completed' \|\| selected\.status === 'cancelled'/);
   });
 
   it('does not leave a terminal or searching trip card when no driver trip remains', () => {
-    assert.match(source, /const DRIVER_CARD_STATUSES = \['searching', 'assigned', 'arriving', 'in_progress'\]/);
+    assert.match(source, /const DRIVER_CARD_STATUSES = \['scheduled', 'searching', 'assigned', 'arriving', 'in_progress'\]/);
     assert.match(source, /selected = trips\.find\(t => DRIVER_CARD_STATUSES\.includes\(t\.status\)\) \|\| null/);
     assert.match(source, /selected && DRIVER_CARD_STATUSES\.includes\(selected\.status\)/);
   });
 
   it('renders searching offers returned to available drivers', () => {
-    assert.match(source, /if \(st === 'searching' \|\| st === 'assigned'\)/);
-    assert.match(source, /\['searching', 'assigned'\]\.includes\(x\.status\)/);
-    assert.match(source, /const freshTrips = trips\.filter\(t => \['searching', 'assigned'\]\.includes\(t\.status\)/);
+    assert.match(source, /if \(st === 'scheduled' \|\| st === 'searching' \|\| st === 'assigned'\)/);
+    assert.match(source, /\['scheduled', 'searching', 'assigned'\]\.includes\(x\.status\)/);
+    assert.match(source, /const freshTrips = trips\.filter\(t => \['scheduled', 'searching', 'assigned'\]\.includes\(t\.status\)/);
   });
 
   it('does not reuse a terminal selection from the previous polling response', () => {
     assert.match(source, /if \(latestCurrent && \['arriving', 'in_progress'\]\.includes\(latestCurrent\.status\)\)/);
-    assert.match(source, /return list\.find\(t => \['searching', 'assigned'\]\.includes\(t\.status\)\) \|\| null/);
+    assert.match(source, /return list\.find\(t => \['scheduled', 'searching', 'assigned'\]\.includes\(t\.status\)\) \|\| null/);
   });
 
   it('clears the previous driver card before loading the new session snapshot', () => {
@@ -93,7 +93,7 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /function tripQueueHtml\(current\)/);
     assert.match(source, /data-trip-select=/);
     assert.match(source, /function bindTripQueue\(\)/);
-    assert.match(source, /trips\.filter\(t => \['searching', 'assigned'\]\.includes\(t\.status\)/);
+    assert.match(source, /trips\.filter\(t => \['scheduled', 'searching', 'assigned'\]\.includes\(t\.status\)/);
     assert.match(source, /selected = found;/);
   });
 
@@ -102,7 +102,7 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /function selectPrimaryTrip\(list, current\)/);
     assert.match(source, /trips = orderTripsNewestFirst\(nextTrips\.filter/);
     assert.match(source, /selected = selectPrimaryTrip\(trips, selected\)/);
-    assert.match(source, /trips\.filter\(t => \['searching', 'assigned'\]\.includes\(t\.status\) && String\(t\.id\) !== String\(current\?\.id\)/);
+    assert.match(source, /trips\.filter\(t => \['scheduled', 'searching', 'assigned'\]\.includes\(t\.status\) && String\(t\.id\) !== String\(current\?\.id\)/);
 
     const start = source.indexOf('function orderTripsNewestFirst');
     const end = source.indexOf('/* ═', start);
@@ -144,7 +144,7 @@ describe('driver operational status synchronization', () => {
 
   it('moves to the next pending trip after resolving only the selected rejection', () => {
     assert.match(source, /function selectNextPendingTrip\(\)/);
-    assert.match(source, /const next = trips\.find\(t => \['searching', 'assigned'\]\.includes\(t\.status\)\)/);
+    assert.match(source, /const next = trips\.find\(t => \['scheduled', 'searching', 'assigned'\]\.includes\(t\.status\)\)/);
     assert.match(source, /rememberRejectedTrip\(rejectedId\)/);
     assert.match(source, /trips = trips\.filter\(t => String\(t\.id\) !== rejectedId\)/);
     assert.match(source, /selectNextPendingTrip\(\);/);
@@ -172,7 +172,7 @@ describe('driver operational status synchronization', () => {
   });
 
   it('announces each newly assigned trip, including when an older trip stays open', () => {
-    assert.match(source, /const freshTrips = trips\.filter\(t => \['searching', 'assigned'\]\.includes\(t\.status\)/);
+    assert.match(source, /const freshTrips = trips\.filter\(t => \['scheduled', 'searching', 'assigned'\]\.includes\(t\.status\)/);
     assert.match(source, /freshTrips\.forEach\(announceNewTrip\)/);
     assert.match(source, /showNotice\(`Nuevo viaje disponible/);
   });

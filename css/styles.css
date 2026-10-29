@@ -536,6 +536,26 @@ button, input, select { touch-action: manipulation; }
   letter-spacing: .04em;
   margin-bottom: 16px;
 }
+.scheduled-trip-highlight {
+  display: grid;
+  gap: 4px;
+  margin: -6px 0 20px;
+  padding: 14px 16px;
+  border: 2px solid #f2b84b;
+  border-radius: 14px;
+  background: rgba(242, 184, 75, .14);
+  color: #ffd98a;
+}
+.scheduled-trip-highlight small {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+.scheduled-trip-highlight strong {
+  font-size: clamp(18px, 5vw, 25px);
+  line-height: 1.15;
+  color: #fff3cf;
+}
 .alert-pulse {
   width: 8px;
   height: 8px;
