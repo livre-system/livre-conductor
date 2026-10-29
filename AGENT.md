@@ -219,3 +219,14 @@ Railway es la única plataforma de despliegue activa para todos los servicios y 
 - `LocationService`, `MainActivity` y `PermissionGate` usan el canal nuevo `livre_trips_v4`; el canal anterior no debe reutilizarse porque Android conserva su configuración de sonido.
 - La variante v6 fue generada y verificada mediante GitHub Actions. Commit: `a42d518`. Artefacto local: `app/nuevo/livre-conductor-v6.apk`.
 - La prueba real confirmó que la notificación aparece y reproduce el mismo sonido de bocina que la web.
+
+## Refinamiento integral del frontend web (2026-10-29)
+
+- El popup de oferta debe ser realmente compacto y centrado: no reintroducir `height` fija ni `min-height` grande en móvil. La cascada final usa `height: auto`, `min-height: 0`, un `max-height` relativo al viewport dinámico y scroll interno sólo si el contenido supera el alto disponible.
+- La acción de finalizar viaje debe quedar habilitada después de pasar de `arriving` a `in_progress`. `nextStatus()` vuelve a renderizar una vez liberado `statusChangeInFlight`; sin ese segundo render el botón permanecía deshabilitado aunque el backend hubiera confirmado el cambio.
+- Las preferencias web validan los tonos definidos en `TONE_SOURCES` (`car_horn`, `bus_horn`, `truck_horn`), limitan el volumen a 0–100 y usan 16 px como tamaño base seguro. No aceptar la validación histórica de un tono inexistente (`bell`).
+- Configuración e historial usan `aria-hidden`, foco inicial, retorno del foco al cerrar y cierre con Escape. Los cierres por botón y por clic en el overlay deben pasar por `setModalOpen()`.
+- La corrección web vive en `js/app.js`, `css/styles.css`, `index.html` y las regresiones en `tests/status.test.js`/`tests/responsive.test.js`; no requiere una APK nueva porque la APK carga el frontend remoto por HTTPS.
+- Validación local de esta iteración: `node --check js/app.js` OK; `node --test tests/*.test.js` → 53 pasaron, 0 fallaron; `python3 tools/verify_release.py` OK; `git diff --check` OK.
+- Cache-busting preparado: `front-refine-20261029-01`. Falta publicar y verificar por HTTPS los assets nuevos en Railway antes de afirmar disponibilidad en producción.
+- La APK v8 nativa ya fue generada por GitHub Actions en el commit `3fa782a`; artefacto descargado en `/home/calambre/Downloads/livre-conductor-v8-40975206565/livre-conductor-v8-3fa782a1.apk`, con firma release verificada. Los cambios web posteriores no obligan a regenerarla.

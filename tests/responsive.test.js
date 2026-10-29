@@ -28,6 +28,6 @@ describe('responsive conductor shell', () => {
   });
 
   it('busts the deployed stylesheet after responsive changes', () => {
-    assert.match(html, /css\/styles\.css\?v=(?:operational-mobile|trip-flow-mobile|trip-flow-clean-map)-20261029/);
+    assert.match(html, /css\/styles\.css\?v=(?:operational-mobile|trip-flow-mobile|trip-flow-clean-map|front-refine)-20261029/);
   });
 });

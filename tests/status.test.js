@@ -332,8 +332,27 @@ describe('driver operational status synchronization', () => {
 
   it('mantiene la oferta centrada, compacta y sin tapar la tarifa', () => {
     assert.match(styles, /\.sheet\.alert-mode \{[\s\S]*?width: min\(calc\(82vw \/ var\(--ui-scale\)\), 360px\);/);
-    assert.match(styles, /\.sheet\.alert-mode \{[\s\S]*?max-height: none;/);
+    assert.match(styles, /\.sheet\.alert-mode \{[\s\S]*?max-height: min\(calc\(100dvh - 32px\), 590px\);/);
     assert.match(styles, /\.sheet\.alert-mode \.alert-actions \{\n  position: static;\n  padding-top: 0;/);
-    assert.match(styles, /\.sheet\.alert-mode \.sheet-inner \{[\s\S]*?overflow: visible;/);
+    assert.match(styles, /\.sheet\.alert-mode \.sheet-inner \{[\s\S]*?overflow-y: auto;/);
+  });
+
+  it('re-enables the finalization action after starting a trip', () => {
+    assert.match(source, /statusChangeInFlight = false;\n  \/\/ changeStatus\(\) renders the returned trip/);
+    assert.match(source, /if \(next !== 'completed' \|\| !changed\) render\(\);/);
+  });
+
+  it('keeps preference values valid and accepts all configured alert tones', () => {
+    assert.match(source, /Object\.prototype\.hasOwnProperty\.call\(TONE_SOURCES, preferences\.tone\)/);
+    assert.match(source, /preferences\.volume = Math\.max\(0, Math\.min\(100, Number\(preferences\.volume\)\)\);/);
+    assert.match(source, /fontScale: '16'/);
+  });
+
+  it('opens and closes dialogs with accessible state and Escape support', () => {
+    assert.match(html, /id="settingsModal"[^>]*aria-hidden="true"/);
+    assert.match(html, /id="historyModal"[^>]*aria-hidden="true"/);
+    assert.match(source, /function setModalOpen\(id, open\)/);
+    assert.match(source, /modal\.setAttribute\('aria-hidden', 'false'\)/);
+    assert.match(source, /if \(e\.key === 'Escape'\) closeActiveModal\(\)/);
   });
 });

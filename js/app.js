@@ -141,7 +141,7 @@ let authMode    = 'login';
 let operationalStatus = 'available';
 let currentDriverSnapshot = null;
 const PREFS_KEY = 'livre_driver_preferences';
-const DEFAULT_PREFS = { theme: 'dark', tone: 'car_horn', volume: 70, fontScale: '12' };
+const DEFAULT_PREFS = { theme: 'dark', tone: 'car_horn', volume: 70, fontScale: '16' };
 let preferences = { ...DEFAULT_PREFS };
 
 const OPERATIONAL_STATUS_LABELS = {
@@ -334,8 +334,9 @@ function installAudioGestureUnlock() {
 function loadPreferences() {
   try { preferences = { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') }; } catch (_) {}
   if (!['dark', 'light'].includes(preferences.theme)) preferences.theme = DEFAULT_PREFS.theme;
-  if (!['car_horn', 'bell'].includes(preferences.tone)) preferences.tone = DEFAULT_PREFS.tone;
+  if (!Object.prototype.hasOwnProperty.call(TONE_SOURCES, preferences.tone)) preferences.tone = DEFAULT_PREFS.tone;
   if (!Number.isFinite(Number(preferences.volume))) preferences.volume = DEFAULT_PREFS.volume;
+  preferences.volume = Math.max(0, Math.min(100, Number(preferences.volume)));
   let fontScale = Number(preferences.fontScale);
   // Migra el porcentaje anterior (0.85–1.3) al mismo rango en px del CRM.
   if (fontScale >= 0.85 && fontScale <= 1.3) fontScale = Math.round(fontScale * 16);
@@ -353,6 +354,27 @@ function loadPreferences() {
 }
 function savePreferences() { localStorage.setItem(PREFS_KEY, JSON.stringify(preferences)); }
 function toggleTheme() { preferences.theme = preferences.theme === 'light' ? 'dark' : 'light'; savePreferences(); loadPreferences(); }
+let activeModal = null;
+let modalReturnFocus = null;
+function setModalOpen(id, open) {
+  const modal = $(id);
+  if (!modal) return;
+  if (open) {
+    modalReturnFocus = document.activeElement;
+    activeModal = modal;
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    const focusTarget = modal.querySelector('button, input, select, [tabindex]:not([tabindex="-1"])');
+    focusTarget?.focus();
+  } else {
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+    if (activeModal === modal) activeModal = null;
+    if (modalReturnFocus && document.contains(modalReturnFocus)) modalReturnFocus.focus();
+    modalReturnFocus = null;
+  }
+}
+function closeActiveModal() { if (activeModal) setModalOpen(activeModal.id, false); }
 function operationalControlsHtml() {
   return '';
 }
@@ -751,6 +773,10 @@ async function nextStatus() {
   render();
   const changed = await changeStatus(next, tripId);
   statusChangeInFlight = false;
+  // changeStatus() renders the returned trip while the request is marked as
+  // in flight. Render once more after clearing the guard so the next action
+  // becomes usable again (especially the transition to finalization).
+  if (next !== 'completed' || !changed) render();
   if (changed && next === 'in_progress') {
     // La ruta es auxiliar: no debe bloquear el botón de finalización.
     void loadTripRoute('trip');
@@ -2022,7 +2048,7 @@ async function downloadShiftPdf(closureId) {
   }
 }
 function openHistory() {
-  $('historyModal').classList.remove('hidden');
+  setModalOpen('historyModal', true);
   const today = localDateInput();
   if (!$('historyFrom').value) $('historyFrom').value = today;
   if (!$('historyTo').value) $('historyTo').value = today;
@@ -2238,16 +2264,20 @@ $('loginForm').onsubmit = login;
 $('toggleAuth').onclick = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
 $('logoutBtn').onclick = logout;
 $('themeToggle').onclick = toggleTheme;
-$('settingsButton').onclick = () => $('settingsModal').classList.remove('hidden');
-$('historyClose').onclick = () => $('historyModal').classList.add('hidden');
+$('settingsButton').onclick = () => setModalOpen('settingsModal', true);
+$('historyClose').onclick = () => setModalOpen('historyModal', false);
 $('historyRefresh').onclick = loadDriverHistory;
-$('historyModal').onclick = e => { if (e.target.id === 'historyModal') $('historyModal').classList.add('hidden'); };
-$('settingsClose').onclick = () => $('settingsModal').classList.add('hidden');
-$('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') $('settingsModal').classList.add('hidden'); };
+$('historyModal').onclick = e => { if (e.target.id === 'historyModal') setModalOpen('historyModal', false); };
+$('settingsClose').onclick = () => setModalOpen('settingsModal', false);
+$('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') setModalOpen('settingsModal', false); };
 $('tonePreview').onclick = () => { unlockAlertAudio(); beep(); };
 $('arrivalTone').onchange = e => { preferences.tone = e.target.value; alertAudioUnlocked = false; alertAudioUnlockPromise = null; alertAudio = null; savePreferences(); void unlockAlertAudio(); };
 $('volumeRange').oninput = e => { preferences.volume = Number(e.target.value); if (alertAudio) alertAudio.volume = preferences.volume / 100; $('volumeValue').textContent = `${preferences.volume}%`; savePreferences(); };
 $('fontScaleRange').oninput = e => { preferences.fontScale = String(Number(e.target.value)); $('fontScaleValue').textContent = `${preferences.fontScale}px`; savePreferences(); loadPreferences(); };
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeActiveModal();
+});
 
 document.addEventListener('visibilitychange', () => {
   setNativeAppVisible(document.visibilityState === 'visible');
