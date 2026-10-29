@@ -261,7 +261,7 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /const PENDING_GPS_KEY = 'livre_driver_pending_gps';/);
     assert.match(source, /function queuePendingGpsLocation\(/);
     assert.match(source, /function flushPendingGpsLocation\(/);
-    assert.match(source, /window\.addEventListener\('online', \(\) => \{/);
+    assert.match(source, /function handleNetworkOnline\(\)[\s\S]*?flushPendingGpsLocation\(\);/);
     assert.match(source, /flushPendingGpsLocation\(\);/);
     assert.match(source, /localStorage\.removeItem\(PENDING_GPS_KEY\)/);
     assert.match(source, /const GPS_MAX_ACCURACY_METERS = 150;/);
@@ -342,6 +342,25 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /if \(next !== 'completed' \|\| !changed\) render\(\);/);
   });
 
+  it('evita doble inicio de viajes programados y pausa polling en segundo plano', () => {
+    assert.match(source, /if \(statusChangeInFlight \|\| !selected \|\| selected\.status !== 'assigned'\) return;/);
+    assert.match(source, /document\.visibilityState === 'visible'/);
+    assert.match(source, /statusChangeInFlight = true;\n  render\(\);\n  try \{/);
+  });
+
+  it('mantiene destino y tarifa visibles durante un viaje activo', () => {
+    assert.match(source, /class="active-compact-summary"/);
+    assert.match(source, /class="active-compact-destination"/);
+    assert.match(styles, /active-compact-summary \{[\s\S]*?grid-column: 1;/);
+    assert.doesNotMatch(styles, /active-compact-summary[^}]*display: none/);
+  });
+
+  it('evita duplicar cierres y descartar respuestas viejas del historial', () => {
+    assert.match(source, /let historyRequestSequence = 0/);
+    assert.match(source, /if \(requestSequence !== historyRequestSequence\) return false;/);
+    assert.match(source, /document\.querySelector\('\[data-closures\]'\)\?\.remove\(\)/);
+  });
+
   it('keeps preference values valid and accepts all configured alert tones', () => {
     assert.match(source, /Object\.prototype\.hasOwnProperty\.call\(TONE_SOURCES, preferences\.tone\)/);
     assert.match(source, /preferences\.volume = Math\.max\(0, Math\.min\(100, Number\(preferences\.volume\)\)\);/);
@@ -354,5 +373,6 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /function setModalOpen\(id, open\)/);
     assert.match(source, /modal\.setAttribute\('aria-hidden', 'false'\)/);
     assert.match(source, /if \(e\.key === 'Escape'\) closeActiveModal\(\)/);
+    assert.match(html, /id="gpsPill"[^>]*role="status"[^>]*aria-live="polite"/);
   });
 });

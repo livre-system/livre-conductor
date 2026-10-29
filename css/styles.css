@@ -1567,6 +1567,44 @@ body.trip-active .sheet.active-mode .fare-row,
 body.trip-active .sheet.active-mode .final-fare-card,
 body.trip-active .sheet.active-mode .trip-queue,
 body.trip-active .sheet.active-mode .notice { display: none !important; }
+body.trip-active .sheet.active-mode .active-compact-summary {
+  grid-column: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+body.trip-active .sheet.active-mode .active-compact-destination {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.trip-active .sheet.active-mode .active-compact-destination small {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+body.trip-active .sheet.active-mode .active-compact-fare {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+body.trip-active .sheet.active-mode .active-compact-fare .fare-label { display: none; }
+body.trip-active .sheet.active-mode .active-compact-fare .fare-value { font-size: 14px; }
 body.trip-active .sheet.active-mode .active-status {
   grid-column: 1;
   margin: 0;

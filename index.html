@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07080a">
   <title>Livre · Conductor</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="css/styles.css?v=front-refine-20261029-01">
+  <link rel="stylesheet" href="css/styles.css?v=front-refine-20261029-02">
 </head>
 <body>
 
@@ -61,7 +61,7 @@
     <div class="topbar-right">
       <button id="themeToggle" class="header-icon-button" type="button" aria-label="Cambiar tema" title="Cambiar tema">☼</button>
       <button id="settingsButton" class="header-icon-button" type="button" aria-label="Abrir configuración" title="Configuración">⚙</button>
-      <div id="gpsPill" class="gps-pill inactive">
+      <div id="gpsPill" class="gps-pill inactive" role="status" aria-live="polite">
         <span class="gps-dot"></span>
         <span id="gpsLabel">GPS inactivo</span>
       </div>
@@ -95,7 +95,7 @@
     <div id="historySummary" class="history-summary"></div>
     <div id="historyList" class="history-list"></div>
     <div id="historyClosure" class="history-closure"></div>
-    <div id="historyNotice" class="notice hidden"></div>
+    <div id="historyNotice" class="notice hidden" role="alert" aria-live="assertive"></div>
   </div>
 </div>
 
@@ -116,6 +116,6 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/app.js?v=front-refine-20261029-01"></script>
+<script src="js/app.js?v=front-refine-20261029-02"></script>
 </body>
 </html>

@@ -651,6 +651,10 @@ function render() {
   inner.innerHTML = `
     <div class="active-trip">
       ${statusHtml}
+      <div class="active-compact-summary" aria-label="Resumen del viaje activo">
+        <span class="active-compact-destination"><small>Destino</small>${esc(t.destination || 'No informado')}</span>
+        ${!isCompleted ? driverFareHtml(t).replace('class="fare-row"', 'class="active-compact-fare"') : ''}
+      </div>
 
       <div class="trip-summary">
         <div class="trip-row">
@@ -711,15 +715,22 @@ async function acceptTrip() {
 }
 
 async function startScheduledTrip() {
-  if (!selected || selected.status !== 'assigned') return;
+  if (statusChangeInFlight || !selected || selected.status !== 'assigned') return;
   const tripId = String(selected.id);
-  const changed = await changeStatus('arriving', tripId);
-  if (!changed) return;
-  activeTripId = tripId;
-  startGps();
-  requestImmediateGpsSync();
-  loadTripRoute('pickup');
-  speak('Saliendo hacia el origen.');
+  statusChangeInFlight = true;
+  render();
+  try {
+    const changed = await changeStatus('arriving', tripId);
+    if (!changed) return;
+    activeTripId = tripId;
+    startGps();
+    requestImmediateGpsSync();
+    loadTripRoute('pickup');
+    speak('Saliendo hacia el origen.');
+  } finally {
+    statusChangeInFlight = false;
+    render();
+  }
 }
 
 function rememberRejectedTrip(id) {
@@ -816,12 +827,13 @@ function demoReset() {
 
 /** Carga los viajes asignados al conductor */
 function tripsPollingAllowed() {
-  return !DEMO && !!token && navigator.onLine !== false && !$('appView')?.classList.contains('hidden');
+  return !DEMO && !!token && document.visibilityState === 'visible' && navigator.onLine !== false && !$('appView')?.classList.contains('hidden');
 }
 
 function handleNetworkOnline() {
   if (!token || $('appView')?.classList.contains('hidden')) return;
   clearNotice();
+  restartGpsAfterBackground();
   startTripsPolling();
   flushPendingGpsLocation();
 }
@@ -1962,6 +1974,7 @@ function historyTotalsHtml(data, title = '') {
     </div>`;
 }
 function localDateInput() { return new Date().toLocaleDateString('en-CA'); }
+let historyRequestSequence = 0;
 function historyNotice(message) {
   const el = $('historyNotice');
   if (!el) return;
@@ -1983,12 +1996,15 @@ async function loadDriverHistory() {
   }
   const from = $('historyFrom').value;
   const to = $('historyTo').value;
+  const requestSequence = ++historyRequestSequence;
   historyNotice('Cargando…');
   try {
     const r = await fetch(`${API}/mobility/driver/history?date_from=${encodeURIComponent(from)}&date_to=${encodeURIComponent(to)}`, { headers: h(), cache: 'no-store' });
     if (r.status === 401) { logout(); return false; }
     if (!r.ok) throw Error(r.status);
-    renderHistory(await r.json());
+    const data = await r.json();
+    if (requestSequence !== historyRequestSequence) return false;
+    renderHistory(data);
     historyNotice('');
     await loadDriverClosures();
     return true;
@@ -2004,7 +2020,8 @@ async function loadDriverClosures() {
     if (!r.ok) return;
     const closures = await r.json();
     if (!closures.length) return;
-    $('historyClosure').insertAdjacentHTML('beforeend', `<div class="history-item"><strong>Cierres guardados</strong><br>${closures.slice(0, 5).map(c => `${esc(c.closure_date)} · ${c.trip_count} viajes · ${money(c.total_revenue)} <button class="settings-preview" type="button" data-pdf-id="${esc(c.id)}">PDF</button>`).join('<br>')}</div>`);
+    document.querySelector('[data-closures]')?.remove();
+    $('historyClosure').insertAdjacentHTML('beforeend', `<div class="history-item" data-closures><strong>Cierres guardados</strong><br>${closures.slice(0, 5).map(c => `${esc(c.closure_date)} · ${c.trip_count} viajes · ${money(c.total_revenue)} <button class="settings-preview" type="button" data-pdf-id="${esc(c.id)}">PDF</button>`).join('<br>')}</div>`);
     document.querySelectorAll('[data-pdf-id]').forEach(button => { button.onclick = () => downloadShiftPdf(button.dataset.pdfId); });
   } catch (_) {}
 }
@@ -2284,7 +2301,10 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     restartGpsAfterBackground();
     startTripsPolling();
-  } else gpsSuspended = true;
+  } else {
+    gpsSuspended = true;
+    stopTripsPolling();
+  }
 });
 window.addEventListener('pageshow', () => {
   restartGpsAfterBackground();
@@ -2299,10 +2319,4 @@ window.addEventListener('focus', () => {
   restartGpsAfterBackground();
   startTripsPolling();
 });
-window.addEventListener('online', () => {
-  flushPendingGpsLocation();
-  restartGpsAfterBackground();
-  startTripsPolling();
-});
-
 if (token) openApp();
