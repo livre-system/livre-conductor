@@ -161,10 +161,10 @@ public class LocationService extends Service {
         }
         fusedCallbackReceived = false;
         gpsFallbackRequested = false;
-        android.util.Log.i(TAG, "Solicitando Fused PRIORITY_HIGH_ACCURACY intervalo_ms=10000");
+        android.util.Log.i(TAG, "Solicitando Fused PRIORITY_HIGH_ACCURACY intervalo_ms=60000");
         try {
-            LocationRequest request = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000L)
-                    .setMinUpdateIntervalMillis(5000L)
+            LocationRequest request = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 60000L)
+                    .setMinUpdateIntervalMillis(30000L)
                     // El envío debe ocurrir también con el vehículo detenido.
                     // La frecuencia la gobierna el intervalo; no exigir distancia.
                     .setMinUpdateDistanceMeters(0f)
@@ -197,10 +197,10 @@ public class LocationService extends Service {
         try {
             if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 android.util.Log.w(TAG, "Fused sin callback: activando GPS_PROVIDER como fallback");
-                manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000L, 0f, listener, Looper.getMainLooper());
+                manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 60000L, 0f, listener, Looper.getMainLooper());
             } else if (manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 android.util.Log.w(TAG, "GPS_PROVIDER no disponible: activando NETWORK_PROVIDER fallback");
-                manager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 15000L, 0f, listener, Looper.getMainLooper());
+                manager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 60000L, 0f, listener, Looper.getMainLooper());
             } else {
                 android.util.Log.e(TAG, "Sin proveedor GPS/NETWORK habilitado");
             }
