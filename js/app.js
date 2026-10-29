@@ -355,10 +355,7 @@ function operationalControlsHtml() {
 }
 
 function operationalStatusCompactHtml() {
-  return `<div class="operational-status-compact" aria-label="Estado operativo actual">
-    <span class="operational-status-compact-dot" data-operational-dot></span>
-    <span>Estado operativo: <strong data-operational-label></strong></span>
-  </div>`;
+  return '';
 }
 
 /* ── Formatear tarifa ───────────────────────────────────────── */

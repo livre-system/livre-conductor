@@ -289,6 +289,11 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /String\(t\.id\) !== lostTripId/);
   });
 
+  it('oculta el estado operativo compacto durante un viaje activo para no apretar la hoja', () => {
+    assert.match(source, /function operationalStatusCompactHtml\(\) \{\n  return '';/);
+    assert.doesNotMatch(source, /operational-status-compact.*data-operational-label/);
+  });
+
   it('renders operational actions in the bottom panel', () => {
     assert.match(source, /operationalControlsHtml/);
     assert.doesNotMatch(source, /Esperando un viaje/);
