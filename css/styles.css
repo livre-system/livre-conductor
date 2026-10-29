@@ -1480,32 +1480,33 @@ body[data-theme="light"] .trip-queue {
   width: min(calc(82vw / var(--ui-scale)), 360px);
   height: auto;
   min-height: 0;
-  max-height: min(62dvh, calc(100dvh - 120px));
+  max-height: none;
   transform: translate(-50%, -50%);
   border: 1px solid var(--red);
   border-radius: 24px;
   box-shadow: 0 24px 70px #000b, 0 0 0 100vmax #0007;
-  overflow: hidden;
+  overflow: visible;
   transition: none;
 }
 .sheet.alert-mode .sheet-handle { display: flex; }
 .sheet.alert-mode .sheet-inner {
   min-height: 0;
-  padding: 0 16px max(16px, env(safe-area-inset-bottom));
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  padding: 0 14px 14px;
+  overflow: visible;
 }
-.sheet.alert-mode .trip-alert { padding-top: 10px; }
+.sheet.alert-mode .trip-alert { padding-top: 6px; }
 .sheet.alert-mode .alert-title {
-  margin-bottom: 20px;
-  font-size: clamp(27px, 7vw, 34px);
+  margin-bottom: 12px;
+  font-size: clamp(24px, 6.5vw, 30px);
 }
-.sheet.alert-mode .route-card { padding: 16px; margin-bottom: 14px; }
-.sheet.alert-mode .stop-address { font-size: 15px; }
-.sheet.alert-mode .fare-row { padding: 13px 16px; margin-bottom: 14px; }
-.sheet.alert-mode .alert-actions { gap: 10px; }
+.sheet.alert-mode .route-card { padding: 11px 12px; margin-bottom: 9px; }
+.sheet.alert-mode .route-stop + .route-stop { margin-top: 8px; }
+.sheet.alert-mode .stop-address { font-size: 14px; }
+.sheet.alert-mode .fare-row { min-height: 46px; padding: 8px 12px; margin-bottom: 9px; }
+.sheet.alert-mode .fare-value { font-size: 17px; }
+.sheet.alert-mode .alert-actions { gap: 7px; }
 .sheet.alert-mode .btn-accept,
-.sheet.alert-mode .btn-reject { min-height: 58px; font-size: 13px; }
+.sheet.alert-mode .btn-reject { min-height: 48px; font-size: 12px; }
 .sheet.alert-mode .alert-actions {
   position: static;
   padding-top: 0;

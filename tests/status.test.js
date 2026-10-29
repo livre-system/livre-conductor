@@ -315,7 +315,8 @@ describe('driver operational status synchronization', () => {
 
   it('mantiene la oferta centrada, compacta y sin tapar la tarifa', () => {
     assert.match(styles, /\.sheet\.alert-mode \{[\s\S]*?width: min\(calc\(82vw \/ var\(--ui-scale\)\), 360px\);/);
-    assert.match(styles, /\.sheet\.alert-mode \{[\s\S]*?max-height: min\(62dvh, calc\(100dvh - 120px\)\);/);
+    assert.match(styles, /\.sheet\.alert-mode \{[\s\S]*?max-height: none;/);
     assert.match(styles, /\.sheet\.alert-mode \.alert-actions \{\n  position: static;\n  padding-top: 0;/);
+    assert.match(styles, /\.sheet\.alert-mode \.sheet-inner \{[\s\S]*?overflow: visible;/);
   });
 });
