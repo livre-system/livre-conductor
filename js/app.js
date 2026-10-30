@@ -644,6 +644,9 @@ function render() {
   if (isInProgress)  statusHtml = `<div class="active-status amber"><span class="active-status-dot"></span><span class="active-status-text">${DEMO ? '🧪 DEMO — ' : ''}Viaje en curso</span></div>`;
   if (isCompleted)   statusHtml = `<div class="active-status"><span class="active-status-dot" style="background:#8b8d96;box-shadow:none"></span><span class="active-status-text" style="color:#8b8d96">Viaje finalizado</span></div>`;
 
+  const activeAddressLabel = isArriving ? 'Retiro del cliente' : 'Destino';
+  const activeAddress = isArriving ? t.origin : t.destination;
+
   let primaryBtn = '';
   if (isArriving)    primaryBtn = `<button class="btn-primary green"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">LLEGUÉ — Iniciar viaje</button>`;
   if (isInProgress)  primaryBtn = `<button class="btn-primary"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">Finalizar viaje</button>`;
@@ -653,7 +656,7 @@ function render() {
     <div class="active-trip">
       ${statusHtml}
       <div class="active-compact-summary" aria-label="Resumen del viaje activo">
-        <span class="active-compact-destination"><small>Destino</small>${esc(t.destination || 'No informado')}</span>
+        <span class="active-compact-destination"><small>${activeAddressLabel}</small>${esc(activeAddress || 'No informado')}</span>
         ${!isCompleted ? driverFareHtml(t).replace('class="fare-row"', 'class="active-compact-fare"') : ''}
       </div>
 

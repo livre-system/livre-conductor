@@ -91,6 +91,12 @@ describe('driver operational status synchronization', () => {
     assert.match(context.finalFareHtml({ fare: 4800, final_fare: 4000 }), /4\.800/);
   });
 
+  it('shows the pickup address before arrival and the destination after starting the trip', () => {
+    assert.match(source, /const activeAddressLabel = isArriving \? 'Retiro del cliente' : 'Destino';/);
+    assert.match(source, /const activeAddress = isArriving \? t\.origin : t\.destination;/);
+    assert.match(source, /<small>\$\{activeAddressLabel\}<\/small>\$\{esc\(activeAddress \|\| 'No informado'\)\}/);
+  });
+
   it('renders every assigned trip while another trip is selected', () => {
     assert.match(source, /function tripQueueHtml\(current\)/);
     assert.match(source, /data-trip-select=/);
