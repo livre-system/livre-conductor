@@ -351,7 +351,9 @@ describe('driver operational status synchronization', () => {
   it('mantiene destino y tarifa visibles durante un viaje activo', () => {
     assert.match(source, /class="active-compact-summary"/);
     assert.match(source, /class="active-compact-destination"/);
-    assert.match(styles, /active-compact-summary \{[\s\S]*?grid-column: 1;/);
+    assert.match(styles, /active-compact-summary \{[\s\S]*?grid-column: 1 \/ -1;[\s\S]*?grid-row: 1;/);
+    assert.match(styles, /active-status \{[\s\S]*?grid-column: 1;[\s\S]*?grid-row: 2;/);
+    assert.match(styles, /primary-actions \{[\s\S]*?grid-column: 2;[\s\S]*?grid-row: 2;/);
     assert.doesNotMatch(styles, /active-compact-summary[^}]*display: none/);
   });
 
