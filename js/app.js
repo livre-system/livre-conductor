@@ -640,8 +640,8 @@ function render() {
   const isCompleted  = st === 'completed';
 
   let statusHtml = '';
-  if (isArriving)    statusHtml = `<div class="active-status"><span class="active-status-dot"></span><span class="active-status-text">${DEMO ? '🧪 DEMO — ' : ''}En camino al pasajero — GPS activo</span></div>`;
-  if (isInProgress)  statusHtml = `<div class="active-status amber"><span class="active-status-dot"></span><span class="active-status-text">${DEMO ? '🧪 DEMO — ' : ''}Viaje en curso — GPS activo</span></div>`;
+  if (isArriving)    statusHtml = `<div class="active-status"><span class="active-status-dot"></span><span class="active-status-text">${DEMO ? '🧪 DEMO — ' : ''}En camino al pasajero</span></div>`;
+  if (isInProgress)  statusHtml = `<div class="active-status amber"><span class="active-status-dot"></span><span class="active-status-text">${DEMO ? '🧪 DEMO — ' : ''}Viaje en curso</span></div>`;
   if (isCompleted)   statusHtml = `<div class="active-status"><span class="active-status-dot" style="background:#8b8d96;box-shadow:none"></span><span class="active-status-text" style="color:#8b8d96">Viaje finalizado</span></div>`;
 
   let primaryBtn = '';
