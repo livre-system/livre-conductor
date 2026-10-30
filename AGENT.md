@@ -227,8 +227,17 @@ Railway es la única plataforma de despliegue activa para todos los servicios y 
 - Las preferencias web validan los tonos definidos en `TONE_SOURCES` (`car_horn`, `bus_horn`, `truck_horn`), limitan el volumen a 0–100 y usan 16 px como tamaño base seguro. No aceptar la validación histórica de un tono inexistente (`bell`).
 - Configuración e historial usan `aria-hidden`, foco inicial, retorno del foco al cerrar y cierre con Escape. Los cierres por botón y por clic en el overlay deben pasar por `setModalOpen()`.
 - La corrección web vive en `js/app.js`, `css/styles.css`, `index.html` y las regresiones en `tests/status.test.js`/`tests/responsive.test.js`; no requiere una APK nueva porque la APK carga el frontend remoto por HTTPS.
-- Validación local de esta iteración: `node --check js/app.js` OK; `node --test tests/*.test.js` → 53 pasaron, 0 fallaron; `python3 tools/verify_release.py` OK; `git diff --check` OK.
-- Cache-busting publicado y verificado por HTTPS: `front-refine-20261029-01`; Railway sirve `index.html`, `css/styles.css` y `js/app.js` con ese identificador.
-- Verificación de producción con el modo demo, sin crear viajes reales: el popup midió aproximadamente 294×456 px a 320 px, 322×456 px a 350 px y 396×460 px a 430 px; `scrollWidth` coincidió con el viewport en los tres casos y no hubo overflow horizontal.
-- El flujo demo publicado recorrió aceptar → llegar/iniciar → finalizar; después de iniciar, el botón `Finalizar viaje` quedó habilitado y el cierre dejó la hoja sin viaje residual mostrando el aviso de confirmación.
-- Configuración publicada abrió con `aria-hidden="false"`, foco en el cierre, y Escape la cerró devolviendo `aria-hidden="true"`. La APK v8 nativa ya fue generada por GitHub Actions en el commit `3fa782a`; artefacto descargado en `/home/calambre/Downloads/livre-conductor-v8-40975206565/livre-conductor-v8-3fa782a1.apk`, con firma release verificada. Los cambios web posteriores no obligan a regenerarla.
+- Validación local final: `node --check js/app.js` OK; `node --test tests/*.test.js` → 57 pasaron, 0 fallaron; `python3 tools/verify_release.py` OK; `git diff --check` OK.
+- La segunda iteración agregó guard contra doble inicio de viajes programados, pausó el polling al ocultar la pestaña, consolidó el listener `online`, evitó respuestas viejas del historial y evitó duplicar visualmente los cierres.
+- Durante un viaje activo se mantiene visible un resumen compacto con `Destino` y `Tarifa conductor` junto al estado GPS y la acción principal; el mapa sigue disponible. En producción, a `390x844`, la hoja midió `390x112` y `scrollWidth` coincidió con el viewport.
+- Los avisos de GPS e historial tienen regiones vivas para lectores de pantalla (`role="status"`/`role="alert"`).
+- La carga concurrente de rutas usa un controlador de lote y timeouts locales por fase; las actualizaciones de conductores no reinician una solicitud de la misma fase que todavía está en curso. Esto evita abortos intermitentes cada 15 segundos.
+- Cache-busting publicado y verificado por HTTPS: `front-refine-20261029-02`; Railway sirve los assets nuevos en `https://livre-conductor-production.up.railway.app/`.
+- Verificación de producción con modo demo, sin crear viajes reales: el flujo aceptar → iniciar → finalizar funcionó; la hoja activa mostró destino, tarifa y acción, sin overflow horizontal. El popup de oferta sigue probado en 320/350/430 px sin overflow.
+- Commits de esta revisión: `1291226` (refinamiento inicial), `724dc2e` (documentación), `1e98892` (estados/polling/historial/accesibilidad) y `464803f` (rutas concurrentes y regresiones).
+- La APK v8 nativa fue generada y verificada en `3fa782a`; los cambios web posteriores no obligan a regenerarla porque la APK carga el frontend remoto por HTTPS.
+
+### Pendientes reales
+
+- La suite actual es estática/source-based: no reemplaza una batería de integración DOM/API con Playwright o WebDriver. Quedan como siguiente mejora pruebas automatizadas de login, respuestas HTTP 401/409, polling, GPS, historial y transiciones de estado con `fetch` simulado.
+- No se hicieron viajes reales ni se tocaron credenciales durante esta revisión; la validación operativa se limitó al modo demo y a assets públicos. Para validar contratos reales hace falta una cuenta de prueba autorizada.
