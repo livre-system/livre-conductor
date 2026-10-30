@@ -341,7 +341,7 @@ function loadPreferences() {
   let fontScale = Number(preferences.fontScale);
   // Migra el porcentaje anterior (0.85–1.3) al mismo rango en px del CRM.
   if (fontScale >= 0.85 && fontScale <= 1.3) fontScale = Math.round(fontScale * 16);
-  if (!Number.isFinite(fontScale) || fontScale < 12 || fontScale > 22) fontScale = Number(DEFAULT_PREFS.fontScale);
+  if (!Number.isFinite(fontScale) || fontScale < 12 || fontScale > 18) fontScale = Number(DEFAULT_PREFS.fontScale);
   preferences.fontScale = String(fontScale);
   document.documentElement.style.setProperty('--font-size-base', `${fontScale}px`);
   document.documentElement.style.setProperty('--ui-scale', String(fontScale / 16));

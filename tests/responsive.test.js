@@ -28,6 +28,11 @@ describe('responsive conductor shell', () => {
   });
 
   it('busts the deployed stylesheet after responsive changes', () => {
-    assert.match(html, /css\/styles\.css\?v=(?:operational-mobile|trip-flow-mobile|trip-flow-clean-map|front-refine|conductor-trip-layout)-202610(?:29|30)/);
+    assert.match(html, /css\/styles\.css\?v=(?:operational-mobile|trip-flow-mobile|trip-flow-clean-map|front-refine|conductor-trip-layout|conductor-font-scale)-202610(?:29|30)/);
+  });
+
+  it('limits the global font scale setting to 12–18 px', () => {
+    assert.match(html, /id="fontScaleRange"[^>]*min="12"[^>]*max="18"/);
+    assert.match(js, /fontScale < 12 \|\| fontScale > 18/);
   });
 });
