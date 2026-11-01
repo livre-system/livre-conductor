@@ -19,6 +19,7 @@ import android.provider.Settings;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
+import android.webkit.PermissionRequest;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -30,15 +31,18 @@ public class MainActivity extends Activity {
     public static final String ACTION_SESSION_INVALIDATED = "com.livre.conductor.SESSION_INVALIDATED";
     private static final String TRIPS_NOTIFICATION_CHANNEL = "livre_trips_v4";
     private static final String WEB_URL = "https://livre-conductor-production.up.railway.app/";
+    private static final String WEB_ORIGIN = "https://livre-conductor-production.up.railway.app";
     private static final int LOCATION_REQUEST = 41;
     private static final int BACKGROUND_LOCATION_REQUEST = 42;
     private static final int NOTIFICATION_REQUEST = 43;
+    private static final int AUDIO_REQUEST = 44;
     private WebView webView;
     private boolean backgroundSettingsOpened;
     private boolean notificationWarningShown;
     private boolean permissionDialogShown;
     private boolean serviceOperational;
     private boolean notificationPermissionRequestInFlight;
+    private PermissionRequest pendingAudioRequest;
     private String pendingToken;
     private String pendingTripId;
 
@@ -87,6 +91,31 @@ public class MainActivity extends Activity {
                         || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
                 boolean locationEnabled = PermissionGate.locationProviderEnabled(MainActivity.this);
                 callback.invoke(origin, trustedOrigin && preciseLocation && locationEnabled, false);
+            }
+            @Override public void onPermissionRequest(PermissionRequest request) {
+                runOnUiThread(() -> {
+                    if (!WEB_ORIGIN.equals(request.getOrigin().toString())) {
+                        request.deny();
+                        return;
+                    }
+                    boolean wantsAudio = false;
+                    for (String resource : request.getResources()) {
+                        if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) {
+                            wantsAudio = true;
+                            break;
+                        }
+                    }
+                    if (!wantsAudio) {
+                        request.deny();
+                        return;
+                    }
+                    if (Build.VERSION.SDK_INT < 23 || checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                    } else {
+                        pendingAudioRequest = request;
+                        requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, AUDIO_REQUEST);
+                    }
+                });
             }
         });
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidGps");
@@ -230,6 +259,14 @@ public class MainActivity extends Activity {
     @Override public void onRequestPermissionsResult(int request, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(request, permissions, results);
         if (request == NOTIFICATION_REQUEST) notificationPermissionRequestInFlight = false;
+        if (request == AUDIO_REQUEST && pendingAudioRequest != null) {
+            if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+                pendingAudioRequest.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+            } else {
+                pendingAudioRequest.deny();
+            }
+            pendingAudioRequest = null;
+        }
         if (request == NOTIFICATION_REQUEST) warnIfTripNotificationsDisabled();
         if ((request == LOCATION_REQUEST || request == BACKGROUND_LOCATION_REQUEST || request == NOTIFICATION_REQUEST) && pendingToken != null) requestLocationAndStart();
         publishPermissionState();

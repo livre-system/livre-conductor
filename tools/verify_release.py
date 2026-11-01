@@ -20,16 +20,19 @@ def main():
     js = text("js/app.js")
 
     assert "applicationId 'com.livre.conductor'" in build
-    assert "versionCode 4" in build and "versionName '2.1.0'" in build
+    assert "versionCode 5" in build and "versionName '2.2.0'" in build
     assert "signingConfig signingConfigs.release" in build
     assert 'android.permission.POST_NOTIFICATIONS' in manifest
+    assert 'android.permission.RECORD_AUDIO' in manifest
     assert 'android.permission.ACCESS_BACKGROUND_LOCATION' in manifest
     assert 'android.permission.FOREGROUND_SERVICE_LOCATION' in manifest
     assert 'android:foregroundServiceType="location"' in manifest
     assert 'car_horn' in service
     assert 'notified_trip_ids' in notification_store
     assert 'trip_id' in service and 'trip_id' in activity
+    assert 'PermissionRequest.RESOURCE_AUDIO_CAPTURE' in activity
     assert 'https://livre-conductor-production.up.railway.app/' in activity
+    assert 'android.permission.RECORD_AUDIO' in manifest
     assert 'WebSettings.LOAD_NO_CACHE' in activity
     assert not (ROOT / 'android/app/src/main/assets').exists()
     assert not (ROOT / 'android/app/src/main/assets/web').exists()
