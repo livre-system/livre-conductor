@@ -377,6 +377,11 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /const timeoutId = setTimeout\(\(\) => batchController\.abort\(\), 12000\)/);
   });
 
+  it('usa reintento idempotente para mensajes y audio del handie', () => {
+    assert.match(source, /client_message_id/);
+    assert.match(source, /WithRetry|retry|reintento/);
+    assert.match(source, /handieChunks = \[\]/);
+  });
   it('keeps preference values valid and accepts all configured alert tones', () => {
     assert.match(source, /Object\.prototype\.hasOwnProperty\.call\(TONE_SOURCES, preferences\.tone\)/);
     assert.match(source, /preferences\.volume = Math\.max\(0, Math\.min\(100, Number\(preferences\.volume\)\)\);/);

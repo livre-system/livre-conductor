@@ -2275,6 +2275,21 @@ function renderCommsMessages(targetId, items) {
   }).join('') || '<p class="comms-notice">Todavía no hay mensajes.</p>';
   target.scrollTop = target.scrollHeight;
 }
+function newClientMessageId() {
+  return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+async function requestMessageWithRetry(url, options, attempts = 2) {
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok || (response.status >= 400 && response.status < 500)) return response;
+      lastError = Error(`HTTP ${response.status}`);
+    } catch (error) { lastError = error; }
+    if (attempt + 1 < attempts) await new Promise(resolve => setTimeout(resolve, 350));
+  }
+  throw lastError || Error('No se pudo enviar');
+}
 async function loadPassengerMessages() {
   const tripId = commsTripId();
   if (!tripId || DEMO) return;
@@ -2289,7 +2304,7 @@ async function sendPassengerMessage(event) {
   if (!tripId || !body || DEMO) return;
   input.disabled = true;
   try {
-    const response = await fetch(`${API}/mobility/driver/trips/${encodeURIComponent(tripId)}/messages`, { method: 'POST', headers: h(), body: JSON.stringify({ body }) });
+    const response = await requestMessageWithRetry(`${API}/mobility/driver/trips/${encodeURIComponent(tripId)}/messages`, { method: 'POST', headers: h(), body: JSON.stringify({ body, client_message_id: newClientMessageId() }) });
     if (!response.ok) throw Error('No se pudo enviar');
     input.value = '';
     await loadPassengerMessages();
@@ -2314,7 +2329,7 @@ async function loadHandieMessages() {
 async function sendHandiePayload(payload) {
   const sessionId = await ensureHandieSession();
   if (!sessionId) return;
-  const response = await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/messages`, { method: 'POST', headers: h(), body: JSON.stringify(payload) });
+  const response = await requestMessageWithRetry(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/messages`, { method: 'POST', headers: h(), body: JSON.stringify(payload) });
   if (!response.ok) throw Error('No se pudo enviar al handie');
   await loadHandieMessages();
 }
@@ -2326,6 +2341,7 @@ async function startHandieRecording(event) {
   if (!window.MediaRecorder || DEMO) { $('handieState').textContent = 'Este navegador no permite grabar audio.'; return; }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    handieChunks = [];
     const recorderOptions = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? { mimeType: 'audio/webm;codecs=opus' } : {};
     const recorder = new MediaRecorder(stream, recorderOptions);
     handieRecorder = recorder;
@@ -2334,7 +2350,7 @@ async function startHandieRecording(event) {
       stream.getTracks().forEach(track => track.stop());
       const blob = new Blob(handieChunks, { type: recorder.mimeType || 'audio/webm' });
       if (blob.size > 2200000) { $('handieState').textContent = 'Audio demasiado largo. Probá de nuevo.'; return; }
-      try { $('handieState').textContent = 'Enviando audio…'; await sendHandiePayload({ body: 'Audio del handie', audio_data: await blobAsDataUrl(blob), audio_type: blob.type }); $('handieState').textContent = 'Audio guardado en la base.'; }
+      try { $('handieState').textContent = 'Enviando audio…'; await sendHandiePayload({ client_message_id: newClientMessageId(), body: 'Audio del handie', audio_data: await blobAsDataUrl(blob), audio_type: blob.type }); $('handieState').textContent = 'Audio guardado en la base.'; }
       catch (_) { $('handieState').textContent = 'No se pudo guardar el audio.'; }
     };
     handieRecorder.start();
@@ -2350,7 +2366,7 @@ async function sendHandieText(event) {
   const input = $('handieTextInput');
   const body = input.value.trim();
   if (!body) return;
-  try { await sendHandiePayload({ body }); input.value = ''; $('handieState').textContent = 'Mensaje guardado en la base.'; }
+  try { await sendHandiePayload({ client_message_id: newClientMessageId(), body }); input.value = ''; $('handieState').textContent = 'Mensaje guardado en la base.'; }
   catch (_) { $('handieState').textContent = 'No se pudo enviar el mensaje.'; }
 }
 function initComms() {
