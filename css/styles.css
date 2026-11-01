@@ -450,6 +450,28 @@ button, input, select { touch-action: manipulation; }
 }
 .sheet.empty-state { display: none; }
 
+/* Comunicaciones compactas: no compiten con el mapa ni con la hoja. */
+.driver-comms { position: fixed; z-index: 45; right: max(12px, env(safe-area-inset-right)); bottom: max(112px, calc(env(safe-area-inset-bottom) + 96px)); display: grid; gap: 10px; }
+.comms-fab { width: 46px; height: 46px; border-radius: 50%; background: rgba(18, 21, 29, .94); border: 1px solid #ffffff2b; box-shadow: 0 8px 24px #0008; font-size: 21px; display: grid; place-items: center; }
+.comms-fab:hover, .comms-fab:focus-visible { border-color: var(--red); transform: translateX(-2px); }
+.comms-fab:disabled { opacity: .35; filter: grayscale(1); }
+.handie-fab { border-color: #35d0b0aa; }
+.comms-modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 18px; background: #0009; }
+.comms-modal.hidden { display: none; }
+.comms-card { width: min(420px, 100%); max-height: min(620px, 82dvh); display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 22px 70px #000b; }
+.comms-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.comms-heading h2 { margin: 0; font-size: 17px; }
+.comms-heading button { font-size: 26px; color: var(--muted); }
+.comms-messages { min-height: 120px; max-height: 42dvh; overflow: auto; display: grid; align-content: start; gap: 8px; padding: 4px; }
+.comms-message { max-width: 86%; padding: 9px 11px; border-radius: 12px; background: var(--surface2); font-size: 13px; line-height: 1.35; }
+.comms-message.mine { justify-self: end; background: var(--red-dim); }
+.comms-message small { display: block; color: var(--muted); font-size: 10px; margin-bottom: 3px; }
+.comms-message audio { max-width: 100%; height: 32px; }
+.comms-form { display: flex; gap: 8px; }
+.comms-form input { min-width: 0; flex: 1; border: 1px solid var(--line); border-radius: 10px; background: var(--surface2); color: var(--white); padding: 10px; }
+.comms-form button { width: 42px; border-radius: 10px; background: var(--red); color: #fff; font-size: 18px; }
+.comms-notice { min-height: 16px; margin: 0; color: var(--muted); font-size: 11px; }
+
 /* Estado alerta (llega un viaje) */
 .sheet.alert-mode {
   height: var(--alert-h);

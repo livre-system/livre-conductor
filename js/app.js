@@ -2286,9 +2286,115 @@ async function logout() {
   location.reload();
 }
 
+function closeCommsModal(id) { $(id)?.classList.add('hidden'); }
+function commsTripId() { return activeTripId || (selected && ['arriving', 'in_progress'].includes(selected.status) ? String(selected.id) : ''); }
+function renderCommsMessages(targetId, items) {
+  const target = $(targetId);
+  if (!target) return;
+  target.innerHTML = (items || []).map(item => {
+    const mine = item.sender_role === 'driver';
+    const safeMedia = typeof item.media_data === 'string' && /^data:audio\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/i.test(item.media_data) ? item.media_data : '';
+    const audio = safeMedia ? `<audio controls preload="metadata" src="${safeMedia}"></audio>` : esc(item.body);
+    return `<div class="comms-message${mine ? ' mine' : ''}"><small>${mine ? 'Vos' : item.sender_role === 'base' ? 'Base' : 'Pasajero'}</small>${audio}</div>`;
+  }).join('') || '<p class="comms-notice">Todavía no hay mensajes.</p>';
+  target.scrollTop = target.scrollHeight;
+}
+async function loadPassengerMessages() {
+  const tripId = commsTripId();
+  if (!tripId || DEMO) return;
+  const response = await fetch(`${API}/mobility/driver/trips/${encodeURIComponent(tripId)}/messages`, { headers: h() });
+  if (response.ok) renderCommsMessages('passengerMessages', await response.json());
+}
+async function sendPassengerMessage(event) {
+  event.preventDefault();
+  const tripId = commsTripId();
+  const input = $('passengerMessageInput');
+  const body = input.value.trim();
+  if (!tripId || !body || DEMO) return;
+  input.disabled = true;
+  try {
+    const response = await fetch(`${API}/mobility/driver/trips/${encodeURIComponent(tripId)}/messages`, { method: 'POST', headers: h(), body: JSON.stringify({ body }) });
+    if (!response.ok) throw Error('No se pudo enviar');
+    input.value = '';
+    await loadPassengerMessages();
+  } catch (_) { $('passengerChatNotice').textContent = 'No se pudo enviar el mensaje.'; }
+  finally { input.disabled = false; input.focus(); }
+}
+let handieSessionId = null;
+let handieRecorder = null;
+let handieChunks = [];
+async function ensureHandieSession() {
+  if (handieSessionId || DEMO) return handieSessionId;
+  const response = await fetch(`${API}/mobility/driver/handie`, { method: 'POST', headers: h(), body: JSON.stringify({ trip_id: commsTripId() ? Number(commsTripId()) : null }) });
+  if (!response.ok) throw Error('No se pudo abrir el handie');
+  handieSessionId = (await response.json()).id;
+  return handieSessionId;
+}
+async function loadHandieMessages() {
+  if (!handieSessionId || DEMO) return;
+  const response = await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(handieSessionId)}/messages`, { headers: h() });
+  if (response.ok) renderCommsMessages('handieMessages', await response.json());
+}
+async function sendHandiePayload(payload) {
+  const sessionId = await ensureHandieSession();
+  if (!sessionId) return;
+  const response = await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/messages`, { method: 'POST', headers: h(), body: JSON.stringify(payload) });
+  if (!response.ok) throw Error('No se pudo enviar al handie');
+  await loadHandieMessages();
+}
+function blobAsDataUrl(blob) {
+  return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(blob); });
+}
+async function startHandieRecording(event) {
+  event.preventDefault();
+  if (!window.MediaRecorder || DEMO) { $('handieState').textContent = 'Este navegador no permite grabar audio.'; return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorderOptions = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? { mimeType: 'audio/webm;codecs=opus' } : {};
+    const recorder = new MediaRecorder(stream, recorderOptions);
+    handieRecorder = recorder;
+    recorder.ondataavailable = e => { if (e.data.size) handieChunks.push(e.data); };
+    recorder.onstop = async () => {
+      stream.getTracks().forEach(track => track.stop());
+      const blob = new Blob(handieChunks, { type: recorder.mimeType || 'audio/webm' });
+      if (blob.size > 2200000) { $('handieState').textContent = 'Audio demasiado largo. Probá de nuevo.'; return; }
+      try { $('handieState').textContent = 'Enviando audio…'; await sendHandiePayload({ body: 'Audio del handie', audio_data: await blobAsDataUrl(blob), audio_type: blob.type }); $('handieState').textContent = 'Audio guardado en la base.'; }
+      catch (_) { $('handieState').textContent = 'No se pudo guardar el audio.'; }
+    };
+    handieRecorder.start();
+    $('handieState').textContent = 'Grabando… soltá para enviar';
+  } catch (_) { $('handieState').textContent = 'No se pudo acceder al micrófono.'; }
+}
+function stopHandieRecording(event) {
+  event.preventDefault();
+  if (handieRecorder && handieRecorder.state === 'recording') { handieRecorder.stop(); handieRecorder = null; }
+}
+async function sendHandieText(event) {
+  event.preventDefault();
+  const input = $('handieTextInput');
+  const body = input.value.trim();
+  if (!body) return;
+  try { await sendHandiePayload({ body }); input.value = ''; $('handieState').textContent = 'Mensaje guardado en la base.'; }
+  catch (_) { $('handieState').textContent = 'No se pudo enviar el mensaje.'; }
+}
+function initComms() {
+  $('passengerChatButton').onclick = async () => { if (!commsTripId()) return; $('passengerChatModal').classList.remove('hidden'); await loadPassengerMessages(); };
+  $('passengerChatClose').onclick = () => closeCommsModal('passengerChatModal');
+  $('passengerMessageForm').onsubmit = sendPassengerMessage;
+  $('handieButton').onclick = async () => { $('handieModal').classList.remove('hidden'); try { await ensureHandieSession(); await loadHandieMessages(); } catch (_) { $('handieState').textContent = 'No se pudo abrir el handie.'; } };
+  $('handieClose').onclick = () => closeCommsModal('handieModal');
+  $('handieTextForm').onsubmit = sendHandieText;
+  $('handieButton').addEventListener('pointerdown', startHandieRecording);
+  $('handieButton').addEventListener('pointerup', stopHandieRecording);
+  $('handieButton').addEventListener('pointercancel', stopHandieRecording);
+  $('handieButton').addEventListener('contextmenu', e => e.preventDefault());
+  setInterval(() => { if (!$('passengerChatModal').classList.contains('hidden')) void loadPassengerMessages(); if (!$('handieModal').classList.contains('hidden')) void loadHandieMessages(); }, 5000);
+}
+
 /* ── Bootstrap ──────────────────────────────────────────────── */
 loadPreferences();
 installAudioGestureUnlock();
+initComms();
 $('loginForm').onsubmit = login;
 $('toggleAuth').onclick = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
 $('logoutBtn').onclick = logout;
