@@ -7,10 +7,10 @@ const activity = fs.readFileSync('android/app/src/main/java/com/livre/conductor/
 const gate = fs.readFileSync('android/app/src/main/java/com/livre/conductor/PermissionGate.java', 'utf8');
 
 describe('initial native permission flow', () => {
-  it('does not gate operation on unused microphone access', () => {
-    assert.doesNotMatch(manifest, /android\.permission\.RECORD_AUDIO/);
-    assert.doesNotMatch(activity, /MICROPHONE_REQUEST|Manifest\.permission\.RECORD_AUDIO/);
-    assert.doesNotMatch(gate, /NEED_MICROPHONE|RECORD_AUDIO/);
+  it('declares microphone capture for the handie without replacing location gating', () => {
+    assert.match(manifest, /android\.permission\.RECORD_AUDIO/);
+    assert.match(activity, /MICROPHONE_REQUEST|Manifest\.permission\.RECORD_AUDIO/);
+    assert.match(activity, /PermissionRequest\.RESOURCE_AUDIO_CAPTURE/);
   });
 
   it('keeps precise and background location in the existing permission gate', () => {
@@ -20,8 +20,7 @@ describe('initial native permission flow', () => {
     assert.match(gate, /NEED_BACKGROUND_LOCATION/);
   });
 
-  it('starts after location and notification prerequisites only', () => {
-    assert.doesNotMatch(gate, /NEED_MICROPHONE/);
-    assert.doesNotMatch(activity, /MICROPHONE_REQUEST/);
+  it('starts after location, notification, and microphone prerequisites', () => {
+    assert.match(activity, /MICROPHONE_REQUEST|RECORD_AUDIO/);
   });
 });

@@ -180,11 +180,6 @@ const DEMO_TRIP = {
 function setDemoMode(active) {
   DEMO = active;
   if (active) {
-    // Banner visible en topbar para que quede claro que es demo
-    const pill = document.getElementById('gpsPill');
-    if (pill) {
-      pill.title = 'MODO DEMO — sin backend';
-    }
     console.info('[DEMO] Modo demo activo. Sin llamadas al backend.');
   }
 }
@@ -348,7 +343,7 @@ function loadPreferences() {
   document.body.dataset.theme = preferences.theme;
   const themeMeta = document.querySelector('meta[name="theme-color"]');
   if (themeMeta) themeMeta.content = preferences.theme === 'light' ? '#f7f8fa' : '#07080a';
-  if ($('themeToggle')) $('themeToggle').textContent = preferences.theme === 'light' ? '☾' : '☼';
+  if ($('themeSelect')) $('themeSelect').value = preferences.theme;
   if ($('arrivalTone')) $('arrivalTone').value = preferences.tone;
   if ($('volumeRange')) { $('volumeRange').value = preferences.volume; $('volumeValue').textContent = `${preferences.volume}%`; }
   if ($('fontScaleRange')) { $('fontScaleRange').value = preferences.fontScale; $('fontScaleValue').textContent = `${preferences.fontScale}px`; }
@@ -377,7 +372,12 @@ function setModalOpen(id, open) {
 }
 function closeActiveModal() { if (activeModal) setModalOpen(activeModal.id, false); }
 function operationalControlsHtml() {
-  return '';
+  return `<section class="operational-panel" aria-label="Estado operativo">
+    <div class="operational-panel-title">Estado del conductor</div>
+    <div class="operational-panel-buttons">
+      ${Object.entries(OPERATIONAL_STATUS_LABELS).map(([status, label]) => `<button type="button" class="operational-panel-button" data-operational-status="${status}">${label.replace(/^\S+\s/, '')}</button>`).join('')}
+    </div>
+  </section>`;
 }
 
 function operationalStatusCompactHtml() {
@@ -580,7 +580,6 @@ function render() {
     const scheduledAccepted = isScheduled && st === 'assigned';
     sheet.className = 'sheet alert-mode';
     inner.innerHTML = `
-      ${operationalControlsHtml()}
       <div class="trip-alert">
         <div class="alert-badge">
           <span class="alert-pulse"></span>
@@ -1283,25 +1282,8 @@ function stopGps() {
 }
 
 function updateGpsPill() {
-  const pill = $('gpsPill');
-  const label = $('gpsLabel');
-  if (!pill || !label) return;
-  if (gpsState.provider === 'STARTING') {
-    pill.className = 'gps-pill inactive';
-    label.textContent = 'Solicitando GPS…';
-  } else if (gpsState.provider === 'LOST') {
-    pill.className = 'gps-pill inactive';
-    label.textContent = 'GPS SIN SEÑAL';
-  } else if (gpsState.provider === 'ACTIVE' && ['FAILED', 'UNKNOWN'].includes(gpsState.backend)) {
-    pill.className = 'gps-pill';
-    label.textContent = 'GPS activo · sin sincronizar';
-  } else if (gpsState.provider === 'ACTIVE') {
-    pill.className = 'gps-pill';
-    label.textContent = DEMO ? 'GPS demo' : 'GPS activo';
-  } else {
-    pill.className = 'gps-pill inactive';
-    label.textContent = 'GPS inactivo';
-  }
+  // El estado se conserva para diagnóstico y sincronización; la luz visual
+  // fue retirada del encabezado para liberar espacio operativo.
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1892,12 +1874,6 @@ function announceNewTrip(t) {
 }
 
 function renderOperationalStatus() {
-  const select = $('operationalStatusSelect');
-  if (select) {
-    select.value = operationalStatus;
-    select.onchange = async () => await changeOperationalStatus(select.value);
-    select.dataset.operationalStatus = operationalStatus;
-  }
   document.querySelectorAll('[data-operational-status]').forEach(item => {
     item.classList.toggle('selected', item.dataset.operationalStatus === operationalStatus);
     item.onclick = async () => await changeOperationalStatus(item.dataset.operationalStatus);
@@ -2398,7 +2374,7 @@ initComms();
 $('loginForm').onsubmit = login;
 $('toggleAuth').onclick = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
 $('logoutBtn').onclick = logout;
-$('themeToggle').onclick = toggleTheme;
+$('themeSelect').onchange = e => { preferences.theme = e.target.value; savePreferences(); loadPreferences(); };
 $('settingsButton').onclick = () => setModalOpen('settingsModal', true);
 $('historyClose').onclick = () => setModalOpen('historyModal', false);
 $('historyRefresh').onclick = loadDriverHistory;
@@ -2413,6 +2389,12 @@ $('fontScaleRange').oninput = e => { preferences.fontScale = String(Number(e.tar
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeActiveModal();
 });
+
+document.addEventListener('dblclick', e => {
+  if (e.target.closest('#map, .leaflet-container')) return;
+  e.preventDefault();
+  e.stopPropagation();
+}, { capture: true });
 
 document.addEventListener('visibilitychange', () => {
   setNativeAppVisible(document.visibilityState === 'visible');

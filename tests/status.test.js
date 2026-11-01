@@ -313,8 +313,8 @@ describe('driver operational status synchronization', () => {
     assert.match(styles, /body\.trip-active \.sheet\.active-mode \{ height: min\(340px/);
     assert.match(styles, /body\.trip-active \.sheet\.active-mode \{[\s\S]*?bottom: 0;/);
     assert.match(styles, /body\.trip-active \.topbar \.header-icon-button \{ display: grid; \}/);
-    assert.match(html, /id="themeToggle"/);
     assert.match(html, /id="settingsButton"/);
+    assert.match(html, /id="themeSelect"/);
     assert.match(source, /El backend rechazó el cambio/);
     assert.match(source, /if \(statusCode === 404\) \{/);
   });
@@ -329,11 +329,11 @@ describe('driver operational status synchronization', () => {
     assert.doesNotMatch(source, /Esperando un viaje/);
   });
 
-  it('da prioridad visual al selector de estado operativo', () => {
-    assert.match(styles, /\.topbar-status-select \{[\s\S]*?width: 176px;[\s\S]*?min-height: 38px;[\s\S]*?font-size: 12px;[\s\S]*?font-weight: 900;[\s\S]*?text-transform: uppercase;/);
-    assert.match(styles, /@media \(max-width: 430px\) \{\n  \.topbar-left \{ flex: 1 1 auto; min-width: 0; \}/);
-    assert.match(styles, /@media \(max-width: 599px\) \{\n  \.topbar-left \{ max-width: 64%; \}[\s\S]*?min-width: 145px;[\s\S]*?font-size: 11px;/);
-    assert.match(html, /value="out_of_service">Fuera serv\.<\/option>/);
+  it('da prioridad visual a los tres estados operativos inferiores', () => {
+    assert.match(styles, /\.operational-panel-buttons \{[\s\S]*grid-template-columns: repeat\(3/);
+    assert.match(styles, /\.operational-panel-button \{[\s\S]*min-height: 42px/);
+    assert.match(source, /data-operational-status="\$\{status\}"/);
+    assert.match(source, /Object\.entries\(OPERATIONAL_STATUS_LABELS\)/);
   });
 
   it('mantiene la oferta centrada, compacta y sin tapar la tarifa', () => {
@@ -389,6 +389,6 @@ describe('driver operational status synchronization', () => {
     assert.match(source, /function setModalOpen\(id, open\)/);
     assert.match(source, /modal\.setAttribute\('aria-hidden', 'false'\)/);
     assert.match(source, /if \(e\.key === 'Escape'\) closeActiveModal\(\)/);
-    assert.match(html, /id="gpsPill"[^>]*role="status"[^>]*aria-live="polite"/);
+    assert.doesNotMatch(html, /id="gpsPill"/);
   });
 });
