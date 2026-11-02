@@ -109,7 +109,8 @@ describe('driver operational status synchronization', () => {
   it('promotes the newest assigned trip without dropping older queue items', () => {
     assert.match(source, /function orderTripsNewestFirst\(list\)/);
     assert.match(source, /function selectPrimaryTrip\(list, current\)/);
-    assert.match(source, /trips = orderTripsNewestFirst\(nextTrips\.filter/);
+    assert.match(source, /const visibleTrips = nextTrips\.filter/);
+    assert.match(source, /trips = orderTripsNewestFirst\(visibleTrips\)/);
     assert.match(source, /selected = selectPrimaryTrip\(trips, selected\)/);
     assert.match(source, /trips\.filter\(t => \['scheduled', 'searching', 'assigned'\]\.includes\(t\.status\) && String\(t\.id\) !== String\(current\?\.id\)/);
 
@@ -149,6 +150,19 @@ describe('driver operational status synchronization', () => {
     require('vm').runInNewContext(`${source.slice(start, end)}; this.selectPrimaryTrip = selectPrimaryTrip;`, context);
     const active = { id: 10, status: 'in_progress' };
     assert.strictEqual(context.selectPrimaryTrip([], active), null);
+  });
+
+  it('does not clear an operational card on the first empty snapshot', () => {
+    assert.match(source, /MAX_EMPTY_TRIPS_READS = 2/);
+    assert.match(source, /selected && DRIVER_CARD_STATUSES\.includes\(selected\.status\)/);
+    assert.match(source, /trips = \[selected\];/);
+  });
+
+  it('retries a native notification before confirming the trip unavailable', () => {
+    assert.match(source, /MAX_PENDING_NATIVE_TRIP_RETRIES = 8/);
+    assert.match(source, /pendingNativeTripRetryCount < MAX_PENDING_NATIVE_TRIP_RETRIES/);
+    assert.match(source, /setTimeout\(\(\) => \{[\s\S]*?void loadTrips\(\);[\s\S]*?\}, 1500\)/);
+    assert.doesNotMatch(source, /pendingNativeTripId = null;\n  if \(applyNativeTrip\(id\)\) return;/);
   });
 
   it('moves to the next pending trip after resolving only the selected rejection', () => {

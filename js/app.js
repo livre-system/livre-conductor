@@ -78,6 +78,11 @@ let token       = localStorage.getItem('livre_driver_token');
 let authEpoch   = 0;
 let trips       = [];
 let selected    = null;
+let emptyTripsReads = 0;
+let pendingNativeTripRetryTimer = null;
+let pendingNativeTripRetryCount = 0;
+const MAX_EMPTY_TRIPS_READS = 2;
+const MAX_PENDING_NATIVE_TRIP_RETRIES = 8;
 // Se conserva fuera de la tarjeta para que un refresh de viajes no corte
 // el envío del GPS del viaje aceptado.
 let activeTripId = null;
@@ -912,9 +917,22 @@ async function loadTrips() {
     const operationalTrips = operationalTripsOnly(nextTrips);
     receivedCount = operationalTrips.length;
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
-    trips = orderTripsNewestFirst(nextTrips.filter(t => DRIVER_CARD_STATUSES.includes(t.status) && !rejectedTripIds.has(String(t.id))));
-    // La lista ya está ordenada por la fecha real del pedido. La tarjeta
-    // principal toma el pendiente más nuevo; los anteriores quedan en la cola.
+    const visibleTrips = nextTrips.filter(t => DRIVER_CARD_STATUSES.includes(t.status) && !rejectedTripIds.has(String(t.id)));
+    if (visibleTrips.length) {
+      emptyTripsReads = 0;
+      trips = orderTripsNewestFirst(visibleTrips);
+    } else if (selected && DRIVER_CARD_STATUSES.includes(selected.status)
+        && emptyTripsReads < MAX_EMPTY_TRIPS_READS) {
+      // Una consulta vacía aislada puede coincidir con la transición de
+      // asignación o con el renderer de la APK volviendo del segundo plano.
+      // No borrar una tarjeta operativa hasta confirmar la ausencia.
+      emptyTripsReads += 1;
+      trips = [selected];
+    } else {
+      emptyTripsReads += 1;
+      trips = [];
+    }
+    // La tarjeta principal toma el pendiente más nuevo; los anteriores quedan en la cola.
     selected = selectPrimaryTrip(trips, selected);
     // Los viajes terminales pertenecen al historial, no a la tarjeta operativa.
     // Si no queda otro viaje activo, render() debe mostrar solo el panel
@@ -2087,9 +2105,26 @@ function applyNativeTrip(tripId) {
 function resolvePendingNativeTrip() {
   if (!pendingNativeTripId) return;
   const id = pendingNativeTripId;
+  if (applyNativeTrip(id)) {
+    pendingNativeTripId = null;
+    pendingNativeTripRetryCount = 0;
+    if (pendingNativeTripRetryTimer !== null) clearTimeout(pendingNativeTripRetryTimer);
+    pendingNativeTripRetryTimer = null;
+    return;
+  }
+  if (pendingNativeTripRetryCount < MAX_PENDING_NATIVE_TRIP_RETRIES) {
+    pendingNativeTripRetryCount += 1;
+    if (pendingNativeTripRetryTimer === null) {
+      pendingNativeTripRetryTimer = setTimeout(() => {
+        pendingNativeTripRetryTimer = null;
+        void loadTrips();
+      }, 1500);
+    }
+    return;
+  }
   pendingNativeTripId = null;
-  if (applyNativeTrip(id)) return;
-  showNotice('Ese viaje ya fue tomado por otro conductor.');
+  pendingNativeTripRetryCount = 0;
+  showNotice('Ese viaje ya no está disponible.');
   window.AndroidGps?.confirmTripUnavailable?.(id);
 }
 
