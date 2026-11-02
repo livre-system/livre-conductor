@@ -338,6 +338,7 @@ describe('driver operational status synchronization', () => {
     assert.match(styles, /\.sheet\.empty-state \.operational-panel \{[\s\S]*position: fixed/);
     assert.match(styles, /\.driver-comms \{ position: fixed;[\s\S]*top: 50%;[\s\S]*transform: translateY\(-50%\)/);
     assert.match(styles, /\.sheet\.empty-state \.operational-panel-button\[data-operational-status="available"\]\.selected \{[\s\S]*background: #174b38;[\s\S]*color: #fff/);
+    assert.match(styles, /\.operational-panel-button\[data-operational-status="available"\],[\s\S]*background: #17191d;[\s\S]*color: #cdd1d8/);
   });
 
   it('mantiene la oferta centrada, compacta y sin tapar la tarifa', () => {
