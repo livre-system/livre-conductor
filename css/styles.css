@@ -461,7 +461,7 @@ button, input, select { touch-action: manipulation; }
 
 
 /* Comunicaciones compactas: no compiten con el mapa ni con la hoja. */
-.driver-comms { position: fixed; z-index: 45; top: max(116px, calc(env(safe-area-inset-top) + 108px)); right: max(12px, env(safe-area-inset-right)); display: grid; gap: 8px; justify-items: center; }
+.driver-comms { position: fixed; z-index: 45; top: 50%; right: max(12px, env(safe-area-inset-right)); transform: translateY(-50%); display: grid; gap: 8px; justify-items: center; }
 .comms-fab { width: 46px; height: 46px; border-radius: 50%; background: rgba(18, 21, 29, .94); border: 1px solid #ffffff2b; box-shadow: 0 8px 24px #0008; font-size: 21px; display: grid; place-items: center; }
 .comms-fab:hover, .comms-fab:focus-visible { border-color: var(--red); transform: translateX(-2px); }
 .comms-fab:disabled { opacity: .35; filter: grayscale(1); }
@@ -477,7 +477,7 @@ button, input, select { touch-action: manipulation; }
 .sheet.empty-state .operational-panel { position: fixed; z-index: 35; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); left: 12px; padding: 0; pointer-events: auto; }
 .sheet.empty-state .operational-panel-title { display: none; }
 .sheet.empty-state .operational-panel-buttons { gap: 8px; }
-.sheet.empty-state .operational-panel-button { min-height: 44px; background: rgba(18, 21, 29, .9); box-shadow: 0 6px 18px #0008; }
+.sheet.empty-state .operational-panel-button { min-height: 44px; background: rgba(18, 21, 29, .94); box-shadow: 0 6px 18px #0008; }
 .comms-modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 18px; background: #0009; }
 .comms-modal.hidden { display: none; }
 .comms-card { width: min(420px, 100%); max-height: min(620px, 82dvh); display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 22px 70px #000b; }
@@ -1245,6 +1245,24 @@ body[data-theme="light"] .leaflet-control-attribution { color: #596575 !importan
   box-shadow: 0 0 0 2px rgba(232,0,61,.12);
 }
 .operational-panel-button.selected { color: #fff; }
+
+/* Estado seleccionado legible aun sobre el mapa: menos glass, más contraste. */
+.sheet.empty-state .operational-panel-button[data-operational-status="available"].selected {
+  background: #174b38;
+  border-color: #2de08b;
+  color: #fff;
+  box-shadow: 0 0 0 2px #2de08b55, 0 6px 18px #0008;
+}
+.sheet.empty-state .operational-panel-button[data-operational-status="unavailable"] {
+  background: #343942;
+  border-color: #9aa0aa;
+  color: #e1e4ea;
+}
+.sheet.empty-state .operational-panel-button[data-operational-status="out_of_service"] {
+  background: #4f1826;
+  border-color: #e8003d99;
+  color: #ff9ab0;
+}
 
 .active-status {
   min-height: 48px;

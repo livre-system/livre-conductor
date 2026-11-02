@@ -28,7 +28,7 @@ describe('responsive conductor shell', () => {
   });
 
   it('busts the deployed stylesheet after responsive changes', () => {
-    assert.match(html, /css\/styles\.css\?v=conductor-voice-layout-20261102-03/);
+    assert.match(html, /css\/styles\.css\?v=conductor-voice-layout-20261102-04/);
   });
 
   it('limits the global font scale setting to 12–18 px', () => {
