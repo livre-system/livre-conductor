@@ -2314,6 +2314,7 @@ async function sendPassengerMessage(event) {
 let handieSessionId = null;
 let handieConversation = null;
 let handieStarting = false;
+let handiePermissionStream = null;
 function setHandieState(active, text) {
   const button = $('handieButton');
   const state = $('handieState');
@@ -2349,14 +2350,23 @@ async function endHandieConversation() {
   if (conversation) {
     try { await conversation.endSession(); } catch (_) {}
   }
+  handiePermissionStream?.getTracks().forEach(track => track.stop());
+  handiePermissionStream = null;
   await closeHandieSession(sessionId);
   setHandieState(false, 'Livi inactiva');
 }
 async function startHandieConversation() {
   if (handieStarting || handieConversation) return;
   handieStarting = true;
-  setHandieState(false, 'Conectando con Livi…');
+  setHandieState(false, 'Solicitando micrófono…');
   try {
+    if (!DEMO) {
+      if (!navigator.mediaDevices?.getUserMedia) throw Error('Este dispositivo no permite usar el micrófono desde la aplicación.');
+      handiePermissionStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      handiePermissionStream.getTracks().forEach(track => track.stop());
+      handiePermissionStream = null;
+    }
+    setHandieState(false, 'Conectando con Livi…');
     const sessionId = await ensureHandieSession();
     if (DEMO) { setHandieState(true, 'Livi activa (demo)'); return; }
     const tokenResponse = await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/voice-token`, { headers: h() });
@@ -2389,7 +2399,10 @@ async function startHandieConversation() {
     setHandieState(true, 'Livi activa');
   } catch (error) {
     handieConversation = null;
+    handiePermissionStream?.getTracks().forEach(track => track.stop());
+    handiePermissionStream = null;
     setHandieState(false, error?.message || 'No se pudo iniciar Livi.');
+    showNotice(error?.message || 'No se pudo iniciar Livi.');
     diagLog('handie_voice_start_failed', { error: String(error?.message || error).slice(0, 120) });
   } finally { handieStarting = false; }
 }
