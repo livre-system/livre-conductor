@@ -418,7 +418,7 @@ function commercialFareValues(t) {
 }
 
 function driverFareLabel() {
-  return 'Tarifa conductor';
+  return 'Valor';
 }
 
 function driverFareHtml(t) {

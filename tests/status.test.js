@@ -80,6 +80,8 @@ describe('driver operational status synchronization', () => {
     const fareSource = source.slice(source.indexOf('function formatFare'), source.indexOf('function serviceTypeLabel'));
     const context = { Intl };
     require('vm').runInNewContext(`${fareSource}; this.driverFareHtml = driverFareHtml; this.finalFareHtml = finalFareHtml;`, context);
+    assert.match(context.driverFareHtml({ fare: 4800 }), /Valor/);
+    assert.doesNotMatch(context.driverFareHtml({ fare: 4800 }), /Tarifa conductor/);
     assert.match(context.driverFareHtml({ fare: 4800 }), /4\.080/);
     assert.match(context.driverFareHtml({ fare: 4800, final_fare: 4000 }), /4\.080/);
     assert.match(context.driverFareHtml({ fare: 4800, service_type_id: '2' }), /4\.800/);
