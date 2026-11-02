@@ -334,6 +334,9 @@ describe('driver operational status synchronization', () => {
     assert.match(styles, /\.operational-panel-button \{[\s\S]*min-height: 42px/);
     assert.match(source, /data-operational-status="\$\{status\}"/);
     assert.match(source, /Object\.entries\(OPERATIONAL_STATUS_LABELS\)/);
+    assert.match(styles, /\.sheet\.empty-state \{[\s\S]*height: 0;[\s\S]*background: transparent/);
+    assert.match(styles, /\.sheet\.empty-state \.operational-panel \{[\s\S]*position: fixed/);
+    assert.match(styles, /\.driver-comms \{ position: fixed;[\s\S]*top: max\(116px/);
   });
 
   it('mantiene la oferta centrada, compacta y sin tapar la tarifa', () => {
