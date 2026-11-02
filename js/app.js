@@ -2384,7 +2384,7 @@ async function startHandieConversation() {
       },
       onError: error => { diagLog('handie_voice_error', { error: String(error?.message || error).slice(0, 120) }); setHandieState(false, 'No se pudo mantener la conexión con Livi.'); },
       onStatusChange: status => { if (status === 'connected') setHandieState(true, 'Livi activa'); if (status === 'disconnected') setHandieState(false, 'Livi inactiva'); },
-      onDisconnect: () => { handieConversation = null; setHandieState(false, 'Livi inactiva'); },
+      onDisconnect: () => { const endedSessionId = handieSessionId; handieConversation = null; handieSessionId = null; void closeHandieSession(endedSessionId); setHandieState(false, 'Livi inactiva'); },
     });
     setHandieState(true, 'Livi activa');
   } catch (error) {
