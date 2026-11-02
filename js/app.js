@@ -2337,12 +2337,19 @@ async function saveHandieVoiceEvent(role, body, conversationId) {
     });
   } catch (_) { diagLog('handie_voice_event_failed', { role }); }
 }
+async function closeHandieSession(sessionId) {
+  if (!sessionId || DEMO) return;
+  try { await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/close`, { method: 'POST', headers: h() }); } catch (_) {}
+}
 async function endHandieConversation() {
   const conversation = handieConversation;
+  const sessionId = handieSessionId;
   handieConversation = null;
+  handieSessionId = null;
   if (conversation) {
     try { await conversation.endSession(); } catch (_) {}
   }
+  await closeHandieSession(sessionId);
   setHandieState(false, 'Livi inactiva');
 }
 async function startHandieConversation() {
