@@ -1263,6 +1263,26 @@ body[data-theme="light"] .leaflet-control-attribution { color: #596575 !importan
   border-color: #e8003d99;
   color: #ff9ab0;
 }
+.sheet.empty-state .operational-panel-button[data-operational-status="available"]:not(.selected),
+.sheet.empty-state .operational-panel-button[data-operational-status="unavailable"]:not(.selected),
+.sheet.empty-state .operational-panel-button[data-operational-status="out_of_service"]:not(.selected) {
+  background: #17191d;
+  border-color: #6f768066;
+  color: #cdd1d8;
+  box-shadow: none;
+}
+.sheet.empty-state .operational-panel-button[data-operational-status="unavailable"].selected {
+  background: #343942;
+  border-color: #9aa0aa;
+  color: #fff;
+  box-shadow: 0 0 0 2px #9aa0aa55, 0 6px 18px #0008;
+}
+.sheet.empty-state .operational-panel-button[data-operational-status="out_of_service"].selected {
+  background: #4f1826;
+  border-color: #e8003d;
+  color: #fff;
+  box-shadow: 0 0 0 2px #e8003d55, 0 6px 18px #0008;
+}
 
 .active-status {
   min-height: 48px;
