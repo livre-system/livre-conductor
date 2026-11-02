@@ -2218,7 +2218,10 @@ function openApp() {
   initMap();
   startNativeBackgroundLocation();
   startGps();
-  loadOperationalStatus().then(() => startTripsPolling());
+  // La tarjeta de viaje no depende de que el estado operativo responda:
+  // al abrir/reanudar, pedir el snapshot inmediatamente.
+  startTripsPolling();
+  void loadOperationalStatus();
 }
 
 function clearWebSession() {

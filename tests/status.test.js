@@ -36,7 +36,8 @@ describe('driver operational status synchronization', () => {
 
   it('keeps GPS startup independent from operational status', () => {
     assert.match(source, /startGps\(\);/);
-    assert.match(source, /loadOperationalStatus\(\)\.then\(\(\) => startTripsPolling\(\)\)/);
+    assert.match(source, /startTripsPolling\(\);\n  void loadOperationalStatus\(\);/);
+    assert.doesNotMatch(source, /loadOperationalStatus\(\)\.then\(\(\) => startTripsPolling\(\)\)/);
     assert.doesNotMatch(source, /operationalStatus\s*===\s*['"]out_of_service['"][\s\S]{0,120}stopGps\(/);
   });
 
