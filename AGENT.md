@@ -241,3 +241,10 @@ Railway es la única plataforma de despliegue activa para todos los servicios y 
 
 - La suite actual es estática/source-based: no reemplaza una batería de integración DOM/API con Playwright o WebDriver. Quedan como siguiente mejora pruebas automatizadas de login, respuestas HTTP 401/409, polling, GPS, historial y transiciones de estado con `fetch` simulado.
 - No se hicieron viajes reales ni se tocaron credenciales durante esta revisión; la validación operativa se limitó al modo demo y a assets públicos. Para validar contratos reales hace falta una cuenta de prueba autorizada.
+
+## Handie de voz Livi (2026-11-02)
+
+- El botón Base ya no abre una bandeja ni usa pulsación sostenida: alterna una sesión de voz ElevenLabs, verde mientras está activa y gris al finalizar.
+- Las transcripciones del conductor y de Livi se guardan en Cloud para el CRM; no se habilitan emergencias ni conversaciones generales.
+- La acción disponible es `reassign_trip(reason, confirmed)` y sólo se ejecuta después de confirmación explícita del conductor.
+- La sesión requiere micrófono HTTPS y permisos de audio del navegador/WebView; la configuración del client tool y del prompt restringido se completa en el agente ElevenLabs.

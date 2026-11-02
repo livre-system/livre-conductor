@@ -466,6 +466,8 @@ button, input, select { touch-action: manipulation; }
 .comms-fab:hover, .comms-fab:focus-visible { border-color: var(--red); transform: translateX(-2px); }
 .comms-fab:disabled { opacity: .35; filter: grayscale(1); }
 .handie-fab { border-color: #35d0b0aa; }
+.handie-fab.voice-active { background: #20b486; border-color: #9dffe5; color: #06271e; box-shadow: 0 0 0 5px #35d0b044, 0 8px 24px #0008; }
+.comms-voice-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .comms-modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 18px; background: #0009; }
 .comms-modal.hidden { display: none; }
 .comms-card { width: min(420px, 100%); max-height: min(620px, 82dvh); display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 22px 70px #000b; }

@@ -2312,75 +2312,87 @@ async function sendPassengerMessage(event) {
   finally { input.disabled = false; input.focus(); }
 }
 let handieSessionId = null;
-let handieRecorder = null;
-let handieChunks = [];
+let handieConversation = null;
+let handieStarting = false;
+function setHandieState(active, text) {
+  const button = $('handieButton');
+  const state = $('handieState');
+  button?.classList.toggle('voice-active', active);
+  button?.setAttribute('aria-pressed', active ? 'true' : 'false');
+  if (state) state.textContent = text;
+}
 async function ensureHandieSession() {
   if (handieSessionId || DEMO) return handieSessionId;
   const response = await fetch(`${API}/mobility/driver/handie`, { method: 'POST', headers: h(), body: JSON.stringify({ trip_id: commsTripId() ? Number(commsTripId()) : null }) });
-  if (!response.ok) throw Error('No se pudo abrir el handie');
+  if (!response.ok) throw Error('No se pudo abrir la sesión de Livi');
   handieSessionId = (await response.json()).id;
   return handieSessionId;
 }
-async function loadHandieMessages() {
-  if (!handieSessionId || DEMO) return;
-  const response = await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(handieSessionId)}/messages`, { headers: h() });
-  if (response.ok) renderCommsMessages('handieMessages', await response.json());
-}
-async function sendHandiePayload(payload) {
-  const sessionId = await ensureHandieSession();
-  if (!sessionId) return;
-  const response = await requestMessageWithRetry(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/messages`, { method: 'POST', headers: h(), body: JSON.stringify(payload) });
-  if (!response.ok) throw Error('No se pudo enviar al handie');
-  await loadHandieMessages();
-}
-function blobAsDataUrl(blob) {
-  return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(blob); });
-}
-async function startHandieRecording(event) {
-  event.preventDefault();
-  if (!window.MediaRecorder || DEMO) { $('handieState').textContent = 'Este navegador no permite grabar audio.'; return; }
+async function saveHandieVoiceEvent(role, body, conversationId) {
+  if (!handieSessionId || DEMO || !body?.trim()) return;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    handieChunks = [];
-    const recorderOptions = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? { mimeType: 'audio/webm;codecs=opus' } : {};
-    const recorder = new MediaRecorder(stream, recorderOptions);
-    handieRecorder = recorder;
-    recorder.ondataavailable = e => { if (e.data.size) handieChunks.push(e.data); };
-    recorder.onstop = async () => {
-      stream.getTracks().forEach(track => track.stop());
-      const blob = new Blob(handieChunks, { type: recorder.mimeType || 'audio/webm' });
-      if (blob.size > 2200000) { $('handieState').textContent = 'Audio demasiado largo. Probá de nuevo.'; return; }
-      try { $('handieState').textContent = 'Enviando audio…'; await sendHandiePayload({ client_message_id: newClientMessageId(), body: 'Audio del handie', audio_data: await blobAsDataUrl(blob), audio_type: blob.type }); $('handieState').textContent = 'Audio guardado en la base.'; }
-      catch (_) { $('handieState').textContent = 'No se pudo guardar el audio.'; }
-    };
-    handieRecorder.start();
-    $('handieState').textContent = 'Grabando… soltá para enviar';
-  } catch (_) { $('handieState').textContent = 'No se pudo acceder al micrófono.'; }
+    await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(handieSessionId)}/voice-events`, {
+      method: 'POST', headers: h(),
+      body: JSON.stringify({ role, body: body.trim().slice(0, 2000), conversation_id: conversationId || null, event_id: newClientMessageId() }),
+    });
+  } catch (_) { diagLog('handie_voice_event_failed', { role }); }
 }
-function stopHandieRecording(event) {
-  event.preventDefault();
-  if (handieRecorder && handieRecorder.state === 'recording') { handieRecorder.stop(); handieRecorder = null; }
+async function endHandieConversation() {
+  const conversation = handieConversation;
+  handieConversation = null;
+  if (conversation) {
+    try { await conversation.endSession(); } catch (_) {}
+  }
+  setHandieState(false, 'Livi inactiva');
 }
-async function sendHandieText(event) {
-  event.preventDefault();
-  const input = $('handieTextInput');
-  const body = input.value.trim();
-  if (!body) return;
-  try { await sendHandiePayload({ client_message_id: newClientMessageId(), body }); input.value = ''; $('handieState').textContent = 'Mensaje guardado en la base.'; }
-  catch (_) { $('handieState').textContent = 'No se pudo enviar el mensaje.'; }
+async function startHandieConversation() {
+  if (handieStarting || handieConversation) return;
+  handieStarting = true;
+  setHandieState(false, 'Conectando con Livi…');
+  try {
+    const sessionId = await ensureHandieSession();
+    if (DEMO) { setHandieState(true, 'Livi activa (demo)'); return; }
+    const tokenResponse = await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/voice-token`, { headers: h() });
+    const token = await tokenResponse.json();
+    if (!tokenResponse.ok || !token.signed_url) throw Error(token.detail || 'No se pudo iniciar la voz');
+    const { Conversation } = await import('https://cdn.jsdelivr.net/npm/@elevenlabs/client@0.6.2/+esm');
+    handieConversation = await Conversation.startSession({
+      signedUrl: token.signed_url,
+      connectionType: 'websocket',
+      dynamicVariables: token.dynamic_variables || {},
+      clientTools: {
+        reassign_trip: async ({ reason, confirmed }) => {
+          const response = await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/reassign`, {
+            method: 'POST', headers: h(), body: JSON.stringify({ reason: String(reason || '').trim(), confirmed: confirmed === true }),
+          });
+          const result = await response.json();
+          if (!response.ok) return { success: false, message: result.detail || 'No se pudo reasignar el viaje.' };
+          return { success: true, message: 'El viaje volvió a la búsqueda de conductores.', trip_id: result.trip_id, status: result.status };
+        },
+      },
+      onMessage: message => {
+        const text = String(message?.message || message?.text || '').trim();
+        const source = message?.source === 'user' || message?.role === 'user' ? 'driver' : 'assistant';
+        if (text) void saveHandieVoiceEvent(source, text, message?.conversation_id);
+      },
+      onError: error => { diagLog('handie_voice_error', { error: String(error?.message || error).slice(0, 120) }); setHandieState(false, 'No se pudo mantener la conexión con Livi.'); },
+      onStatusChange: status => { if (status === 'connected') setHandieState(true, 'Livi activa'); if (status === 'disconnected') setHandieState(false, 'Livi inactiva'); },
+      onDisconnect: () => { handieConversation = null; setHandieState(false, 'Livi inactiva'); },
+    });
+    setHandieState(true, 'Livi activa');
+  } catch (error) {
+    handieConversation = null;
+    setHandieState(false, error?.message || 'No se pudo iniciar Livi.');
+    diagLog('handie_voice_start_failed', { error: String(error?.message || error).slice(0, 120) });
+  } finally { handieStarting = false; }
 }
 function initComms() {
   $('passengerChatButton').onclick = async () => { if (!commsTripId()) return; $('passengerChatModal').classList.remove('hidden'); await loadPassengerMessages(); };
   $('passengerChatClose').onclick = () => closeCommsModal('passengerChatModal');
   $('passengerMessageForm').onsubmit = sendPassengerMessage;
-  $('handieButton').onclick = async () => { $('handieModal').classList.remove('hidden'); try { await ensureHandieSession(); await loadHandieMessages(); } catch (_) { $('handieState').textContent = 'No se pudo abrir el handie.'; } };
-  $('handieClose').onclick = () => closeCommsModal('handieModal');
-  $('handieTextForm').onsubmit = sendHandieText;
-  $('handieButton').addEventListener('pointerdown', startHandieRecording);
-  $('handieButton').addEventListener('pointerup', stopHandieRecording);
-  $('handieButton').addEventListener('pointercancel', stopHandieRecording);
-  $('handieButton').addEventListener('contextmenu', e => e.preventDefault());
-  setInterval(() => { if (!$('passengerChatModal').classList.contains('hidden')) void loadPassengerMessages(); if (!$('handieModal').classList.contains('hidden')) void loadHandieMessages(); }, 5000);
+  $('handieButton').onclick = () => { if (handieConversation) void endHandieConversation(); else void startHandieConversation(); };
+  setHandieState(false, 'Livi inactiva');
+  setInterval(() => { if (!$('passengerChatModal').classList.contains('hidden')) void loadPassengerMessages(); }, 5000);
 }
 
 /* ── Bootstrap ──────────────────────────────────────────────── */
