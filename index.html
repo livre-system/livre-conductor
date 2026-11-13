@@ -2,497 +2,129 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#101820">
-  <meta name="description" content="Seguimiento seguro de viajes Livre en Bahía Blanca">
-  <meta name="referrer" content="no-referrer">
-  <title>Livre · Tu viaje</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#07080a">
+  <title>Livre · Conductor</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <style>
-    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#151b22;background:#f6f7f8;--ink:#101820;--ink-soft:#26313a;--brand:#e8003d;--brand-dark:#b50030;--teal:#087f83;--teal-soft:#e8f7f6;--muted:#68737d;--line:#e2e6e9;--panel:#fff;--shadow:0 20px 55px #1018201a}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#f6f7f8}button,input{font:inherit}.hidden{display:none!important}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-    .app-header{height:72px;padding:0 max(20px,calc((100% - 1240px)/2));display:flex;align-items:center;justify-content:space-between;background:var(--ink);color:#fff;position:relative;z-index:20}.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:850;letter-spacing:-.03em;font-size:20px}.brand img{width:34px;height:34px;object-fit:contain;background:#fff;border-radius:9px;padding:3px}.header-meta{display:flex;align-items:center;gap:12px;color:#c8d0d6;font-size:12px}.city-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #ffffff2b;border-radius:999px;padding:7px 11px}.city-pill i{width:7px;height:7px;border-radius:50%;background:#5fd3a8;box-shadow:0 0 0 4px #5fd3a833}
-    .app{max-width:1240px;margin:0 auto;padding:32px 20px 48px}.intro{display:flex;justify-content:space-between;align-items:end;gap:30px;margin-bottom:26px}.eyebrow{margin:0 0 10px;color:var(--brand);font-size:11px;font-weight:850;letter-spacing:.14em;text-transform:uppercase}.intro h1{font-size:clamp(30px,5vw,52px);line-height:.98;letter-spacing:-.07em;margin:0 0 12px;color:var(--ink)}.intro p{max-width:580px;margin:0;color:var(--muted);line-height:1.55;font-size:15px}.trust{display:flex;align-items:center;gap:9px;white-space:nowrap;color:var(--muted);font-size:12px}.trust b{color:var(--teal)}
-    .request-layout{display:grid;grid-template-columns:minmax(310px,390px) minmax(0,1fr);gap:20px;align-items:stretch}.panel{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:0 8px 28px #1018200b}.form-panel{padding:24px}.panel-heading{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:21px}.panel-heading h2{margin:0;font-size:20px;letter-spacing:-.04em}.panel-heading p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.45}.step{color:#8d969d;font-size:11px;font-weight:800;white-space:nowrap}.field{margin-top:14px}.field label{display:block;margin:0 0 7px;color:#53606a;font-size:11px;font-weight:800;letter-spacing:.05em}.input-wrap{position:relative}.input-wrap .marker{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:10px;height:10px;border:3px solid var(--teal);border-radius:50%;z-index:1}.input-wrap.destination .marker{border-color:var(--brand);border-radius:2px}.field input{width:100%;height:48px;border:1px solid #ccd3d8;border-radius:12px;background:#fff;color:var(--ink);padding:0 13px 0 36px;outline:none;transition:border-color .2s,box-shadow .2s}.fare-output{display:flex;align-items:center;height:48px;border:1px solid #ccd3d8;border-radius:12px;background:#f7f9fa;color:var(--ink);padding:0 13px;font-size:14px;font-weight:750}.fare-output.pending{color:var(--muted);font-size:12px;font-weight:500}.field input:focus{border-color:var(--teal);box-shadow:0 0 0 4px #087f8317}.field small{display:block;color:#8a939a;font-size:11px;line-height:1.4;margin-top:6px}.field-row{display:grid;grid-template-columns:1fr 120px;gap:10px}.btn{width:100%;height:50px;border:0;border-radius:12px;background:var(--brand);color:#fff;font-size:14px;font-weight:850;cursor:pointer;transition:transform .18s,background .18s,box-shadow .18s}.btn:hover{background:var(--brand-dark);box-shadow:0 8px 18px #e8003d2e}.btn:active{transform:translateY(1px)}.btn.danger{background:#9d1237}.btn.danger:hover{background:#7f0e2c}.btn.danger:disabled{cursor:not-allowed;opacity:.5;box-shadow:none}.btn:disabled{cursor:wait;opacity:.65;box-shadow:none}.btn.secondary{background:#fff;color:var(--ink);border:1px solid #ccd3d8}.btn.secondary:hover{background:#f7f8f9;box-shadow:none}.form-actions{margin-top:21px}.form-note{display:flex;gap:8px;align-items:flex-start;color:var(--muted);font-size:11px;line-height:1.45;margin:14px 0 0}.form-note svg{flex:none;color:var(--teal);margin-top:1px}.error,.notice{border-radius:12px;padding:12px 13px;font-size:12px;line-height:1.45;margin-top:14px}.error{background:#fff0f3;color:#9d1237;border:1px solid #ffd2dc}.notice{background:#f1f4f5;color:#53606a}.map-panel{overflow:hidden;min-height:430px;position:relative}.map-panel .map-title{position:absolute;z-index:5;left:18px;top:18px;background:#fffffff2;backdrop-filter:blur(12px);border:1px solid #fff;border-radius:12px;padding:11px 13px;box-shadow:0 8px 20px #1018201c}.map-title strong{display:block;font-size:12px}.map-title span{display:block;color:var(--muted);font-size:11px;margin-top:3px}.map-panel .map-legend{position:absolute;z-index:5;left:18px;bottom:18px;display:flex;gap:11px;background:#fffffff2;backdrop-filter:blur(12px);border-radius:10px;padding:9px 11px;box-shadow:0 8px 20px #1018201c;font-size:10px;color:#53606a}.legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}.legend-dot.teal{background:var(--teal)}.legend-dot.red{background:var(--brand)}#map,#trackMap{height:100%;min-height:430px;background:#dfe6e8}.leaflet-control-zoom{border:0!important;box-shadow:0 6px 18px #1018201c!important}.leaflet-control-zoom a{color:var(--ink)!important;border:0!important}
-    .tracking-shell{position:relative;z-index:1;min-height:calc(100vh - 72px);margin:-32px auto -48px;max-width:1440px;background:#dfe6e8}.tracking-map{position:absolute;z-index:0;inset:0}.tracking-map #trackMap{height:calc(100vh - 72px);min-height:620px}.tracking-card{position:absolute;z-index:10;left:max(20px,calc((100% - 1240px)/2));top:32px;width:min(410px,calc(100% - 40px));max-height:calc(100vh - 120px);overflow:auto;padding:24px;background:color-mix(in srgb,var(--panel) 96%,transparent);backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)}.tracking-card h1{font-size:30px;line-height:1;letter-spacing:-.06em;margin:0 0 8px}.tracking-card .sub{margin:0 0 17px;color:var(--muted);font-size:12px;line-height:1.5}.status-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border-radius:13px;background:var(--teal-soft);color:#08696d}.status-row strong{font-size:13px}.status-row span{font-size:11px}.status-row.waiting{background:#fff7e6;color:#855b08}.status-row.cancelled{background:#fff0f3;color:#9d1237}.route-list{margin:20px 0 18px}.route-item{display:grid;grid-template-columns:18px 1fr;gap:10px;position:relative;padding-bottom:17px}.route-item:last-child{padding-bottom:0}.route-item:not(:last-child):after{content:"";position:absolute;left:8px;top:15px;bottom:1px;border-left:1px dashed #bbc5ca}.route-marker{width:16px;height:16px;border:4px solid var(--teal);border-radius:50%;background:#fff;z-index:1}.route-item:last-child .route-marker{border-color:var(--brand);border-radius:3px}.route-label{color:#8a939a;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.route-address{display:block;color:var(--ink);font-size:13px;font-weight:650;line-height:1.35;margin-top:3px}.driver-card{display:flex;align-items:center;gap:12px;border-top:1px solid var(--line);padding-top:17px}.driver-avatar{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:var(--ink);color:#fff;font-weight:850}.driver-card strong{display:block;font-size:13px}.driver-card span{display:block;color:var(--muted);font-size:11px;margin-top:3px}.tracking-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}.tracking-actions .btn{height:43px;font-size:12px}.updated{display:flex;justify-content:space-between;gap:10px;margin-top:14px;color:#7a858d;font-size:10px}.chat{margin-top:19px;border-top:1px solid var(--line);padding-top:17px}.chat-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.chat-head strong{font-size:13px}.chat-head span{font-size:10px;color:var(--muted)}.messages{display:flex;flex-direction:column;gap:7px;max-height:170px;overflow:auto;margin:11px 0}.message{align-self:flex-start;max-width:86%;padding:8px 10px;background:#f0f2f3;border-radius:10px 10px 10px 3px;font-size:12px;line-height:1.35}.message.mine{align-self:flex-end;background:#ffe5ed;border-radius:10px 10px 3px 10px}.message b{display:block;color:#6f7a82;font-size:10px;margin-bottom:2px}.chat-form{display:flex;gap:7px}.chat-form input{min-width:0;flex:1;height:40px;border:1px solid #ccd3d8;border-radius:10px;padding:0 10px;font-size:12px}.chat-form .btn{width:auto;padding:0 13px;height:40px;font-size:12px}
-    footer{padding:22px 20px;text-align:center;background:#fff;border-top:1px solid var(--line);color:#8a939a;font-size:11px}footer a{color:var(--muted);text-decoration:none;margin:0 6px}footer a:hover{color:var(--brand)}
-    .account-bar{max-width:1240px;margin:14px auto 0;padding:0 20px;display:flex;justify-content:flex-end;gap:8px;align-items:center;font-size:12px;color:var(--muted)}.account-bar form{display:flex;gap:6px;align-items:center}.account-bar input{height:34px;border:1px solid #ccd3d8;border-radius:8px;padding:0 9px;width:150px}.account-bar button{height:34px;padding:0 10px;border:1px solid #ccd3d8;border-radius:8px;background:#fff;color:var(--ink);font-weight:700;cursor:pointer}.account-bar button.primary{background:var(--ink);border-color:var(--ink);color:#fff}.account-error{color:var(--brand);font-size:11px}.account-name{font-weight:700;color:var(--ink)}
-    @media (max-width:700px){
-      .app-header{height:60px;padding:0 14px}.brand{font-size:18px}.brand img{width:31px;height:31px}.header-meta{font-size:10px}.city-pill{padding:6px 8px}.city-pill span{display:none}
-      .app{padding:20px 14px 32px}.intro{display:block;margin-bottom:18px}.intro h1{font-size:38px;line-height:.98;margin-bottom:10px}.intro p{font-size:14px}.trust{margin-top:14px;font-size:11px;white-space:normal}.request-layout{display:flex;flex-direction:column;gap:14px}.form-panel{padding:18px;border-radius:18px}.panel-heading{margin-bottom:17px}.panel-heading h2{font-size:19px}.panel-heading p{font-size:11px}.step{font-size:9px}.field{margin-top:12px}.field input,.fare-output{height:52px;font-size:16px}.field-row{display:flex;flex-direction:column;gap:0}.btn{height:52px;font-size:15px}.form-note{align-items:flex-start;font-size:11px;line-height:1.4}.map-panel{min-height:300px;border-radius:18px;overflow:hidden}.map-title{padding:15px 16px}.map-title strong{font-size:14px}.map-title span{font-size:10px}.map-panel #map{height:250px;min-height:250px}.map-legend{padding:10px 14px;font-size:10px}.account-bar{margin:10px 14px 0;padding:0;display:block}.account-bar form{display:grid;grid-template-columns:1fr 1fr;gap:6px}.account-bar input{width:100%;height:42px;font-size:14px}.account-bar button{height:42px;font-size:12px}.account-bar form button:first-of-type{grid-column:1/-1}.account-bar .account-name{display:block;margin-bottom:6px}.account-error{display:block;margin-top:5px}
-      .tracking-shell{min-height:calc(100dvh - 60px);height:calc(100dvh - 60px);margin:0;overflow:hidden}.tracking-map #trackMap{height:100%;min-height:0}.tracking-card{left:0;top:auto;bottom:0;width:100%;max-height:66dvh;max-height:66vh;overflow:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0}.tracking-card h1{font-size:25px}.tracking-card .sub{font-size:11px;margin-bottom:12px}.route-list{margin:15px 0}.route-item{padding-bottom:13px}.route-address{font-size:12px}.tracking-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tracking-actions .btn{font-size:12px;padding:0 8px}.chat-head{margin-top:16px}.chat-form{display:grid;grid-template-columns:1fr auto;gap:7px}.chat-form input{min-width:0;height:46px;font-size:15px}.chat-form .btn{width:auto;height:46px;padding:0 14px;font-size:12px}.messages{max-height:160px}.status-row{padding:11px 12px}.updated{font-size:10px}
-      footer{padding:16px 14px;font-size:10px}
-    }
-    @media (max-width:360px){.header-meta{display:none}.intro h1{font-size:34px}.form-panel{padding:15px}.tracking-card{padding-left:13px;padding-right:13px}.tracking-actions{grid-template-columns:1fr}.map-panel #map{height:220px}}
-    /* Livre passenger refresh */
-    :root{--surface-soft:#f0f3f5;--surface-raised:#fff;--text-subtle:#66737d;--focus:#087f83;--header:#101820}
-    html[data-theme="dark"]{color-scheme:dark;--ink:#f4f7f8;--ink-soft:#cbd5da;--muted:#a2afb7;--line:#2c3942;--panel:#18232b;--surface-soft:#111a20;--surface-raised:#202d36;--header:#0b1116;background:#101820}
-    html[data-theme="dark"] body,html[data-theme="dark"] footer{background:#101820;color:var(--ink)}
-    html[data-theme="dark"] .app-header{background:#0b1116;border-bottom:1px solid #26333b}
-    html[data-theme="dark"] .field input,html[data-theme="dark"] .account-bar input{background:#111a20;color:var(--ink);border-color:#40505a}
-    html[data-theme="dark"] .fare-output,html[data-theme="dark"] .form-note{background:#202d36;color:var(--muted)}
-    html[data-theme="dark"] .map-panel,html[data-theme="dark"] .panel{background:var(--panel);border-color:var(--line)}
-    html[data-theme="dark"] .account-modal{background:#18232b;color:var(--ink);border-color:#40505a}
-    html[data-theme="dark"] .account-modal .auth-divider{color:#8e9ca5}
-    html[data-theme="dark"] .auth-social,html[data-theme="dark"] .auth-secondary{background:#202d36;color:var(--ink);border-color:#40505a}
-    html[data-theme="dark"] .account-trigger{background:var(--brand);color:#fff;border-color:var(--brand)}html[data-theme="dark"] .tracking-card{background:color-mix(in srgb,var(--panel) 96%,transparent);color:var(--ink)}html[data-theme="dark"] .tracking-card .route-marker{background:var(--panel)}html[data-theme="dark"] .tracking-card .message{background:#202d36;color:var(--ink)}html[data-theme="dark"] .tracking-card .message.mine{background:#542236}html[data-theme="dark"] .tracking-card .chat-form input{background:#111a20;color:var(--ink);border-color:#40505a}html[data-theme="dark"] .tracking-card .notice{background:#202d36;color:var(--ink-soft)}html[data-theme="dark"] .tracking-map .leaflet-tile-pane{filter:brightness(.72) invert(1) hue-rotate(180deg) saturate(.75)}
-    .service-options{display:grid;gap:8px}.service-empty{display:block;padding:14px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:12px}.service-option{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:13px;background:var(--surface-raised);color:var(--ink);text-align:left;cursor:pointer;transition:border-color .18s,box-shadow .18s,transform .18s}.service-option:hover{border-color:var(--teal);transform:translateY(-1px)}.service-option.selected{border:2px solid var(--brand);padding:11px 13px;box-shadow:0 7px 18px #e8003d1c}.service-option span{display:grid;gap:3px}.service-option strong{font-size:13px}.service-option small{color:var(--muted);font-size:11px}.service-option b{color:var(--brand);font-size:14px;white-space:nowrap}
-    body{overflow-x:hidden}
-    .app-header{box-shadow:0 8px 22px #00000016}
-    .brand{gap:11px}.brand-mark{display:block;width:auto;height:32px;max-width:112px;object-fit:contain;filter:drop-shadow(0 4px 14px #e8003d2e)}
-    .header-actions{display:flex;align-items:center;gap:8px}.theme-toggle,.account-trigger{height:38px;border:1px solid #ffffff31;border-radius:11px;background:#ffffff0e;color:#fff;padding:0 12px;font-size:12px;font-weight:800;cursor:pointer}.theme-toggle{width:38px;padding:0;font-size:16px}.theme-toggle:hover,.account-trigger:hover{background:#ffffff1c}
-    .account-bar{min-height:0;margin:0;padding:0;position:static;z-index:30}.account-bar .account-trigger{position:static;background:var(--brand);color:#fff;border-color:var(--brand);box-shadow:0 8px 20px #e8003d30}.account-bar .account-trigger:hover{background:var(--brand-dark)}
-    .intro{padding-top:20px}.intro h1{font-weight:850}.intro .trust{display:none}.request-layout{grid-template-columns:minmax(340px,420px) minmax(0,1fr);gap:24px}.panel{border-radius:24px}.form-panel{padding:28px}.request-layout{position:relative;z-index:1}.form-panel{position:relative;z-index:2}.map-panel{position:relative;z-index:1;overflow:hidden}.map-title{background:var(--surface-raised)!important}.map-legend{background:var(--surface-raised)!important}.route-status{display:block;margin-top:4px;font-size:11px;color:var(--muted)}
-    .account-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:#0810168c;backdrop-filter:blur(10px);overflow:auto}.account-modal.hidden{display:none}.account-modal-card{width:min(420px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:28px;border:1px solid #fff;background:#fff;border-radius:24px;box-shadow:0 28px 90px #0005}.account-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px}.account-modal-head h2{margin:0;font-size:25px;letter-spacing:-.05em}.account-modal-head p{margin:6px 0 0;color:var(--muted);font-size:13px}.modal-close{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);font-size:20px;cursor:pointer}.auth-form{display:grid;gap:10px}.auth-form input{height:48px;width:100%;border:1px solid #ccd3d8;border-radius:12px;padding:0 13px;background:var(--surface-raised);color:var(--ink);outline:none}.auth-form input:focus{border-color:var(--focus);box-shadow:0 0 0 4px #087f8317}.auth-form .primary{height:48px;border:0;border-radius:12px;background:var(--brand);color:#fff;font-weight:850;cursor:pointer}.auth-divider{display:flex;align-items:center;gap:10px;color:#89949b;font-size:11px;margin:8px 0}.auth-divider:before,.auth-divider:after{content:"";height:1px;background:var(--line);flex:1}.auth-socials{display:grid;grid-template-columns:1fr 1fr;gap:8px}.auth-social,.auth-secondary{height:44px;border:1px solid #ccd3d8;border-radius:11px;background:#fff;color:var(--ink);font-weight:750;cursor:pointer}.auth-social{display:flex;align-items:center;justify-content:center;gap:8px}.auth-social svg{width:17px;height:17px}.auth-secondary{width:100%;margin-top:8px}.auth-error{min-height:17px;color:var(--brand);font-size:11px}.modal-legal{margin:17px 0 0;color:var(--muted);font-size:11px;line-height:1.45;text-align:center}
-    @media (max-width:700px){.app-header{height:64px}.brand-mark{height:27px;max-width:88px}.header-meta{display:none}.account-trigger{height:38px}.theme-toggle{height:38px}.header-actions{gap:6px}.intro{padding-top:14px}.intro h1{font-size:39px}.request-layout{grid-template-columns:1fr}.form-panel{padding:20px}.account-modal{padding:14px}.account-modal-card{padding:22px;border-radius:20px}}
-    @media (max-width:700px){
-      .tracking-shell{isolation:isolate;overscroll-behavior:none}
-      .tracking-card{max-height:62dvh;touch-action:pan-y}
-      .tracking-card::before{content:"";display:block;width:42px;height:4px;margin:-7px auto 13px;border-radius:999px;background:var(--line)}
-      .tracking-actions .btn{min-height:48px}
-      .map-panel #map{touch-action:pan-x pan-y}
-    }
-    @media (orientation:landscape) and (max-height:520px){
-      .app-header{height:54px}
-      .app{padding-top:14px;padding-bottom:22px}
-      .intro{display:none}
-      .request-layout{grid-template-columns:minmax(280px,40%) 1fr;gap:12px}
-      .form-panel{padding:14px}
-      .field{margin-top:8px}
-      .map-panel #map{height:calc(100dvh - 54px);min-height:260px}
-      .tracking-card{max-height:78dvh;padding-top:14px}
-    }
-    /* ── Single-screen tracking (inline panel) ── */
-    #requestForm.trip-active{display:none!important}
-    #tripStatusPanel{display:none}
-    #tripStatusPanel.active{display:block}
-    /* trackMap lives inside .map-panel alongside #map */
-    #trackMap{height:100%;min-height:430px;display:none}
-    #trackMap.active{display:block}
-    #map.trip-active{display:none}
-    /* Driver-arrived accent (status = waiting from backend) */
-    .status-row.arrived{background:#e8f7ef;color:#087f83}
-    /* inline tracking action buttons */
-    .inline-actions{display:grid;gap:9px;margin-top:16px}
-    @media (max-width:700px){
-      #map.trip-active,#trackMap{min-height:0}
-      #trackMap.active{min-height:250px}
-    }
-  </style>
+  <link rel="stylesheet" href="css/styles.css?v=conductor-voice-layout-20261102-06">
 </head>
 <body>
-  <header class="app-header"><a class="brand" href="./"><img class="brand-mark" src="./logo_livre.png" alt="Livre"></a><div class="header-actions"><button id="themeToggle" class="theme-toggle" type="button" aria-label="Cambiar tema">☾</button><div id="accountBar" class="account-bar" aria-label="Cuenta de pasajero"></div></div></header>
-  <section id="accountModal" class="account-modal hidden" aria-label="Acceso a tu cuenta" aria-modal="true" role="dialog">
-    <div class="account-modal-card"><div class="account-modal-head"><div><h2>Entrá a Livre</h2><p>Guardá tus viajes y pedí más rápido.</p></div><button id="closeAccountModal" class="modal-close" type="button" aria-label="Cerrar">×</button></div>
-      <form id="passengerAuthForm" class="auth-form"><input id="authEmail" type="email" required placeholder="Tu email" autocomplete="email"><input id="authPassword" type="password" required minlength="8" placeholder="Contraseña" autocomplete="current-password"><button class="primary" type="submit">Ingresar</button><button id="registerPassenger" class="auth-secondary" type="button">Crear cuenta</button><span id="accountError" class="auth-error" role="alert"></span><div class="auth-divider">o continuá con</div><div class="auth-socials"><button class="auth-social" data-firebase-provider="google" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.23c0-.72-.06-1.42-.18-2.09H12v3.96h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.26Z"/><path fill="#34A853" d="M12 21.5c2.63 0 4.84-.87 6.45-2.35l-3.14-2.45c-.87.58-1.98.93-3.31.93-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.5Z"/><path fill="#FBBC05" d="M6.54 13.6a5.86 5.86 0 0 1 0-3.75V7.32H3.3a9.75 9.75 0 0 0 0 8.8l3.24-2.52Z"/><path fill="#EA4335" d="M12 5.82c1.43 0 2.72.49 3.73 1.46l2.8-2.8C16.84 2.8 14.63 2 12 2a9.74 9.74 0 0 0-8.7 5.32l3.24 2.53C7.31 7.54 9.46 5.82 12 5.82Z"/></svg>Google</button><button class="auth-social" data-firebase-provider="apple" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.77 12.84c.02 2.29 2 3.05 2.02 3.06-.02.05-.32 1.1-1.04 2.18-.63.94-1.29 1.88-2.32 1.9-1.01.02-1.34-.61-2.5-.61-1.17 0-1.53.59-2.49.63-1 .04-1.76-1.02-2.39-1.96-1.3-1.9-2.3-5.36-.96-7.7.67-1.17 1.74-1.91 2.9-1.93 1.01-.02 1.96.68 2.5.68.53 0 1.53-.84 2.72-.72.5.02 1.92.2 2.83 1.53-.07.04-1.69.99-1.67 2.94ZM15 7.2c.54-.65.9-1.56.8-2.46-.78.03-1.7.52-2.26 1.17-.49.56-.92 1.48-.81 2.36.86.07 1.74-.44 2.27-1.07Z"/></svg>Apple</button></div><button id="emailLinkPassenger" class="auth-secondary" type="button">Recibir acceso por email</button></form><p class="modal-legal">Al continuar aceptás los términos y la política de privacidad de Livre.</p>
+
+<!-- ══════════════════════════════ LOGIN ══════════════════════════════ -->
+<section id="loginView">
+  <div class="login-wrap">
+
+    <div class="login-logo">
+      <span class="logo-mark">L</span>
+      <span class="login-brand">Livre Conductor</span>
     </div>
-  </section>
 
-  <main id="requestView" class="app">
-    <section class="intro"><div><p class="eyebrow">Movilidad simple</p><h1>Tu próximo viaje,<br>sin vueltas.</h1><p>Elegí tu recorrido y recibí el seguimiento en tiempo real desde Livre.</p></div></section>
-    <div class="request-layout">
-      <!-- ── Formulario de solicitud ── -->
-      <form id="requestForm" class="panel form-panel" novalidate>
-        <div class="panel-heading"><div><h2>Pedí tu viaje</h2><p>Completá los datos para enviar la solicitud.</p></div><span class="step">DATOS DEL VIAJE</span></div>
-        <div class="field"><label for="origin">PUNTO DE PARTIDA</label><div class="input-wrap"><span class="marker"></span><input id="origin" required minlength="3" autocomplete="street-address"></div></div>
-        <div class="field"><label for="destination">DESTINO</label><div class="input-wrap destination"><span class="marker"></span><input id="destination" required minlength="3" autocomplete="street-address"></div></div>
-        <div class="field service-field"><label>SERVICIO</label><div id="serviceOptions" class="service-options" aria-live="polite"><span class="service-empty">Completá origen y destino para elegir.</span></div></div>
-        <output id="fare" class="sr-only" data-value=""></output>
-        <div id="requestError" class="error hidden" role="alert"></div>
-        <div class="form-actions"><button class="btn" id="requestButton" type="submit">Solicitar viaje</button></div>
-        <p class="form-note"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 10v6m0-9h.01"></path></svg><span>Tu solicitud se procesa de forma segura. No compartimos tus datos con proveedores externos.</span></p>
-      </form>
+    <h1 id="authTitle">Hola de nuevo</h1>
+    <p id="authSub" class="login-sub">Ingresá con tu cuenta de conductor Livre.</p>
 
-      <!-- ── Panel de seguimiento inline (misma pantalla) ── -->
-      <div id="tripStatusPanel" class="panel form-panel" aria-live="polite">
-        <div class="panel-heading">
-          <div><h2 id="inlineTripTitle">Tu viaje</h2><p style="margin:5px 0 0;color:var(--muted);font-size:12px">Seguimiento en tiempo real</p></div>
-          <span class="step">EN CURSO</span>
-        </div>
-        <div id="inlineTrackStatus" class="status-row waiting"><strong>Consultando viaje…</strong><span>●</span></div>
-        <div class="route-list" style="margin:16px 0 14px">
-          <div class="route-item"><span class="route-marker"></span><div><span class="route-label">Salida</span><span id="inlineTrackOrigin" class="route-address">—</span></div></div>
-          <div class="route-item"><span class="route-marker"></span><div><span class="route-label">Destino</span><span id="inlineTrackDestination" class="route-address">—</span></div></div>
-        </div>
-        <div id="inlineDriverCard" class="driver-card hidden"><div class="driver-avatar">L</div><div><strong id="inlineDriverName">Conductor asignado</strong><span id="inlineVehicleInfo">Vehículo pendiente</span></div></div>
-        <div class="updated" style="margin-top:14px"><span id="inlineTrackUpdated">Esperando ubicación</span><span>Actualización automática</span></div>
-        <div id="inlineTrackNotice" class="notice hidden" role="status"></div>
-        <div class="inline-actions">
-          <button id="inlineCancelTrip" class="btn danger" type="button">Cancelar viaje</button>
-          <button id="inlineNewTrip" class="btn secondary" type="button">Nuevo pedido</button>
-        </div>
-        <section class="chat" aria-label="Mensajes del viaje">
-          <div class="chat-head"><strong>Mensajes</strong><span id="inlineChatNotice">Canal pasajero · conductor</span></div>
-          <div id="inlineMessages" class="messages"></div>
-          <form id="inlineMessageForm" class="chat-form">
-            <label class="sr-only" for="inlineMessage">Mensaje</label>
-            <input id="inlineMessage" maxlength="1000" placeholder="Escribí un mensaje…" autocomplete="off">
-            <button class="btn" type="submit">Enviar</button>
-          </form>
-        </section>
+    <form id="loginForm">
+      <div id="nameField" class="login-field hidden">
+        <label for="nameInput">Nombre completo</label>
+        <input id="nameInput" autocomplete="name" placeholder="Juan Pérez">
       </div>
+      <div class="login-field">
+        <label for="username">Usuario</label>
+        <input id="username" autocomplete="username" required placeholder="tu_usuario">
+      </div>
+      <div class="login-field">
+        <label for="password">Contraseña</label>
+        <input id="password" type="password" autocomplete="current-password" required placeholder="••••••••">
+      </div>
+      <button id="submitBtn" class="btn-login" type="submit">Ingresar</button>
+      <div id="loginError" class="login-error hidden"></div>
+      <button id="toggleAuth" type="button" class="login-toggle hidden" aria-hidden="true">Registro deshabilitado</button>
+    </form>
 
-      <!-- ── Panel de mapa (preview + tracking) ── -->
-      <section class="panel map-panel" aria-label="Vista previa del recorrido">
-        <div class="map-title"><strong>Tu recorrido</strong><span id="routeStatus" class="route-status">Indicá origen y destino para verlo en el mapa</span></div>
-        <div id="map"></div>
-        <!-- trackMap se activa al iniciar un viaje, dentro del mismo panel -->
-        <div id="trackMap"></div>
-        <div class="map-legend"><span><i class="legend-dot teal"></i>Salida</span><span><i class="legend-dot red"></i>Destino</span></div>
-      </section>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ APP ═══════════════════════════════ -->
+<section id="appView" class="hidden">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">
+        <img src="assets/logo_livre.png" alt="Livre" class="topbar-logo-image">
+      </div>
     </div>
-  </main>
+    <div class="topbar-right">
+      <button id="settingsButton" class="header-icon-button" type="button" aria-label="Abrir configuración" title="Configuración">⚙</button>
+      <button id="logoutBtn" class="btn-logout">Salir</button>
+    </div>
+  </header>
 
-  <!-- ── Segunda pantalla en stand-by (no eliminar, no mostrar) ── -->
-  <main id="trackingView" class="tracking-shell hidden">
-    <section class="tracking-map"><div id="trackMapLegacy"></div></section>
-    <section class="tracking-card" aria-live="polite">
-      <p class="eyebrow">Seguimiento privado</p><h1 id="trackTitle">Tu viaje</h1><p class="sub">Cuando el conductor acepte el viaje, el mapa mostrará su ubicación y actualizará el recorrido automáticamente.</p>
-      <div id="trackStatus" class="status-row waiting"><strong>Consultando viaje…</strong><span>●</span></div>
-      <div class="route-list"><div class="route-item"><span class="route-marker"></span><div><span class="route-label">Salida</span><span id="trackOrigin" class="route-address">—</span></div></div><div class="route-item"><span class="route-marker"></span><div><span class="route-label">Destino</span><span id="trackDestination" class="route-address">—</span></div></div></div>
-      <div id="driverCard" class="driver-card hidden"><div class="driver-avatar">L</div><div><strong id="driverName">Conductor asignado</strong><span id="vehicleInfo">Información del vehículo pendiente</span></div></div>
-      <div class="updated"><span id="trackUpdated">Esperando ubicación</span><span id="trackRefresh">Actualización automática</span></div>
-      <div id="trackNotice" class="notice hidden" role="status"></div>
-      <div class="tracking-actions"><button id="cancelTrip" class="btn danger" type="button">Cancelar viaje</button><button id="shareTrip" class="btn" type="button">Compartir viaje</button><button id="newTrip" class="btn secondary" type="button">Nuevo pedido</button></div>
-      <section class="chat" aria-label="Mensajes del viaje"><div class="chat-head"><strong>Mensajes</strong><span id="chatNotice">Canal pasajero · conductor</span></div><div id="passengerMessages" class="messages"></div><form id="passengerMessageForm" class="chat-form"><label class="sr-only" for="passengerMessage">Mensaje</label><input id="passengerMessage" maxlength="1000" placeholder="Escribí un mensaje…" autocomplete="off"><button class="btn" type="submit">Enviar</button></form></section>
-    </section>
-  </main>
+  <!-- Mapa full-screen -->
+  <div id="map"></div>
 
-  <footer><a href="./privacy.html">Privacidad</a> · <a href="./terms.html">Términos</a> · <a href="./support.html">Soporte</a></footer>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="./tracking-polling.js?v=passenger-state-v2"></script>
-  <script>
-    (() => {
-      const API='https://livre-cloud-production.up.railway.app';
-      const $=id=>document.getElementById(id);
-      const statusLabels={
-        pending:'Pedido recibido',
-        searching:'Buscando conductor',
-        scheduled:'Viaje programado',
-        assigned:'Conductor asignado, va en camino',
-        arriving:'Tu conductor llegó y está afuera',
-        waiting:'El conductor está afuera',
-        in_progress:'Viaje en curso',
-        conflict:'Estamos revisando el viaje',
-        lost:'No pudimos ubicar el viaje',
-        completed:'Viaje finalizado',
-        cancelled:'Viaje cancelado'
-      };
-      let map=null,trackMap=null,trackMarker=null,trackRouteLine=null,trackRouteStops=[],trackRoutePhase='',currentTrackingToken='',trackingPolling=null,passengerChatPolling=null,currentQuote=null,quoteRequestSequence=0,routePreviewRequest=0,routePreviewLine=null,routePreviewMarkers=[];
-      const FIREBASE_CONFIG={apiKey:'AIzaSyDJfeL1Ns6bn-tNwkGMGBEw'+'BrNVGRZ5uVQ',authDomain:'livre-pasajeros-668b4.firebaseapp.com',projectId:'livre-pasajeros-668b4',storageBucket:'livre-pasajeros-668b4.firebasestorage.app',messagingSenderId:'665864786520',appId:'1:665864786520:web:a043381a03aa80e399702d',measurementId:'G-6PE72B2SE2'};
-      const firebaseApp=firebase.initializeApp(FIREBASE_CONFIG),firebaseAuth=firebaseApp.auth();
-      const firebaseProviders={google:new firebase.auth.GoogleAuthProvider(),apple:new firebase.auth.OAuthProvider('apple.com')};
-      const APP_STATE_VERSION='passenger-state-v2';
-      const PASSENGER_SESSION_KEY='livre.passenger.session.v1';
-      const ACTIVE_TRIP_KEY='livre.passenger.active_trip.v1';
-      let passengerSession=JSON.parse(localStorage.getItem(PASSENGER_SESSION_KEY)||'null');
-      document.documentElement.dataset.livrePassengerState=APP_STATE_VERSION;
+  <!-- Sheet flotante -->
+  <div id="sheet" class="sheet empty-state">
+    <div class="sheet-handle">
+      <span class="sheet-handle-bar"></span>
+    </div>
+    <div id="sheetInner" class="sheet-inner">
+      <!-- render() popula esto -->
+    </div>
+  </div>
 
-      // ── Persistencia de viaje activo ──
-      function saveActiveTrip(token,origin,destination){try{localStorage.setItem(ACTIVE_TRIP_KEY,JSON.stringify({token,origin:origin||'',destination:destination||'',ts:Date.now()}))}catch(_){}}
-      function clearActiveTrip(){try{localStorage.removeItem(ACTIVE_TRIP_KEY)}catch(_){}}
-      function loadActiveTrip(){try{return JSON.parse(localStorage.getItem(ACTIVE_TRIP_KEY)||'null')}catch{return null}}
+  <div id="driver-comms" class="driver-comms" aria-label="Comunicaciones">
+    <button id="passengerChatButton" class="comms-fab" type="button" aria-label="Chat con pasajero" title="Chat con pasajero">💬</button>
+    <button id="handieButton" class="comms-fab handie-fab" type="button" aria-label="Hablar con Livi" title="Hablar con Livi">🎙️</button>
+    <span id="handieState" class="comms-voice-status" role="status" aria-live="polite">Livi inactiva</span>
+  </div>
 
-      const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-      function renderAccount(){const bar=$('accountBar');if(passengerSession?.token){bar.innerHTML='<button class="account-trigger" id="logoutPassenger" type="button">'+escapeHtml(passengerSession.user?.name||passengerSession.user?.email||'Mi cuenta')+' · Salir</button>';return}bar.innerHTML='<button class="account-trigger" id="openAccountModal" type="button">Ingresar</button>';}
-      function closeAccountModal(){$('accountModal').classList.add('hidden');$('accountError').textContent=''}
-      async function syncFirebaseUser(user){const idToken=await user.getIdToken(true);const response=await fetch(API+'/auth/passenger/firebase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id_token:idToken})});const data=await response.json();if(!response.ok)throw Error(data.detail||'No se pudo validar la sesión');passengerSession={token:data.token,user:data.user};localStorage.setItem(PASSENGER_SESSION_KEY,JSON.stringify(passengerSession));renderAccount();closeAccountModal()}
-      async function firebaseLogin(provider){try{await firebaseAuth.signInWithPopup(firebaseProviders[provider]);await syncFirebaseUser(firebaseAuth.currentUser)}catch(error){const message=error.code==='auth/popup-closed-by-user'?'Inicio cancelado':error.code==='auth/operation-not-allowed'?'Apple todavía no está habilitado en Firebase.':(error.message||'No se pudo iniciar sesión');$('accountError').textContent=message}}
-      async function sendEmailLink(){const email=$('authEmail').value.trim();if(!email){$('accountError').textContent='Ingresá tu email primero';return}try{await firebaseAuth.sendSignInLinkToEmail(email,{url:location.origin+location.pathname,handleCodeInApp:true});localStorage.setItem('livre.firebase.emailForSignIn',email);$('accountError').textContent='Te enviamos un vínculo de acceso por email.'}catch(error){$('accountError').textContent=error.message||'No se pudo enviar el vínculo'}}
-      async function completeEmailLink(){if(!firebaseAuth.isSignInWithEmailLink(location.href))return;let email=localStorage.getItem('livre.firebase.emailForSignIn')||window.prompt('Confirmá tu email');if(!email)return;try{await firebaseAuth.signInWithEmailLink(email,location.href);localStorage.removeItem('livre.firebase.emailForSignIn');history.replaceState({},'',location.pathname);await syncFirebaseUser(firebaseAuth.currentUser)}catch(error){$('accountError').textContent=error.message||'No se pudo completar el acceso por email'}}
-      const savedTheme=localStorage.getItem('livre.passenger.theme')||'light';
-      document.documentElement.dataset.theme=savedTheme;
-      $('themeToggle').textContent=savedTheme==='dark'?'☀':'☾';
-      $('themeToggle').addEventListener('click',()=>{const next=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;localStorage.setItem('livre.passenger.theme',next);$('themeToggle').textContent=next==='dark'?'☀':'☾'});
-      renderAccount();
-      completeEmailLink();
-      function authHeaders(){return passengerSession?.token?{Authorization:'Bearer '+passengerSession.token}:{};}
-      function baseMap(id){const m=L.map(id,{zoomControl:false}).setView([-38.7183,-62.2663],12);const base=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri, HERE, Garmin, © OpenStreetMap contributors',maxZoom:19}).addTo(m);L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,pane:'overlayPane'}).addTo(m);base.on('tileerror',()=>base.setUrl('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'));L.control.zoom({position:'bottomright'}).addTo(m);setTimeout(()=>m.invalidateSize(),100);return m}
-      async function previewRoute(){const origin=$('origin').value.trim(),destination=$('destination').value.trim(),request=++routePreviewRequest;routePreviewLine?.remove();routePreviewLine=null;routePreviewMarkers.forEach(marker=>marker.remove());routePreviewMarkers=[];if(origin.length<3||destination.length<3){$('routeStatus').textContent='Indicá origen y destino para verlo en el mapa';map.setView([-38.718,-62.266],14);return}$('routeStatus').textContent='Calculando recorrido…';try{const params=value=>new URLSearchParams({q:value+', Bahía Blanca, Buenos Aires, Argentina',format:'jsonv2',limit:'1',countrycodes:'ar'});const [originResponse,destinationResponse]=await Promise.all([fetch('https://nominatim.openstreetmap.org/search?'+params(origin),{headers:{Accept:'application/json'}}),fetch('https://nominatim.openstreetmap.org/search?'+params(destination),{headers:{Accept:'application/json'}})]);const [originData,destinationData]=await Promise.all([originResponse.json(),destinationResponse.json()]);if(request!==routePreviewRequest)return;const points=[[Number(originData[0]?.lat),Number(originData[0]?.lon)],[Number(destinationData[0]?.lat),Number(destinationData[0]?.lon)]];if(points.some(point=>point.some(value=>!Number.isFinite(value))))throw Error('No pudimos ubicar esas direcciones');const coordinates=points.map(([lat,lng])=>lng+','+lat).join(';');const routeResponse=await fetch('https://router.project-osrm.org/route/v1/driving/'+coordinates+'?overview=full&geometries=geojson',{headers:{Accept:'application/json'}});const routeData=await routeResponse.json();const geometry=routeData.routes?.[0]?.geometry?.coordinates;if(request!==routePreviewRequest||!Array.isArray(geometry)||geometry.length<2)throw Error('No pudimos calcular el recorrido');routePreviewLine=L.polyline(geometry.map(([lng,lat])=>[lat,lng]),{color:'#55b9a9',weight:5,opacity:.95}).addTo(map);routePreviewMarkers=[L.circleMarker(points[0],{radius:7,color:'#087f83',fillColor:'#fff',fillOpacity:1,weight:3}).addTo(map),L.circleMarker(points[1],{radius:7,color:'#e8003d',fillColor:'#fff',fillOpacity:1,weight:3}).addTo(map)];map.fitBounds(routePreviewLine.getBounds(),{padding:[24,24],maxZoom:16});$('routeStatus').textContent='Recorrido listo · '+(routeData.routes?.[0]?.distance?Math.round(routeData.routes[0].distance/100)/10+' km':'vista previa')}catch(error){if(request!==routePreviewRequest)return;$('routeStatus').textContent='No pudimos mostrar el recorrido todavía';}}
-      map=baseMap('map');L.circle([-38.718,-62.266],{radius:3500,color:'#087f83',weight:2,fillColor:'#087f83',fillOpacity:.07}).addTo(map);
-      function showRequestError(text){$('requestError').textContent=text;$('requestError').classList.remove('hidden')}
-      function requirePassengerLogin(){if(passengerSession?.token)return true;$('requestError').classList.add('hidden');$('accountModal').classList.remove('hidden');setTimeout(()=>$('authEmail')?.focus(),50);return false}
-      function renderServiceOptions(options=[]){const node=$('serviceOptions');if(!options.length){node.innerHTML='<span class="service-empty">Completá origen y destino para elegir.</span>';return}const selectedId=Number(currentQuote?.selected_service_type_id||currentQuote?.service_type_id||0);node.innerHTML=options.map(item=>{const id=Number(item.service_type_id),paymentLabel=item.payment_label||(id===2?'Mercado Pago al solicitar':'Efectivo al conductor');return '<button type="button" class="service-option '+(id===selectedId?'selected':'')+'" data-service-id="'+id+'" data-fare="'+item.fare+'"><span><strong>'+escapeHtml(item.name)+'</strong><small>'+escapeHtml(item.payment_label?paymentLabel:(id===2?'La opción más económica · '+paymentLabel:'Viaje prioritario · '+paymentLabel))+'</small></span><b>'+new Intl.NumberFormat('es-AR',{style:'currency',currency:item.currency||'ARS',maximumFractionDigits:0}).format(item.fare)+'</b></button>'}).join('');node.querySelectorAll('.service-option').forEach(button=>button.addEventListener('click',()=>{node.querySelectorAll('.service-option').forEach(item=>item.classList.remove('selected'));button.classList.add('selected');$('fare').dataset.value=button.dataset.fare;currentQuote.selected_service_type_id=Number(button.dataset.serviceId);currentQuote.fare=Number(button.dataset.fare)}));};
-      async function refreshQuote(){const origin=$('origin').value.trim(),destination=$('destination').value.trim();currentQuote=null;$('fare').dataset.value='';renderServiceOptions();if(origin.length<3||destination.length<3)return;const sequence=++quoteRequestSequence;$('routeStatus').textContent='Buscando servicios…';try{const response=await fetch(API+'/mobility/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({origin,destination})});const data=await response.json();if(sequence!==quoteRequestSequence)return;if(!response.ok)throw Error(data.detail||'No pudimos calcular los servicios');currentQuote={...data,origin,destination,selected_service_type_id:data.service_type_id};renderServiceOptions(data.options);$('fare').dataset.value=String(data.fare)}catch(error){if(sequence!==quoteRequestSequence)return;renderServiceOptions();showRequestError(error.message)}}
-      ['blur'].forEach(eventName=>{['origin','destination'].forEach(id=>$(id).addEventListener(eventName,()=>{refreshQuote();previewRoute()}))});
-      function setButton(button,label,disabled){button.disabled=disabled;button.textContent=label}
+  <div id="passengerChatModal" class="comms-modal hidden" role="dialog" aria-modal="true" aria-labelledby="passengerChatTitle">
+    <div class="comms-card">
+      <div class="comms-heading"><h2 id="passengerChatTitle">Chat del viaje</h2><button id="passengerChatClose" type="button" aria-label="Cerrar">×</button></div>
+      <div id="passengerMessages" class="comms-messages" aria-live="polite"></div>
+      <form id="passengerMessageForm" class="comms-form"><input id="passengerMessageInput" maxlength="1000" placeholder="Escribí al pasajero…" autocomplete="off"><button type="submit" aria-label="Enviar">➤</button></form>
+      <p id="passengerChatNotice" class="comms-notice" role="status"></p>
+    </div>
+  </div>
 
-      // ── Render de estado: segunda pantalla (stand-by) ──
-      function renderStatus(status){const node=$('trackStatus');node.className='status-row '+(['cancelled','lost','conflict'].includes(status)?'cancelled':(['pending','searching','scheduled'].includes(status)?'waiting':''));node.innerHTML='<strong>'+escapeHtml(statusLabels[status]||'Estado no disponible')+'</strong><span>●</span>';const cancel=$('cancelTrip');const locked=['assigned','arriving','waiting','in_progress','completed','cancelled'].includes(status);setButton(cancel,status==='cancelled'?'Viaje cancelado':'Cancelar viaje',locked);}
 
-      // ── Render de estado: panel inline ──
-      function renderInlineStatus(status){
-        const node=$('inlineTrackStatus');
-        const isArrived=status==='waiting'||status==='arriving';
-        const isNeg=['cancelled','lost','conflict'].includes(status);
-        const isSearch=['pending','searching','scheduled'].includes(status);
-        node.className='status-row '+(isNeg?'cancelled':isSearch?'waiting':isArrived?'arrived':'');
-        node.innerHTML='<strong>'+escapeHtml(statusLabels[status]||'Estado no disponible')+'</strong><span>●</span>';
-        const cancel=$('inlineCancelTrip');
-        const locked=['assigned','arriving','waiting','in_progress','completed','cancelled'].includes(status);
-        setButton(cancel,status==='cancelled'?'Viaje cancelado':'Cancelar viaje',locked);
-        // Aviso especial cuando el conductor está afuera (se retira al cambiar de estado)
-        const arrivedNotice=$('inlineTrackNotice');
-        if(isArrived){
-          arrivedNotice.textContent='🚗 El conductor está afuera, esperándote.';
-          arrivedNotice.classList.remove('hidden');
-          arrivedNotice.style.cssText='background:#e8f7ef;color:#087f83;border:1px solid #b2dfd3';
-          arrivedNotice.dataset.arrived='1';
-        }else if(arrivedNotice.dataset.arrived==='1'){
-          arrivedNotice.classList.add('hidden');
-          arrivedNotice.style.cssText='';
-          arrivedNotice.dataset.arrived='';
-        }
-      }
+</section>
 
-      function renderReassignmentNotice(trip){
-        const node=$('trackNotice');
-        const inlineNode=$('inlineTrackNotice');
-        if(!trip.driver_reassignment_pending){
-          if(node.dataset.reassignment==='true'){node.classList.add('hidden');node.dataset.reassignment='false';}
-          if(inlineNode.dataset.reassignment==='true'){inlineNode.classList.add('hidden');inlineNode.dataset.reassignment='false';}
-          return;
-        }
-        const msg='El conductor cambió. Estamos buscando otro conductor para tu viaje.';
-        node.textContent=msg;node.classList.remove('hidden');node.dataset.reassignment='true';
-        inlineNode.textContent=msg;inlineNode.classList.remove('hidden');inlineNode.dataset.reassignment='true';
-      }
+<div id="historyModal" class="settings-modal hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="historyTitle">
+  <div class="settings-card history-card">
+    <div class="settings-heading"><h2 id="historyTitle">Historial y cierre</h2><button id="historyClose" class="settings-close" type="button" aria-label="Cerrar">×</button></div>
+    <div class="history-filters">
+      <label class="settings-field">Desde<input id="historyFrom" type="date"></label>
+      <label class="settings-field">Hasta<input id="historyTo" type="date"></label>
+    </div>
+    <button id="historyRefresh" class="settings-preview" type="button">Actualizar historial</button>
+    <div id="historySummary" class="history-summary"></div>
+    <div id="historyList" class="history-list"></div>
+    <div id="historyClosure" class="history-closure"></div>
+    <div id="historyNotice" class="notice hidden" role="alert" aria-live="assertive"></div>
+  </div>
+</div>
 
-      // ── updateDriver: segunda pantalla (stand-by) ──
-      function updateDriver(trip){const name=trip.driver_name;if(!name){$('driverCard').classList.add('hidden');return}$('driverCard').classList.remove('hidden');$('driverName').textContent=name;$('vehicleInfo').textContent=[trip.vehicle_model,trip.vehicle_color,trip.plate].filter(Boolean).join(' · ')||'Vehículo Livre asignado'}
+<div id="settingsModal" class="settings-modal hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="settingsTitle">
+  <div class="settings-card">
+    <div class="settings-heading"><h2 id="settingsTitle">Configuración</h2><button id="settingsClose" class="settings-close" type="button" aria-label="Cerrar">×</button></div>
+    <label class="settings-field" for="arrivalTone">Tono de llegada de viaje
+      <select id="arrivalTone"><option value="car_horn">Bocina de auto</option><option value="bus_horn">Bocina de colectivo</option><option value="truck_horn">Bocina de camión</option></select>
+    </label>
+    <label class="settings-field" for="themeSelect">Tema
+      <select id="themeSelect"><option value="dark">Oscuro</option><option value="light">Claro</option></select>
+    </label>
+    <button id="tonePreview" class="settings-preview" type="button">▶ Escuchar tono</button>
+    <label class="settings-field" for="volumeRange">Volumen <output id="volumeValue">70%</output>
+      <input id="volumeRange" type="range" min="0" max="100" step="1">
+    </label>
+    <label class="settings-field" for="fontScaleRange">Tamaño de fuente <output id="fontScaleValue">16px</output>
+      <input id="fontScaleRange" type="range" min="12" max="18" step="1" value="16">
+    </label>
+  </div>
+</div>
 
-      // ── updateDriver: panel inline ──
-      function updateInlineDriver(trip){
-        const name=trip.driver_name;
-        if(!name){$('inlineDriverCard').classList.add('hidden');return}
-        $('inlineDriverCard').classList.remove('hidden');
-        $('inlineDriverName').textContent=name;
-        $('inlineVehicleInfo').textContent=[trip.vehicle_model,trip.vehicle_color,trip.plate].filter(Boolean).join(' · ')||'Vehículo Livre asignado';
-      }
-
-      function updateLocation(trip){const terminal=['completed','cancelled'].includes(trip.status);if(terminal){$('trackUpdated').textContent=statusLabels[trip.status];return}if(Number.isFinite(trip.latitude)&&Number.isFinite(trip.longitude)){const point=[trip.latitude,trip.longitude];if(!trackMarker)trackMarker=L.marker(point,{icon:trackRoutePhase==='trip'?L.divIcon({html:'🚗',className:'',iconSize:[24,24],iconAnchor:[12,12]}):L.icon({iconUrl:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon.png',iconSize:[25,41],iconAnchor:[12,41]}),title:'Vehículo Livre'}).addTo(trackMap);else trackMarker.setLatLng(point);if(trackRoutePhase==='pickup')trackMap.setView(point,16);const parsed=trip.location_updated_at?Date.parse(trip.location_updated_at):NaN;const age=Number.isFinite(parsed)?Math.max(0,Date.now()-parsed):null;const txt=age===null?'Ubicación recibida':age<60000?'Ubicación actualizada hace menos de un minuto':'Última ubicación hace '+Math.round(age/60000)+' min';$('trackUpdated').textContent=txt;$('inlineTrackUpdated').textContent=txt;}else{const txt=['pending','searching'].includes(trip.status)?'Esperando asignación':'Esperando ubicación del conductor';$('trackUpdated').textContent=txt;$('inlineTrackUpdated').textContent=txt;}}
-
-      async function updateTrackingRoute(token,trip,signal){const phase=trip.status==='in_progress'?'trip':'pickup';if(!['assigned','arriving','in_progress'].includes(trip.status))return;if(phase==='trip'&&trackRoutePhase===phase&&trackRouteLine)return;const phaseChanged=trackRoutePhase!==phase;const response=await fetchFresh(API+'/mobility/tracking/'+encodeURIComponent(token)+'/route?phase='+phase,{signal});if(!response.ok)return;const route=await response.json();const points=(route.coordinates||[]).map(([lng,lat])=>[lat,lng]).filter(point=>point.every(Number.isFinite));if(points.length<2)return;trackRouteLine?.remove();trackRouteStops.forEach(marker=>marker.remove());trackRouteStops=[];trackRouteLine=L.polyline(points,{color:phase==='pickup'?'#087f83':'#E8003D',weight:6,opacity:.8}).addTo(trackMap);const originIcon=L.divIcon({html:'🏁',className:'',iconSize:[28,28],iconAnchor:[14,14]}),destIcon=L.divIcon({html:'📍',className:'',iconSize:[28,28],iconAnchor:[14,14]});trackRouteStops=[L.marker(points[0],{icon:originIcon}).addTo(trackMap),L.marker(points[points.length-1],{icon:destIcon}).addTo(trackMap)];if(phase==='trip'&&trackMarker){trackMarker.setIcon(L.divIcon({html:'🚗',className:'',iconSize:[24,24],iconAnchor:[12,12]}))};trackRoutePhase=phase;if(phaseChanged)trackMap.fitBounds(trackRouteLine.getBounds(),{padding:[28,28],maxZoom:16})}
-
-      async function fetchFresh(url,options={}){const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000),externalSignal=options.signal,abort=()=>controller.abort();externalSignal?.addEventListener('abort',abort,{once:true});try{return await fetch(url+(url.includes('?')?'&':'?')+'_='+Date.now(),{...options,cache:'no-store',signal:controller.signal})}finally{clearTimeout(timeout);externalSignal?.removeEventListener('abort',abort)}}
-
-      function resetTrackingView(message=''){
-        trackingPolling?.stop();passengerChatPolling?.stop();
-        trackMap?.remove();trackMap=null;trackMarker=null;trackRouteLine=null;trackRouteStops=[];trackRoutePhase='';currentTrackingToken='';
-        clearActiveTrip();
-        // Ocultar panel inline, mostrar formulario
-        $('requestForm').classList.remove('trip-active');
-        $('tripStatusPanel').classList.remove('active');
-        $('map').classList.remove('trip-active');
-        $('trackMap').classList.remove('active');
-        $('inlineTrackNotice').classList.add('hidden');
-        $('inlineTrackNotice').style.cssText='';
-        $('inlineDriverCard').classList.add('hidden');
-        $('inlineMessages').innerHTML='';
-        // Limpiar también la segunda pantalla (stand-by)
-        history.replaceState({},'',location.pathname);
-        $('trackingView').classList.add('hidden');
-        $('requestView').classList.remove('hidden');
-        $('trackNotice').classList.add('hidden');$('trackNotice').textContent='';
-        $('driverCard').classList.add('hidden');$('passengerMessages').innerHTML='';
-        // Reset formulario
-        $('origin').value='';$('destination').value='';$('fare').dataset.value='';
-        currentQuote=null;renderServiceOptions();
-        if(message)showRequestError(message);
-        setTimeout(()=>{map.invalidateSize();$('origin')?.focus()},100);
-      }
-
-      async function refreshTracking(token,signal){
-        const response=await fetchFresh(API+'/mobility/tracking/'+encodeURIComponent(token),{signal});
-        const trip=await response.json();
-        if(!response.ok)throw Error(trip.detail||'No encontramos este seguimiento');
-        renderStatus(trip.status);
-        renderInlineStatus(trip.status);
-        renderReassignmentNotice(trip);
-        if(['completed','cancelled','lost'].includes(trip.status)){
-          clearActiveTrip();
-          resetTrackingView(trip.status==='completed'?'El viaje anterior ya finalizó. Podés pedir uno nuevo.':'El viaje anterior ya no está activo. Podés pedir uno nuevo.');
-          return;
-        }
-        // Actualizar direcciones
-        $('trackOrigin').textContent=trip.origin||'—';
-        $('trackDestination').textContent=trip.destination||'—';
-        $('trackTitle').textContent=trip.driver_name?'Viaje con '+trip.driver_name:'Tu viaje';
-        $('inlineTrackOrigin').textContent=trip.origin||'—';
-        $('inlineTrackDestination').textContent=trip.destination||'—';
-        $('inlineTripTitle').textContent=trip.driver_name?'Viaje con '+trip.driver_name:'Tu viaje';
-        updateDriver(trip);
-        updateInlineDriver(trip);
-        updateLocation(trip);
-        await updateTrackingRoute(token,trip,signal);
-      }
-
-      function messageId(){return crypto.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2)}
-      async function sendMessageWithRetry(url,options){let last;for(let i=0;i<2;i++){try{const r=await fetch(url,options);if(r.ok||(r.status>=400&&r.status<500))return r;last=Error('HTTP '+r.status)}catch(e){last=e}if(i===0)await new Promise(resolve=>setTimeout(resolve,350))}throw last||Error('No se pudo enviar el mensaje')}
-      function renderMessages(items){$('passengerMessages').innerHTML=items.map(message=>'<div class="message '+(message.sender_role==='passenger'?'mine':'')+'"><b>'+(message.sender_role==='passenger'?'Vos':'Livre')+'</b>'+escapeHtml(message.body)+'</div>').join('')||'<div class="notice">Todavía no hay mensajes.</div>'}
-      function renderInlineMessages(items){$('inlineMessages').innerHTML=items.map(m=>'<div class="message '+(m.sender_role==='passenger'?'mine':'')+'"><b>'+(m.sender_role==='passenger'?'Vos':'Livre')+'</b>'+escapeHtml(m.body)+'</div>').join('')||'<div class="notice">Todavía no hay mensajes.</div>'}
-      async function refreshPassengerMessages(token,signal){const response=await fetchFresh(API+'/mobility/tracking/'+encodeURIComponent(token)+'/messages',{signal});if(response.ok){const items=await response.json();renderMessages(items);renderInlineMessages(items);}}
-
-      function startTrackingPolling(){
-        if(!currentTrackingToken)return;
-        trackingPolling?.stop();passengerChatPolling?.stop();
-        const token=currentTrackingToken;
-        trackingPolling=LivreTrackingPolling.create({intervalMs:5000});
-        trackingPolling.start(signal=>refreshTracking(token,signal),null,error=>{
-          const msg=error.name==='AbortError'?'Conexión demorada. Reintentando…':error.message;
-          $('trackNotice').textContent=msg;$('trackNotice').classList.remove('hidden');
-          $('inlineTrackNotice').textContent=msg;$('inlineTrackNotice').classList.remove('hidden');
-        });
-        passengerChatPolling=LivreTrackingPolling.create({intervalMs:5000});
-        passengerChatPolling.start(signal=>refreshPassengerMessages(token,signal),null,()=>{});
-      }
-
-      // ── showTracking: mantiene la misma pantalla ──
-      function showTracking(token,origin,destination){
-        currentTrackingToken=token;
-        // Preservar origin/destination de sesión previa si no vienen como parámetros
-        const existing=loadActiveTrip();
-        const resolvedOrigin=origin||existing?.origin||'';
-        const resolvedDestination=destination||existing?.destination||'';
-        saveActiveTrip(token,resolvedOrigin,resolvedDestination);
-        // Cambiar formulario → panel de seguimiento
-        $('requestForm').classList.add('trip-active');
-        $('tripStatusPanel').classList.add('active');
-        // Cambiar mapa preview → mapa de tracking (mismo panel)
-        $('map').classList.add('trip-active');
-        $('trackMap').classList.add('active');
-        // Resetear UI inline
-        $('inlineMessages').innerHTML='';
-        $('inlineTrackNotice').classList.add('hidden');
-        $('inlineTrackNotice').style.cssText='';
-        $('inlineDriverCard').classList.add('hidden');
-        $('inlineTripTitle').textContent='Tu viaje';
-        if(resolvedOrigin)$('inlineTrackOrigin').textContent=resolvedOrigin;
-        if(resolvedDestination)$('inlineTrackDestination').textContent=resolvedDestination;
-        // Resetear también elementos de segunda pantalla (stand-by)
-        $('trackingView').classList.add('hidden');
-        $('passengerMessages').innerHTML='';
-        $('trackNotice').classList.add('hidden');
-        $('driverCard').classList.add('hidden');
-        // Inicializar mapa de tracking (el div ya es visible)
-        trackMap?.remove();trackMarker=null;trackRouteLine=null;trackRouteStops=[];trackRoutePhase='';
-        trackMap=baseMap('trackMap');
-        startTrackingPolling();
-      }
-
-      function refreshAfterResume(){if(document.visibilityState==='hidden'||!currentTrackingToken)return;trackingPolling?.refresh();passengerChatPolling?.refresh()}
-      ['pageshow','focus','online'].forEach(eventName=>window.addEventListener(eventName,refreshAfterResume));
-      document.addEventListener('visibilitychange',refreshAfterResume);
-
-      document.addEventListener('submit',async event=>{if(event.target.id!=='passengerAuthForm')return;event.preventDefault();const email=$('authEmail').value.trim(),password=$('authPassword').value;const register=event.target.dataset.mode==='register';const name=register?window.prompt('¿Cómo te llamás?','Pasajero'):null;if(register&&!name)return;const endpoint=register?'/auth/passenger/register':'/auth/passenger/login';try{const response=await fetch(API+endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(register?{email,password,name}:{email,password})});const data=await response.json();if(!response.ok)throw Error(data.detail||'No se pudo iniciar sesión');passengerSession={token:data.token,user:data.user};localStorage.setItem(PASSENGER_SESSION_KEY,JSON.stringify(passengerSession));renderAccount();closeAccountModal()}catch(error){$('accountError').textContent=error.message}});
-
-      document.addEventListener('click',event=>{const firebaseButton=event.target.closest('[data-firebase-provider]');if(firebaseButton){firebaseLogin(firebaseButton.dataset.firebaseProvider);return}if(event.target.id==='openAccountModal'){$('accountModal').classList.remove('hidden');setTimeout(()=>$('authEmail')?.focus(),50);return}if(event.target.id==='closeAccountModal'||event.target.id==='accountModal'){$('accountModal').classList.add('hidden');return}if(event.target.id==='emailLinkPassenger'){sendEmailLink();return}if(event.target.id==='registerPassenger'){const form=$('passengerAuthForm');form.dataset.mode='register';event.target.textContent='Crear cuenta · completá nombre';$('authPassword').autocomplete='new-password';return}if(event.target.id==='logoutPassenger'){firebaseAuth.signOut().catch(()=>{});passengerSession=null;localStorage.removeItem(PASSENGER_SESSION_KEY);resetTrackingView();renderAccount()}});
-
-      // ── Ahorro: botón de Mercado Pago inline ──
-      function showMercadoPagoButton(tripId,trackingToken){
-        const origin=$('origin').value.trim();
-        const destination=$('destination').value.trim();
-        showTracking(trackingToken,origin,destination);
-        $('inlineTrackStatus').innerHTML='<strong>Solicitud creada · Pago pendiente</strong><span>●</span>';
-        $('inlineTrackStatus').className='status-row waiting';
-        $('inlineTrackNotice').textContent='Completá el pago con Mercado Pago para confirmar el viaje.';
-        $('inlineTrackNotice').classList.remove('hidden');
-        // Remover botón previo si existe
-        $('mpPayBtn')?.remove();
-        const mpBtn=document.createElement('button');
-        mpBtn.id='mpPayBtn';mpBtn.className='btn';mpBtn.textContent='Abonar con Mercado Pago';mpBtn.style.cssText='margin-top:10px;width:100%';
-        mpBtn.addEventListener('click',async()=>{
-          setButton(mpBtn,'Abriendo Mercado Pago…',true);
-          try{
-            const paymentResponse=await fetch(API+'/payments/passenger/create',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({origin,destination,service_type_id:2})});
-            const payment=await paymentResponse.json();
-            if(!paymentResponse.ok)throw Error(payment.detail||'No pudimos generar el pago');
-            if(!payment.payment_url)throw Error('Mercado Pago no devolvió un link válido');
-            window.location.assign(payment.payment_url);
-          }catch(error){
-            $('inlineTrackNotice').textContent=error.message;
-            setButton(mpBtn,'Abonar con Mercado Pago',false);
-          }
-        });
-        // Insertar antes de los botones de acción
-        const actions=$('tripStatusPanel').querySelector('.inline-actions');
-        actions.before(mpBtn);
-      }
-
-      async function submitTripRequest(){
-        const origin=$('origin').value.trim(),destination=$('destination').value.trim();
-        const fare=Number(currentQuote?.fare),serviceTypeId=Number(currentQuote?.selected_service_type_id||currentQuote?.service_type_id);
-        if(!Number.isFinite(fare)||fare<=0||!Number.isFinite(serviceTypeId)){showRequestError('Elegí Livre Ahorro o Livre Premium para continuar.');return}
-        setButton($('requestButton'),serviceTypeId===2?'Creando solicitud…':'Enviando solicitud…',true);
-        try{
-          const response=await fetch(API+'/mobility/requests',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({origin,destination,passenger:'Pasajero web',whatsapp_user:'web',fare,service_type_id:serviceTypeId,activity_type:'real',payment_method:'cash'})});
-          const data=await response.json();
-          if(!response.ok)throw Error(data.detail||'No se pudo crear la solicitud');
-          if(serviceTypeId===2){
-            showMercadoPagoButton(data.trip_id,data.tracking_token);
-          }else{
-            history.replaceState({},'',`?token=${encodeURIComponent(data.tracking_token)}`);
-            showTracking(data.tracking_token,origin,destination);
-          }
-        }catch(error){showRequestError(error.message)}
-        finally{setButton($('requestButton'),serviceTypeId===2?'Abonar con Mercado Pago':'Solicitar viaje',false)}
-      }
-
-      $('requestForm').addEventListener('submit',async event=>{event.preventDefault();$('requestError').classList.add('hidden');const origin=$('origin').value.trim(),destination=$('destination').value.trim();if(!origin||!destination){showRequestError('Revisá origen y destino antes de continuar.');return}if(!requirePassengerLogin())return;if(!currentQuote||currentQuote.origin!==origin||currentQuote.destination!==destination){await refreshQuote()}await submitTripRequest()});
-
-      // ── Botones de la segunda pantalla (stand-by) ──
-      $('newTrip').addEventListener('click',()=>resetTrackingView());
-      $('cancelTrip').addEventListener('click',async()=>{if(!currentTrackingToken||$('cancelTrip').disabled)return;if(!window.confirm('¿Querés cancelar este viaje?'))return;setButton($('cancelTrip'),'Cancelando…',true);try{const response=await fetch(API+'/mobility/tracking/'+encodeURIComponent(currentTrackingToken)+'/cancel',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.detail||'No se pudo cancelar el viaje');renderStatus(data.status);$('trackNotice').textContent='Viaje cancelado.';$('trackNotice').classList.remove('hidden')}catch(error){$('trackNotice').textContent=error.message;$('trackNotice').classList.remove('hidden');setButton($('cancelTrip'),'Cancelar viaje',false)}});
-      $('shareTrip').addEventListener('click',async()=>{const url=location.href;try{if(navigator.share)await navigator.share({title:'Seguimiento de mi viaje Livre',url});else{await navigator.clipboard.writeText(url);$('trackNotice').textContent='Link copiado para compartir.';$('trackNotice').classList.remove('hidden')}}catch(_){}});
-      $('passengerMessageForm').addEventListener('submit',async event=>{event.preventDefault();const input=$('passengerMessage'),body=input.value.trim();if(!body||!currentTrackingToken)return;input.disabled=true;try{const response=await sendMessageWithRetry(API+'/mobility/tracking/'+encodeURIComponent(currentTrackingToken)+'/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body,client_message_id:messageId()})});if(!response.ok)throw Error('No se pudo enviar el mensaje');input.value='';await refreshPassengerMessages(currentTrackingToken)}catch(error){$('chatNotice').textContent=error.message}finally{input.disabled=false}});
-
-      // ── Botones del panel inline (pantalla activa) ──
-      $('inlineNewTrip').addEventListener('click',()=>resetTrackingView());
-      $('inlineCancelTrip').addEventListener('click',async()=>{
-        if(!currentTrackingToken||$('inlineCancelTrip').disabled)return;
-        if(!window.confirm('¿Querés cancelar este viaje?'))return;
-        setButton($('inlineCancelTrip'),'Cancelando…',true);
-        try{
-          const response=await fetch(API+'/mobility/tracking/'+encodeURIComponent(currentTrackingToken)+'/cancel',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store'});
-          const data=await response.json();
-          if(!response.ok)throw Error(data.detail||'No se pudo cancelar el viaje');
-          renderInlineStatus(data.status);
-          clearActiveTrip();
-          $('inlineTrackNotice').textContent='Viaje cancelado.';
-          $('inlineTrackNotice').classList.remove('hidden');
-          $('inlineTrackNotice').style.cssText='';
-        }catch(error){
-          $('inlineTrackNotice').textContent=error.message;
-          $('inlineTrackNotice').classList.remove('hidden');
-          setButton($('inlineCancelTrip'),'Cancelar viaje',false);
-        }
-      });
-      $('inlineMessageForm').addEventListener('submit',async event=>{
-        event.preventDefault();
-        const input=$('inlineMessage'),body=input.value.trim();
-        if(!body||!currentTrackingToken)return;
-        input.disabled=true;
-        try{
-          const response=await sendMessageWithRetry(API+'/mobility/tracking/'+encodeURIComponent(currentTrackingToken)+'/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body,client_message_id:messageId()})});
-          if(!response.ok)throw Error('No se pudo enviar el mensaje');
-          input.value='';
-          await refreshPassengerMessages(currentTrackingToken);
-        }catch(error){
-          $('inlineChatNotice').textContent=error.message;
-        }finally{input.disabled=false}
-      });
-
-      // ── Inicio: retomar viaje activo desde URL o localStorage ──
-      const urlToken=new URLSearchParams(location.search).get('token');
-      const savedTrip=loadActiveTrip();
-      if(urlToken){
-        showTracking(urlToken);
-      }else if(savedTrip?.token&&(Date.now()-(savedTrip.ts||0))<86400000){
-        // Retomar viaje guardado (máx 24 h)
-        showTracking(savedTrip.token,savedTrip.origin,savedTrip.destination);
-      }
-
-      // ── Exports para debugging ──
-      window.$=$;window.submitTripRequest=submitTripRequest;window.refreshQuote=refreshQuote;window.showTracking=showTracking;window.resetTrackingView=resetTrackingView;window.currentQuote=currentQuote;window.passengerSession=passengerSession;window.renderServiceOptions=renderServiceOptions;
-    })();
-  </script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/app.js?v=conductor-voice-layout-20261102-06"></script>
 </body>
 </html>
