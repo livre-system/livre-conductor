@@ -135,6 +135,25 @@ let traceRequestSequence = 0;
 let currentDriverUserId = '';
 const announcedTripIds = new Set();
 const rejectedTripIds = new Set(JSON.parse(localStorage.getItem('livre_driver_rejected_trips') || '[]'));
+// Viajes programados ya aceptados (assigned) en los que el conductor tocó «Salir».
+const ENROUTE_TRIPS_KEY = 'livre_driver_enroute_trips';
+const enRouteTripIds = new Set((() => {
+  try { return JSON.parse(localStorage.getItem(ENROUTE_TRIPS_KEY) || '[]'); } catch (_) { return []; }
+})());
+function persistEnRouteTrips() {
+  try { localStorage.setItem(ENROUTE_TRIPS_KEY, JSON.stringify([...enRouteTripIds])); } catch (_) {}
+}
+const PENDING_TRIP_STATUSES = ['scheduled', 'searching', 'assigned'];
+// Viaje ya aceptado por este conductor: assigned (en camino) → arriving (llegué) → in_progress.
+function isActiveTrip(t) {
+  if (!t) return false;
+  if (['arriving', 'in_progress'].includes(t.status)) return true;
+  return t.status === 'assigned' && (!t.scheduled_at || enRouteTripIds.has(String(t.id)));
+}
+// Oferta pendiente: todavía no está en camino ni en curso.
+function isPendingOffer(t) {
+  return Boolean(t) && PENDING_TRIP_STATUSES.includes(t.status) && !isActiveTrip(t);
+}
 let initialTripsLoaded = false;
 let tripsRequestInFlight = false;
 let tripsPollTimer = null;
@@ -179,7 +198,7 @@ const DEMO_TRIP = {
   origin:      'Av. Alem 945, Bahía Blanca',
   destination: 'Ruta Provincial 51, Km 7',
   fare:        4800,
-  status:      'assigned',
+  status:      'searching',
 };
 
 function setDemoMode(active) {
@@ -434,7 +453,7 @@ function finalFareHtml(t) {
 }
 
 function tripQueueHtml(current) {
-  const pending = trips.filter(t => ['scheduled', 'searching', 'assigned'].includes(t.status) && String(t.id) !== String(current?.id));
+  const pending = trips.filter(t => isPendingOffer(t) && String(t.id) !== String(current?.id));
   if (!pending.length) return '';
   return `<section class="trip-queue" aria-label="Pedidos nuevos">
     <div class="trip-queue-heading">
@@ -470,7 +489,7 @@ function bindTripQueue() {
 
 function clearPendingTrips() {
   const pendingIds = trips
-    .filter(t => ['scheduled', 'searching', 'assigned'].includes(t.status) && String(t.id) !== String(selected?.id))
+    .filter(t => isPendingOffer(t) && String(t.id) !== String(selected?.id))
     .map(t => String(t.id));
   pendingIds.forEach(id => rememberRejectedTrip(id));
   trips = trips.filter(t => !pendingIds.includes(String(t.id)));
@@ -480,7 +499,7 @@ function clearPendingTrips() {
 }
 
 function selectNextPendingTrip() {
-  const next = trips.find(t => ['scheduled', 'searching', 'assigned'].includes(t.status));
+  const next = trips.find(isPendingOffer);
   selected = next || null;
   render();
   return next;
@@ -531,8 +550,8 @@ function selectPrimaryTrip(list, current) {
   // Siempre devolvemos la instancia recién recibida: conservar `current`
   // podía dejar origen/destino/status de una respuesta anterior en pantalla.
   const latestCurrent = current && list.find(t => String(t.id) === String(current.id));
-  if (latestCurrent && ['arriving', 'in_progress'].includes(latestCurrent.status)) return latestCurrent;
-  return list.find(t => ['scheduled', 'searching', 'assigned'].includes(t.status)) || null;
+  if (latestCurrent && isActiveTrip(latestCurrent)) return latestCurrent;
+  return list.find(isPendingOffer) || null;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -540,14 +559,15 @@ function selectPrimaryTrip(list, current) {
 ══════════════════════════════════════════════════════════════ */
 const STATUS_LABEL = {
   scheduled:   'Viaje programado',
-  assigned:    'Viaje recibido',
-  arriving:    'En camino al pasajero',
+  assigned:    'En camino al pasajero',
+  arriving:    'Esperando al pasajero',
   in_progress: 'Viaje en curso',
   completed:   'Viaje finalizado',
   cancelled:   'Viaje cancelado',
 };
 
 const ACTION_LABEL = {
+  assigned:    '→ LLEGUÉ',
   arriving:    '→ INICIAR VIAJE',
   in_progress: '✓ FINALIZAR VIAJE',
 };
@@ -560,8 +580,8 @@ function render() {
     ? selected
     : selected?.status === 'completed'
       ? selected
-      : trips.find(x => ['scheduled', 'searching', 'assigned'].includes(x.status));
-  document.body.classList.toggle('trip-active', Boolean(t && ['arriving', 'in_progress'].includes(t.status)));
+      : trips.find(isPendingOffer);
+  document.body.classList.toggle('trip-active', isActiveTrip(t));
 
   const sheet  = $('sheet');
   const inner  = $('sheetInner');
@@ -580,7 +600,7 @@ function render() {
   const st = t.status;
 
   // ── Viaje asignado (alerta) ──────────────────────────────── */
-  if (st === 'scheduled' || st === 'searching' || st === 'assigned') {
+  if (isPendingOffer(t)) {
     const isScheduled = Boolean(t.scheduled_at);
     const scheduledAccepted = isScheduled && st === 'assigned';
     sheet.className = 'sheet alert-mode';
@@ -639,20 +659,24 @@ function render() {
   // ── Viaje en curso / en camino ───────────────────────────── */
   sheet.className = 'sheet active-mode';
 
+  const isEnRoute    = st === 'assigned';
   const isArriving   = st === 'arriving';
   const isInProgress = st === 'in_progress';
   const isCompleted  = st === 'completed';
 
   let statusHtml = '';
-  if (isArriving)    statusHtml = `<div class="active-status"><span class="active-status-dot"></span><span class="active-status-text">${DEMO ? '🧪 DEMO — ' : ''}En camino al pasajero</span></div>`;
+  if (isEnRoute)     statusHtml = `<div class="active-status"><span class="active-status-dot"></span><span class="active-status-text">${DEMO ? '🧪 DEMO — ' : ''}En camino al pasajero</span></div>`;
+  if (isArriving)    statusHtml = `<div class="active-status amber"><span class="active-status-dot"></span><span class="active-status-text">${DEMO ? '🧪 DEMO — ' : ''}Esperando al pasajero</span></div>`;
   if (isInProgress)  statusHtml = `<div class="active-status amber"><span class="active-status-dot"></span><span class="active-status-text">${DEMO ? '🧪 DEMO — ' : ''}Viaje en curso</span></div>`;
   if (isCompleted)   statusHtml = `<div class="active-status"><span class="active-status-dot" style="background:#8b8d96;box-shadow:none"></span><span class="active-status-text" style="color:#8b8d96">Viaje finalizado</span></div>`;
 
-  const activeAddressLabel = isArriving ? 'Retiro del cliente' : 'Destino';
-  const activeAddress = isArriving ? t.origin : t.destination;
+  const toPickup = isEnRoute || isArriving;
+  const activeAddressLabel = toPickup ? 'Retiro del cliente' : 'Destino';
+  const activeAddress = toPickup ? t.origin : t.destination;
 
   let primaryBtn = '';
-  if (isArriving)    primaryBtn = `<button class="btn-primary green"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">LLEGUÉ — Iniciar viaje</button>`;
+  if (isEnRoute)     primaryBtn = `<button class="btn-primary green"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">LLEGUÉ — Estoy afuera</button>`;
+  if (isArriving)    primaryBtn = `<button class="btn-primary green"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">INICIAR VIAJE</button>`;
   if (isInProgress)  primaryBtn = `<button class="btn-primary"${statusChangeInFlight ? ' disabled' : ''} onclick="nextStatus()">Finalizar viaje</button>`;
   if (isCompleted)   primaryBtn = `<button class="btn-primary" disabled>Viaje finalizado</button>`;
 
@@ -704,7 +728,7 @@ async function acceptTrip() {
   acceptInFlight = true;
   try {
     const scheduled = selected.status === 'scheduled';
-    const changed = await changeStatus(scheduled ? 'assigned' : 'arriving', tripId);
+    const changed = await changeStatus('assigned', tripId);
     if (!changed || !selected || String(selected.id) !== tripId) return;
     if (scheduled) {
       speak('Viaje programado aceptado. La hora exacta está en pantalla.');
@@ -725,20 +749,15 @@ async function acceptTrip() {
 async function startScheduledTrip() {
   if (statusChangeInFlight || !selected || selected.status !== 'assigned') return;
   const tripId = String(selected.id);
-  statusChangeInFlight = true;
+  // El viaje sigue en `assigned` (en camino); «Llegué» es quien envía `arriving`.
+  enRouteTripIds.add(tripId);
+  persistEnRouteTrips();
+  activeTripId = tripId;
+  startGps();
+  requestImmediateGpsSync();
+  void loadTripRoute('pickup');
   render();
-  try {
-    const changed = await changeStatus('arriving', tripId);
-    if (!changed) return;
-    activeTripId = tripId;
-    startGps();
-    requestImmediateGpsSync();
-    loadTripRoute('pickup');
-    speak('Saliendo hacia el origen.');
-  } finally {
-    statusChangeInFlight = false;
-    render();
-  }
+  speak('Saliendo hacia el origen.');
 }
 
 function rememberRejectedTrip(id) {
@@ -785,7 +804,7 @@ function dismissTrip() {
 
 async function nextStatus() {
   if (statusChangeInFlight || !selected) return;
-  const next = { arriving: 'in_progress', in_progress: 'completed' }[selected.status];
+  const next = { assigned: 'arriving', arriving: 'in_progress', in_progress: 'completed' }[selected.status];
   if (!next) return;
   const tripId = String(selected.id);
   statusChangeInFlight = true;
@@ -806,6 +825,8 @@ async function nextStatus() {
 }
 
 function finishCompletedTrip(tripId) {
+  enRouteTripIds.delete(String(tripId));
+  persistEnRouteTrips();
   activeTripId = null;
   clearTripRoute();
   // El viaje terminado no debe quedar visible hasta el próximo polling.
@@ -820,7 +841,7 @@ function finishCompletedTrip(tripId) {
 
 /** Solo en DEMO: reinicia el viaje mock para poder recorrer el flujo de nuevo */
 function demoReset() {
-  DEMO_TRIP.status = 'assigned';
+  DEMO_TRIP.status = 'searching';
   selected = { ...DEMO_TRIP };
   trips = [selected];
   announcedTripIds.clear();
@@ -956,10 +977,10 @@ async function loadTrips() {
     }
     // Anunciar cada ID nuevo evita que el primero silencie los siguientes.
     announcedTripIds.forEach(id => {
-      if (!trips.some(t => String(t.id) === id && ['scheduled', 'searching', 'assigned'].includes(t.status)))
+      if (!trips.some(t => String(t.id) === id && isPendingOffer(t)))
         announcedTripIds.delete(id);
     });
-    const freshTrips = trips.filter(t => ['scheduled', 'searching', 'assigned'].includes(t.status) && !announcedTripIds.has(String(t.id)));
+    const freshTrips = trips.filter(t => isPendingOffer(t) && !announcedTripIds.has(String(t.id)));
     if (!initialTripsLoaded) freshTrips.length = 0;
     freshTrips.forEach(announceNewTrip);
     initialTripsLoaded = true;
@@ -2301,7 +2322,7 @@ async function logout() {
 }
 
 function closeCommsModal(id) { $(id)?.classList.add('hidden'); }
-function commsTripId() { return activeTripId || (selected && ['arriving', 'in_progress'].includes(selected.status) ? String(selected.id) : ''); }
+function commsTripId() { return activeTripId || (isActiveTrip(selected) ? String(selected.id) : ''); }
 function renderCommsMessages(targetId, items) {
   const target = $(targetId);
   if (!target) return;
