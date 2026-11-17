@@ -809,8 +809,11 @@ async function nextStatus() {
   const tripId = String(selected.id);
   statusChangeInFlight = true;
   render();
-  const changed = await changeStatus(next, tripId);
-  statusChangeInFlight = false;
+  try {
+    const changed = await changeStatus(next, tripId);
+  } finally {
+    statusChangeInFlight = false;
+  }
   // changeStatus() renders the returned trip while the request is marked as
   // in flight. Render once more after clearing the guard so the next action
   // becomes usable again (especially the transition to finalization).
