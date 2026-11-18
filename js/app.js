@@ -1761,7 +1761,7 @@ function setMapMarker(lat, lng, accuracy = null) {
   const pos = [lat, lng];
   const heading = lastMapPosition ? driverHeading(lastMapPosition, pos) : 0;
   lastMapPosition = pos;
-  const vehicleIcon = L.divIcon({ className: 'livre-driver-vehicle-marker', html: '<span>🚗</span>', iconSize: [42, 42], iconAnchor: [21, 21] });
+  const vehicleIcon = L.divIcon({ className: 'livre-driver-vehicle-marker', html: '<span>🚕</span>', iconSize: [42, 42], iconAnchor: [21, 21] });
   if (!marker) {
     marker = L.marker(pos, {
       icon: vehicleIcon,
@@ -1786,7 +1786,7 @@ function setMapMarker(lat, lng, accuracy = null) {
 
 function updateOwnMarkerStyle() {
   if (!marker) return;
-  if (marker) marker.setIcon(L.divIcon({ className: 'livre-driver-vehicle-marker', html: '<span>🚗</span>', iconSize: [42, 42], iconAnchor: [21, 21] }));
+  if (marker) marker.setIcon(L.divIcon({ className: 'livre-driver-vehicle-marker', html: '<span>🚕</span>', iconSize: [42, 42], iconAnchor: [21, 21] }));
 }
 
 function tokenUserId() {
