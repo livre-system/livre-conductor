@@ -1630,7 +1630,7 @@ async function loadTripRoute(phase) {
     const icon = html => L.divIcon({ html, className: '', iconSize: [44, 46], iconAnchor: [22, 23] });
     L.marker(routeLayers.pickup.points[routeLayers.pickup.points.length - 1], { icon: icon(svgOrigin), title: 'Punto de recogida' }).addTo(map);
     L.marker(routeLayers.trip.points[routeLayers.trip.points.length - 1], { icon: icon(svgDest), title: 'Destino' }).addTo(map);
-    const taxiIcon = L.divIcon({ html: '<span>🚖</span>', className: 'livre-driver-vehicle-marker', iconSize: [44, 46], iconAnchor: [22, 23] });
+    const taxiIcon = L.divIcon({ html: '<span style="font-size:40px;line-height:44px">🚘</span>', className: 'livre-driver-vehicle-marker passenger-car-icon', iconSize: [44, 46], iconAnchor: [22, 23] });
     if (marker) marker.setIcon(taxiIcon);
     phases.forEach(routePhase => {
       const layer = routeLayers[routePhase];
@@ -1778,7 +1778,7 @@ function setMapMarker(lat, lng, accuracy = null) {
   const pos = [lat, lng];
   const heading = lastMapPosition ? driverHeading(lastMapPosition, pos) : 0;
   lastMapPosition = pos;
-  const vehicleIcon = L.divIcon({ className: 'livre-driver-vehicle-marker', html: '<span>🚖</span>', iconSize: [42, 42], iconAnchor: [21, 21] });
+  const vehicleIcon = L.divIcon({ className: 'livre-driver-vehicle-marker passenger-car-icon', html: '<span style="font-size:40px;line-height:44px">🚘</span>', iconSize: [44, 46], iconAnchor: [22, 23] });
   if (!marker) {
     marker = L.marker(pos, {
       icon: vehicleIcon,
@@ -1803,7 +1803,7 @@ function setMapMarker(lat, lng, accuracy = null) {
 
 function updateOwnMarkerStyle() {
   if (!marker) return;
-  if (marker) marker.setIcon(L.divIcon({ html: '<span>🚖</span>', className: 'livre-driver-vehicle-marker', iconSize: [44, 46], iconAnchor: [22, 23] }));
+  if (marker) marker.setIcon(L.divIcon({ html: '<span style="font-size:40px;line-height:44px">🚘</span>', className: 'livre-driver-vehicle-marker passenger-car-icon', iconSize: [44, 46], iconAnchor: [22, 23] }));
 }
 
 function tokenUserId() {
