@@ -2564,7 +2564,7 @@ function initComms() {
   $('passengerMessageForm').onsubmit = sendPassengerMessage;
   $('handieButton').onclick = () => { if (handieConversation) void endHandieConversation(); else void startHandieConversation(); };
   setHandieState(false, 'Livi inactiva');
-  setInterval(() => { if (!$('passengerChatModal').classList.contains('hidden')) void loadPassengerMessages(); }, 5000);
+  setInterval(() => { if (commsTripId()) void loadPassengerMessages(); }, 5000);
 }
 
 /* ── Bootstrap ──────────────────────────────────────────────── */
