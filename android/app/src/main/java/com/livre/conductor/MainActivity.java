@@ -94,18 +94,17 @@ public class MainActivity extends Activity {
             }
             @Override public void onPermissionRequest(PermissionRequest request) {
                 runOnUiThread(() -> {
-                    if (!WEB_ORIGIN.equals(request.getOrigin().toString())) {
-                        request.deny();
-                        return;
-                    }
-                    boolean wantsAudio = false;
+                    String requestOrigin = request.getOrigin().toString().replaceAll("/+$", "");
+                    boolean sameTrustedOrigin = WEB_ORIGIN.equals(requestOrigin);
+                    boolean audioRequested = false;
                     for (String resource : request.getResources()) {
                         if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) {
-                            wantsAudio = true;
+                            audioRequested = true;
                             break;
                         }
                     }
-                    if (!wantsAudio) {
+                    if (!sameTrustedOrigin || !audioRequested) {
+                        android.util.Log.e("LivreMicrophone", "Denied origin=" + requestOrigin + " audio=" + audioRequested);
                         request.deny();
                         return;
                     }
