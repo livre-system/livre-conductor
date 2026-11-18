@@ -1552,6 +1552,10 @@ function clearTripRoute() {
   routeDeviation = { level: 'unknown', distanceM: null, consecutive: 0 };
   routeSummary = null;
   traceRequestSequence += 1;
+  if (map?._livreRouteEndpointMarkers) {
+    map._livreRouteEndpointMarkers.forEach(layer => layer.remove());
+    map._livreRouteEndpointMarkers = [];
+  }
   renderRouteGuidance();
 }
 
