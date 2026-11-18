@@ -3,6 +3,28 @@
    Mobile-first. Mapa completo. Sheet flotante. Alerta dominante.
 ═══════════════════════════════════════════════════════════════ */
 
+/* Passenger visual suite: same palette and map controls as pasajeros. */
+:root {
+  --passenger-teal: #087f83;
+  --passenger-pink: #e8003d;
+  --passenger-map-bg: #d8e1e5;
+  --suite-font: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+body { font-family: var(--suite-font); }
+.leaflet-control-zoom {
+  border: 0 !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(16, 24, 32, .12) !important;
+}
+.leaflet-control-zoom a {
+  color: #101820 !important;
+  background: #fff !important;
+  border: 0 !important;
+  font-weight: 700;
+}
+.leaflet-control-zoom a:hover { background: #f6f7f8 !important; }
+
 /* ── Tokens ─────────────────────────────────────────────────── */
 :root {
   --red:      #e8003d;
@@ -90,6 +112,14 @@ button, input, select { touch-action: manipulation; }
 }
 .login-wrap {
   width: min(400px, 100%);
+}
+.login-logo-image {
+  display: block;
+  width: auto;
+  height: 34px;
+  max-width: 124px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px var(--red-dim));
 }
 .login-logo {
   display: flex;
@@ -341,7 +371,7 @@ button, input, select { touch-action: manipulation; }
   width: 100%;
   position: relative;
   z-index: 1;
-  filter: saturate(.92) brightness(.9) contrast(1.02);
+  filter: none;
   min-height: 0;
 }
 

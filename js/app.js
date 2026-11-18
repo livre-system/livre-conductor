@@ -1701,7 +1701,11 @@ function initMap() {
     'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
     { attribution: '© Esri, HERE, Garmin, © OpenStreetMap contributors', maxZoom: 19 },
   ).addTo(map);
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, pane: 'overlayPane' }).addTo(map);
+  // Same reference layer as the passenger app: street labels stay above routes.
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    pane: 'overlayPane',
+  }).addTo(map);
   let conductorTileFallbackUsed = false;
   conductorTileLayer.on('tileerror', () => {
     if (conductorTileFallbackUsed || !map) return;
