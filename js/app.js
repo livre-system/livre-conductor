@@ -2435,13 +2435,14 @@ async function loadPassengerMessages() {
   if (!response.ok) return;
   const items = await response.json();
   const previous = passengerMessageCount;
-  const newPassengerMessage = passengerMessageInitialized && items.length > previous
-    && items.slice(previous).some(item => item.sender_role === 'passenger');
-  passengerMessageCount = items.length;
+  const passengerItems = items.filter(item => item.sender_role === 'passenger');
+  const previousPassengerItems = previous;
+  const newPassengerMessage = passengerMessageInitialized && passengerItems.length > previousPassengerItems;
+  passengerMessageCount = passengerItems.length;
   passengerMessageInitialized = true;
   renderCommsMessages('passengerMessages', items);
   if (newPassengerMessage) {
-    passengerUnreadMessageCount += items.slice(previous).filter(item => item.sender_role === 'passenger').length;
+    passengerUnreadMessageCount += passengerItems.length - previousPassengerItems;
     updatePassengerMessageBadge();
     void playMessageNotification();
     if (document.visibilityState === 'visible' && navigator.vibrate) navigator.vibrate([120, 80, 120]);
@@ -2558,7 +2559,7 @@ async function startHandieConversation() {
   } finally { handieStarting = false; }
 }
 function initComms() {
-  $('passengerChatButton').onclick = async () => { if (!commsTripId()) return; passengerUnreadMessageCount = 0; updatePassengerMessageBadge(); $('passengerChatModal').classList.remove('hidden'); $('passengerChatButton').setAttribute('aria-label', 'Chat con pasajero'); await loadPassengerMessages(); };
+  $('passengerChatButton').onclick = async () => { if (!commsTripId()) return; passengerUnreadMessageCount = 0; passengerMessageInitialized = false; passengerMessageCount = 0; updatePassengerMessageBadge(); $('passengerChatModal').classList.remove('hidden'); $('passengerChatButton').setAttribute('aria-label', 'Chat con pasajero'); await loadPassengerMessages(); };
   $('passengerChatClose').onclick = () => closeCommsModal('passengerChatModal');
   $('passengerMessageForm').onsubmit = sendPassengerMessage;
   $('handieButton').onclick = () => { if (handieConversation) void endHandieConversation(); else void startHandieConversation(); };
