@@ -880,6 +880,8 @@ function stopTripsPolling() {
   tripsPollEpoch += 1;
   if (tripsPollTimer !== null) clearTimeout(tripsPollTimer);
   tripsPollTimer = null;
+  if (otherDriversTimer !== null) clearInterval(otherDriversTimer);
+  otherDriversTimer = null;
 }
 
 function scheduleTripsPolling(epoch) {
@@ -897,6 +899,9 @@ function startTripsPolling() {
   if (!tripsPollingAllowed()) return;
   const epoch = tripsPollEpoch;
   void loadTrips().finally(() => scheduleTripsPolling(epoch));
+  if (!otherDriversTimer) otherDriversTimer = setInterval(() => {
+    if (tripsPollingAllowed() && !isActiveTrip(selected)) void loadOtherDrivers();
+  }, TRIPS_POLL_MS);
 }
 
 async function loadTrips() {
@@ -948,6 +953,7 @@ async function loadTrips() {
       selected = null;
       emptyTripsReads = 0;
       clearTripRoute();
+      void loadOtherDrivers();
     }
     if (visibleTrips.length) {
       emptyTripsReads = 0;
@@ -972,6 +978,8 @@ async function loadTrips() {
       selected = trips.find(t => DRIVER_CARD_STATUSES.includes(t.status)) || null;
     render();
     applyCloudTripLocation(selected);
+    if (selected && isActiveTrip(selected)) clearOtherDrivers();
+    else void loadOtherDrivers();
     if (selected) {
       void loadTripTrace();
       if (tripUsesMapRoute(selected.status)) {
@@ -1846,6 +1854,14 @@ function otherDriverIcon() {
   });
 }
 
+function otherDriversVisible() {
+  return !isActiveTrip(selected);
+}
+
+function clearOtherDrivers() {
+  if (otherDriversLayer) otherDriversLayer.clearLayers();
+}
+
 function isFreshDriverLocation(driver) {
   if (driver?.sessionActive === true) return true;
   if (driver?.sessionActive === false) return false;
@@ -1859,45 +1875,23 @@ async function loadOtherDrivers() {
   const requestToken = token;
   otherDriversRequestInFlight = true;
   try {
-    const r = await fetch(`${API}/crm/operational?_=${Date.now()}`, { headers: h(), cache: 'no-store' });
+    const r = await fetch(`${API}/mobility/driver/active-locations?_=${Date.now()}`, { headers: h(), cache: 'no-store' });
     if (r.status === 401) { logout(); return false; }
     if (!r.ok) throw Error(r.status);
     const data = await r.json();
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
     if (!otherDriversLayer) otherDriversLayer = L.layerGroup().addTo(map);
     otherDriversLayer.clearLayers();
-    const drivers = Array.isArray(data.drivers) ? data.drivers : [];
+    if (!otherDriversVisible()) return true;
+    const drivers = Array.isArray(data) ? data : [];
     const ownId = String(currentDriverUserId || tokenUserId());
-    const ownTripId = activeTripId || (selected && selected.id != null ? String(selected.id) : '');
-    // Primero identifica por usuario; durante una sesión activa también puede
-    // identificar al propio conductor por el viaje asignado a ese token.
-    currentDriverSnapshot = drivers.find(driver =>
-      ownId && String(driver.driverUserId) === ownId && driver.lastPlace
-    ) || drivers.find(driver =>
-      ownTripId && String(driver.tripId) === ownTripId && driver.lastPlace
-    ) || null;
-    const ownLocation = currentDriverSnapshot?.lastPlace;
-    if (ownLocation && Number.isFinite(Number(ownLocation.latitude)) && Number.isFinite(Number(ownLocation.longitude))) {
-      setMapMarker(Number(ownLocation.latitude), Number(ownLocation.longitude));
-      gpsState.provider = 'ACTIVE';
-      updateGpsPill();
-    }
-
-    if (marker && currentDriverSnapshot) marker.bindPopup(driverPopupHtml(currentDriverSnapshot, true));
-    if (selected && tripUsesMapRoute(selected.status)) {
-      void loadTripRoute(tripRoutePhase(selected.status));
-      void loadTripTrace();
-    }
     const icon = otherDriverIcon();
     drivers.forEach(driver => {
-      if (!isFreshDriverLocation(driver) || !driver.lastPlace) return;
-      if (ownId && String(driver.driverUserId) === ownId) return;
-      const lat = Number(driver.lastPlace?.latitude);
-      const lng = Number(driver.lastPlace?.longitude);
+      if (String(driver.driver_user_id) === ownId) return;
+      const lat = Number(driver.latitude);
+      const lng = Number(driver.longitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-      L.marker([lat, lng], { icon, keyboard: false })
-        .bindPopup(driverPopupHtml(driver))
-        .addTo(otherDriversLayer);
+      L.marker([lat, lng], { icon, keyboard: false, title: 'Conductor activo' }).addTo(otherDriversLayer);
     });
     return true;
   } catch (_) {
