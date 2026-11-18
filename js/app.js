@@ -2358,11 +2358,21 @@ async function requestMessageWithRetry(url, options, attempts = 2) {
   }
   throw lastError || Error('No se pudo enviar');
 }
+let passengerMessageCount = 0;
 async function loadPassengerMessages() {
   const tripId = commsTripId();
   if (!tripId || DEMO) return;
   const response = await fetch(`${API}/mobility/driver/trips/${encodeURIComponent(tripId)}/messages`, { headers: h() });
-  if (response.ok) renderCommsMessages('passengerMessages', await response.json());
+  if (!response.ok) return;
+  const items = await response.json();
+  const previous = passengerMessageCount;
+  passengerMessageCount = items.length;
+  renderCommsMessages('passengerMessages', items);
+  const unread = items.slice(previous).some(item => item.sender_role === 'passenger');
+  if (unread && $('passengerChatModal').classList.contains('hidden')) {
+    $('passengerChatButton').classList.add('has-unread');
+    $('passengerChatButton').setAttribute('aria-label', 'Chat con pasajero: nuevo mensaje');
+  }
 }
 async function sendPassengerMessage(event) {
   event.preventDefault();
@@ -2475,7 +2485,7 @@ async function startHandieConversation() {
   } finally { handieStarting = false; }
 }
 function initComms() {
-  $('passengerChatButton').onclick = async () => { if (!commsTripId()) return; $('passengerChatModal').classList.remove('hidden'); await loadPassengerMessages(); };
+  $('passengerChatButton').onclick = async () => { if (!commsTripId()) return; $('passengerChatModal').classList.remove('hidden'); $('passengerChatButton').classList.remove('has-unread'); $('passengerChatButton').setAttribute('aria-label', 'Chat con pasajero'); await loadPassengerMessages(); };
   $('passengerChatClose').onclick = () => closeCommsModal('passengerChatModal');
   $('passengerMessageForm').onsubmit = sendPassengerMessage;
   $('handieButton').onclick = () => { if (handieConversation) void endHandieConversation(); else void startHandieConversation(); };

@@ -463,7 +463,7 @@ button, input, select { touch-action: manipulation; }
 /* Comunicaciones compactas: no compiten con el mapa ni con la hoja. */
 .driver-comms { position: fixed; z-index: 45; top: 50%; right: max(12px, env(safe-area-inset-right)); transform: translateY(-50%); display: grid; gap: 8px; justify-items: center; }
 .comms-fab { width: 46px; height: 46px; border-radius: 50%; background: rgba(18, 21, 29, .94); border: 1px solid #ffffff2b; box-shadow: 0 8px 24px #0008; font-size: 21px; display: grid; place-items: center; }
-.comms-fab:hover, .comms-fab:focus-visible { border-color: var(--red); transform: translateX(-2px); }
+.comms-fab.has-unread::after { content: ""; position: absolute; top: 2px; right: 2px; width: 10px; height: 10px; border-radius: 50%; background: #e90046; box-shadow: 0 0 0 2px var(--panel); }
 .comms-fab:disabled { opacity: .35; filter: grayscale(1); }
 .handie-fab { border-color: #35d0b0aa; }
 .handie-fab.voice-active { background: #20b486; border-color: #9dffe5; color: #06271e; box-shadow: 0 0 0 5px #35d0b044, 0 8px 24px #0008; }
