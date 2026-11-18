@@ -1624,7 +1624,13 @@ async function loadTripRoute(phase) {
     routeDeviation = { level: 'unknown', distanceM: null, consecutive: 0 };
     renderRouteGuidance();
     map.invalidateSize({ pan: false });
-    const colors = { pickup: '#087f83', trip: '#e8003d' };
+    const svgOrigin = '<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 38 38"><circle cx="19" cy="19" r="17" fill="#087f83" stroke="#fff" stroke-width="3"/><circle cx="19" cy="19" r="6" fill="#fff"/><circle cx="19" cy="19" r="3" fill="#087f83"/></svg>';
+    const svgDest = '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="46" viewBox="0 0 36 46"><path d="M18 0C8.06 0 0 8.06 0 18c0 12.44 18 28 18 28S36 30.44 36 18C36 8.06 27.94 0 18 0z" fill="#e8003d"/><circle cx="18" cy="18" r="8" fill="#fff"/><circle cx="18" cy="18" r="4" fill="#e8003d"/></svg>';
+    const icon = html => L.divIcon({ html, className: '', iconSize: [44, 46], iconAnchor: [22, 23] });
+    L.marker(routeLayers.pickup.points[routeLayers.pickup.points.length - 1], { icon: icon(svgOrigin), title: 'Punto de recogida' }).addTo(map);
+    L.marker(routeLayers.trip.points[routeLayers.trip.points.length - 1], { icon: icon(svgDest), title: 'Destino' }).addTo(map);
+    const taxiIcon = L.divIcon({ html: '<span style="font-size:38px;line-height:44px">🚕</span>', className: 'livre-driver-vehicle-marker', iconSize: [44, 46], iconAnchor: [22, 23] });
+    if (marker) marker.setIcon(taxiIcon);
     phases.forEach(routePhase => {
       const layer = routeLayers[routePhase];
       const active = routePhase === phase;
