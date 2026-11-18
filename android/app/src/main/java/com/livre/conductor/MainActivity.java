@@ -79,6 +79,7 @@ public class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setGeolocationEnabled(true);
         settings.setDatabaseEnabled(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
         // The remote Railway frontend is the single source of truth. Do not
         // let a stale WebView cache turn the APK into a second frontend.
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
