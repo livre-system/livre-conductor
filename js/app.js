@@ -2411,6 +2411,7 @@ let passengerMessageInitialized = false;
 let passengerUnreadMessageCount = 0;
 let passengerMessageTripId = '';
 let seenPassengerMessageIds = new Set();
+let acknowledgedPassengerMessageIds = new Set();
 function updatePassengerMessageBadge() {
   const button = $('passengerChatButton');
   if (!button) return;
@@ -2440,14 +2441,16 @@ async function loadPassengerMessages() {
     passengerMessageTripId = tripId;
     passengerMessageCount = 0;
     passengerMessageInitialized = false;
+    passengerUnreadMessageCount = 0;
     seenPassengerMessageIds = new Set();
+    acknowledgedPassengerMessageIds = new Set();
   }
   const passengerItems = items.filter(item => item.sender_role === 'passenger');
   const newPassengerItems = passengerItems.filter(item => !seenPassengerMessageIds.has(String(item.id)));
   const newPassengerMessage = passengerMessageInitialized && newPassengerItems.length > 0;
   passengerItems.forEach(item => seenPassengerMessageIds.add(String(item.id)));
   passengerMessageCount = passengerItems.length;
-  passengerUnreadMessageCount = passengerItems.length;
+  passengerUnreadMessageCount = passengerItems.filter(item => !acknowledgedPassengerMessageIds.has(String(item.id))).length;
   updatePassengerMessageBadge();
   passengerMessageInitialized = true;
   renderCommsMessages('passengerMessages', items);
@@ -2570,7 +2573,16 @@ async function startHandieConversation() {
   } finally { handieStarting = false; }
 }
 function initComms() {
-  $('passengerChatButton').onclick = async () => { if (!commsTripId()) return; $('passengerChatModal').classList.remove('hidden'); $('passengerChatButton').setAttribute('aria-label', 'Chat con pasajero'); await loadPassengerMessages(); };
+  $('passengerChatButton').onclick = async () => {
+    if (!commsTripId()) return;
+    const items = [...seenPassengerMessageIds];
+    items.forEach(id => acknowledgedPassengerMessageIds.add(id));
+    passengerUnreadMessageCount = 0;
+    updatePassengerMessageBadge();
+    $('passengerChatModal').classList.remove('hidden');
+    $('passengerChatButton').setAttribute('aria-label', 'Chat con pasajero');
+    await loadPassengerMessages();
+  };
   $('passengerChatClose').onclick = () => closeCommsModal('passengerChatModal');
   $('passengerMessageForm').onsubmit = sendPassengerMessage;
   $('handieButton').onclick = () => { if (handieConversation) void endHandieConversation(); else void startHandieConversation(); };
