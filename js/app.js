@@ -1620,15 +1620,17 @@ async function loadTripRoute(phase) {
         line: null,
       };
     });
-    routeSummary = routeLayers[phase].summary;
+  if (routeLayers.pickup.casing) routeLayers.pickup.casing.addTo(map);
+  if (routeLayers.pickup.line) routeLayers.pickup.line.addTo(map);
+  if (routeLayers.trip.casing) routeLayers.trip.casing.addTo(map);
+  if (routeLayers.trip.line) routeLayers.trip.line.addTo(map);
     plannedRoutePoints = routeLayers[phase].points;
     routeDeviation = { level: 'unknown', distanceM: null, consecutive: 0 };
     renderRouteGuidance();
     map.invalidateSize({ pan: false });
     const passengerCarSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="20" fill="#101820" stroke="#fff" stroke-width="2.5"/><g transform="translate(22,22) rotate(0)"><path d="M0,-12 L-7,4 L-5,4 L-5,8 L5,8 L5,4 L7,4 Z" fill="#fff" opacity="0.95"/><rect x="-7" y="-13" width="14" height="5" rx="2" fill="#087f83" opacity="0.9"/><rect x="-5" y="4" width="4" height="3" rx="1" fill="#555"/><rect x="1" y="4" width="4" height="3" rx="1" fill="#555"/><rect x="-6" y="-10" width="5" height="3" rx="1" fill="#101820" opacity="0.6"/><rect x="1" y="-10" width="5" height="3" rx="1" fill="#101820" opacity="0.6"/></g></svg>';
     const taxiIcon = L.divIcon({ html: passengerCarSvg, className: 'passenger-car-icon', iconSize: [44, 44], iconAnchor: [22, 22] });
-    if (marker) marker.setIcon(taxiIcon);
-    if (marker) marker.setZIndexOffset(1000);
+    if (marker) { marker.setIcon(taxiIcon); marker.setZIndexOffset(1000); }
     phases.forEach(routePhase => {
       const layer = routeLayers[routePhase];
       const active = routePhase === phase;
@@ -1785,16 +1787,8 @@ function setMapMarker(lat, lng, accuracy = null) {
     marker.setLatLng(pos);
     marker.setIcon(vehicleIcon);
   }
-  if (!directionMarker) {
-    directionMarker = L.marker(pos, {
-      icon: driverHeadingIcon(heading),
-      interactive: false,
-      zIndexOffset: 1000,
-    }).addTo(map);
-  } else {
-    directionMarker.setLatLng(pos);
-    directionMarker.setIcon(driverHeadingIcon(heading));
-  }
+  // El marcador de dirección queda desactivado: el SVG de pasajeros ya incluye la orientación visual.
+  directionMarker = null;
   if (followOwnLocation) map.setView(pos, Math.max(map.getZoom(), 15));
 }
 
