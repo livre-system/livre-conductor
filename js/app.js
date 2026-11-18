@@ -1632,6 +1632,7 @@ async function loadTripRoute(phase) {
     L.marker(routeLayers.trip.points[routeLayers.trip.points.length - 1], { icon: icon(svgDest), title: 'Destino' }).addTo(map);
     const taxiIcon = L.divIcon({ html: '<span class="passenger-car-art"><i></i><b></b></span>', className: 'livre-driver-vehicle-marker passenger-car-icon', iconSize: [44, 44], iconAnchor: [22, 22] });
     if (marker) marker.setIcon(taxiIcon);
+    if (marker) marker.setZIndexOffset(1000);
     phases.forEach(routePhase => {
       const layer = routeLayers[routePhase];
       const active = routePhase === phase;
