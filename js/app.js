@@ -1629,7 +1629,7 @@ async function loadTripRoute(phase) {
     const icon = html => L.divIcon({ html, className: '', iconSize: [44, 46], iconAnchor: [22, 23] });
     L.marker(routeLayers.pickup.points[routeLayers.pickup.points.length - 1], { icon: icon(svgOrigin), title: 'Punto de recogida' }).addTo(map);
     L.marker(routeLayers.trip.points[routeLayers.trip.points.length - 1], { icon: icon(svgDest), title: 'Destino' }).addTo(map);
-    const taxiIcon = L.divIcon({ html: '<span style="font-size:38px;line-height:44px">🚕</span>', className: 'livre-driver-vehicle-marker', iconSize: [44, 46], iconAnchor: [22, 23] });
+    const taxiIcon = L.divIcon({ html: '<span>🚕</span>', className: 'livre-driver-vehicle-marker', iconSize: [44, 46], iconAnchor: [22, 23] });
     if (marker) marker.setIcon(taxiIcon);
     phases.forEach(routePhase => {
       const layer = routeLayers[routePhase];
