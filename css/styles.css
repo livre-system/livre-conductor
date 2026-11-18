@@ -11,6 +11,18 @@
   --suite-font: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 body { font-family: var(--suite-font); }
+.topbar {
+  background: #101820;
+  box-shadow: 0 1px 0 rgba(255,255,255,.06), 0 8px 26px rgba(16,24,32,.2);
+}
+.topbar-logo-image { filter: drop-shadow(0 3px 12px rgba(232,0,61,.3)); }
+.sheet, .alert-card, .trip-card { border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 48px rgba(16,24,32,.24); }
+.sheet { border-radius: 24px 24px 0 0; }
+.operational-panel { border-radius: 16px; background: rgba(255,255,255,.06); }
+.operational-panel-button { border-radius: 12px; }
+.alert-card, .trip-card { border-radius: 20px; }
+.route-card { border-radius: 16px; }
+.btn-accept, .btn-primary, .btn-danger { border-radius: 14px; }
 .leaflet-control-zoom {
   border: 0 !important;
   border-radius: 10px !important;
