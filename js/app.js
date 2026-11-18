@@ -1902,9 +1902,19 @@ async function loadOtherDrivers() {
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
     if (!otherDriversLayer) otherDriversLayer = L.layerGroup().addTo(map);
     otherDriversLayer.clearLayers();
-    if (!otherDriversVisible()) return true;
     const drivers = Array.isArray(data) ? data : [];
     const ownId = String(currentDriverUserId || tokenUserId());
+    const ownDriver = drivers.find(driver => String(driver.driver_user_id) === ownId);
+    if (ownDriver) {
+      const ownLat = Number(ownDriver.latitude);
+      const ownLng = Number(ownDriver.longitude);
+      if (Number.isFinite(ownLat) && Number.isFinite(ownLng)) {
+        setMapMarker(ownLat, ownLng);
+        lastNativeLocationAt = Date.now();
+        diagLog('gps_map_refresh_from_active_feed');
+      }
+    }
+    if (!otherDriversVisible()) return true;
     const icon = otherDriverIcon();
     drivers.forEach(driver => {
       if (String(driver.driver_user_id) === ownId) return;
