@@ -60,6 +60,9 @@ button, input, select { touch-action: manipulation; }
 .sheet button, .alert-card button, .trip-card button { border-radius: var(--suite-radius); font-weight: 800; letter-spacing: -.01em; }
 .btn-accept, .btn-primary, .btn-danger { background: var(--passenger-pink); color: #fff; border-radius: var(--suite-radius); }
 .btn-next, .btn-secondary { border-radius: var(--suite-radius); }
+.btn-primary { background: var(--passenger-pink) !important; color: #fff !important; border-radius: 16px !important; }
+.btn-primary.green { background: var(--passenger-pink) !important; color: #fff !important; }
+.active-status { color: var(--passenger-teal) !important; }
 .btn-arrived, .btn-next, .btn-accept { min-height: 64px; }
 .btn-arrived { background: var(--passenger-pink); color: #fff; }
 .btn-next { background: var(--passenger-teal); color: #fff; }
