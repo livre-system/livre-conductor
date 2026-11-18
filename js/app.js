@@ -2413,8 +2413,13 @@ let passengerMessageTripId = '';
 let seenPassengerMessageIds = new Set();
 let acknowledgedPassengerMessageIds = new Set();
 const ACKNOWLEDGED_MESSAGES_KEY = 'livre_driver_acknowledged_messages';
+const MESSAGE_COUNTER_RESET_KEY = 'livre_driver_message_counter_reset_v21';
 function loadAcknowledgedPassengerMessages() {
   try {
+    if (localStorage.getItem(MESSAGE_COUNTER_RESET_KEY) !== '1') {
+      localStorage.removeItem(ACKNOWLEDGED_MESSAGES_KEY);
+      localStorage.setItem(MESSAGE_COUNTER_RESET_KEY, '1');
+    }
     const saved = JSON.parse(localStorage.getItem(ACKNOWLEDGED_MESSAGES_KEY) || '{}');
     return saved && typeof saved === 'object' ? saved : {};
   } catch (_) { return {}; }
