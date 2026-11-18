@@ -1806,3 +1806,25 @@ body.trip-active .topbar .header-icon-button { display: grid; place-items: cente
     font-size: 10px;
   }
 }
+
+/* Override final: acciones del viaje comparten la paleta Livre pasajeros. */
+.primary-actions .btn-primary,
+.primary-actions .btn-primary.green,
+.primary-actions .btn-primary:not(:disabled) {
+  background: #e8003d !important;
+  color: #fff !important;
+  border-color: #e8003d !important;
+  box-shadow: 0 8px 28px #e8003d55 !important;
+}
+.active-trip .active-status,
+.active-trip .active-status.amber {
+  background: #e4f8f3 !important;
+  border-color: #087f83 !important;
+}
+.active-trip .active-status-text,
+.active-trip .active-status.amber .active-status-text { color: #087f83 !important; }
+.active-trip .active-status-dot,
+.active-trip .active-status.amber .active-status-dot {
+  background: #35d0b0 !important;
+  box-shadow: 0 0 0 4px #35d0b044 !important;
+}
