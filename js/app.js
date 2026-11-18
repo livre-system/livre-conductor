@@ -132,6 +132,7 @@ let otherDriversTimer = null;
 let followOwnLocation = true;
 let showOwnTrace = true;
 let traceRequestSequence = 0;
+let overviewResetTimer = null;
 let currentDriverUserId = '';
 const announcedTripIds = new Set();
 const rejectedTripIds = new Set(JSON.parse(localStorage.getItem('livre_driver_rejected_trips') || '[]'));
@@ -1629,7 +1630,7 @@ async function loadTripRoute(phase) {
     const icon = html => L.divIcon({ html, className: '', iconSize: [44, 46], iconAnchor: [22, 23] });
     L.marker(routeLayers.pickup.points[routeLayers.pickup.points.length - 1], { icon: icon(svgOrigin), title: 'Punto de recogida' }).addTo(map);
     L.marker(routeLayers.trip.points[routeLayers.trip.points.length - 1], { icon: icon(svgDest), title: 'Destino' }).addTo(map);
-    const taxiIcon = L.divIcon({ html: '<span>🚕</span>', className: 'livre-driver-vehicle-marker', iconSize: [44, 46], iconAnchor: [22, 23] });
+    const taxiIcon = L.divIcon({ html: '<span>🚖</span>', className: 'livre-driver-vehicle-marker', iconSize: [44, 46], iconAnchor: [22, 23] });
     if (marker) marker.setIcon(taxiIcon);
     phases.forEach(routePhase => {
       const layer = routeLayers[routePhase];
@@ -1644,8 +1645,8 @@ async function loadTripRoute(phase) {
         dashArray: active ? null : '8 6',
       }).addTo(map);
       layer.line = L.polyline(layer.points, {
-        color: colors[routePhase],
-        weight: active ? 5 : 4,
+        color: routePhase === 'pickup' ? '#087f83' : '#e8003d',
+        weight: active ? 6 : 4,
         opacity: active ? 1 : 0.55,
         lineCap: 'round',
         lineJoin: 'round',
@@ -1690,6 +1691,16 @@ function initMap() {
   void loadTripTrace();
   otherDriversTimer = setInterval(loadOtherDrivers, 15000);
   setTimeout(() => map?.invalidateSize(), 0);
+  if (overviewResetTimer) clearInterval(overviewResetTimer);
+  overviewResetTimer = setInterval(() => {
+    if (!map || selected) return;
+    const points = [];
+    if (marker) points.push(marker.getLatLng());
+    Object.values(routeLayers).forEach(layer => (layer.points || []).forEach(point => points.push(point)));
+    if (points.length > 1) map.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 14, animate: false });
+    else if (points.length === 1) map.setView(points[0], 12, { animate: false });
+    else map.setView([-38.7183, -62.2663], 12, { animate: false });
+  }, 10000);
 }
 
 function driverHeading(from, to) {
@@ -1767,7 +1778,7 @@ function setMapMarker(lat, lng, accuracy = null) {
   const pos = [lat, lng];
   const heading = lastMapPosition ? driverHeading(lastMapPosition, pos) : 0;
   lastMapPosition = pos;
-  const vehicleIcon = L.divIcon({ className: 'livre-driver-vehicle-marker', html: '<span>🚕</span>', iconSize: [42, 42], iconAnchor: [21, 21] });
+  const vehicleIcon = L.divIcon({ className: 'livre-driver-vehicle-marker', html: '<span>🚖</span>', iconSize: [42, 42], iconAnchor: [21, 21] });
   if (!marker) {
     marker = L.marker(pos, {
       icon: vehicleIcon,
@@ -1792,7 +1803,7 @@ function setMapMarker(lat, lng, accuracy = null) {
 
 function updateOwnMarkerStyle() {
   if (!marker) return;
-  if (marker) marker.setIcon(L.divIcon({ className: 'livre-driver-vehicle-marker', html: '<span>🚕</span>', iconSize: [42, 42], iconAnchor: [21, 21] }));
+  if (marker) marker.setIcon(L.divIcon({ html: '<span>🚖</span>', className: 'livre-driver-vehicle-marker', iconSize: [44, 46], iconAnchor: [22, 23] }));
 }
 
 function tokenUserId() {
