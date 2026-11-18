@@ -1868,13 +1868,16 @@ function driverPopupHtml(driver, current = false) {
     <div><b>Estado de viaje:</b> ${trip}</div></div>`;
 }
 
-function otherDriverIcon() {
+function otherDriverIcon(driver = {}) {
+  const status = String(driver.operationalStatus || '').toLowerCase();
+  const color = vehicleColorForStatus(status || 'available');
+  const svg = passengerCarSvg.replace(/fill="#087f83"/g, `fill="${color}"`);
   return L.divIcon({
-    className: '',
-    html: '<span class="driver-other-marker"><span>•</span></span>',
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
-    popupAnchor: [0, -28],
+    className: 'passenger-car-icon other-driver-car-icon',
+    html: svg,
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+    popupAnchor: [0, -19],
   });
 }
 
@@ -1925,7 +1928,7 @@ async function loadOtherDrivers() {
       const lat = Number(driver.latitude);
       const lng = Number(driver.longitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-      L.marker([lat, lng], { icon, keyboard: false, title: 'Conductor activo' }).addTo(otherDriversLayer);
+      L.marker([lat, lng], { icon: otherDriverIcon(driver), keyboard: false, title: 'Conductor activo' }).addTo(otherDriversLayer);
     });
     return true;
   } catch (_) {
