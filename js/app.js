@@ -1624,27 +1624,27 @@ async function loadTripRoute(phase) {
     routeDeviation = { level: 'unknown', distanceM: null, consecutive: 0 };
     renderRouteGuidance();
     map.invalidateSize({ pan: false });
-    const colors = { pickup: '#22c7f5', trip: '#f43f5e' };
+    const colors = { pickup: '#087f83', trip: '#e8003d' };
     phases.forEach(routePhase => {
       const layer = routeLayers[routePhase];
       const active = routePhase === phase;
       layer.casing = L.polyline(layer.points, {
-        color: active ? '#082f49' : '#4b1024',
-        weight: active ? 9 : 7,
-        opacity: active ? 0.72 : 0.45,
+        color: active ? (routePhase === 'pickup' ? '#055e61' : '#9d1237') : '#b0bec5',
+        weight: active ? 10 : 4,
+        opacity: active ? 0.15 : 0.55,
         lineCap: 'round',
         lineJoin: 'round',
         smoothFactor: 0.1,
-        dashArray: active ? null : '10 8',
+        dashArray: active ? null : '8 6',
       }).addTo(map);
       layer.line = L.polyline(layer.points, {
         color: colors[routePhase],
         weight: active ? 5 : 4,
-        opacity: active ? 1 : 0.78,
+        opacity: active ? 1 : 0.55,
         lineCap: 'round',
         lineJoin: 'round',
         smoothFactor: 0.1,
-        dashArray: active ? null : '10 8',
+        dashArray: active ? null : '8 6',
       }).addTo(map);
     });
     routeCasing = routeLayers[phase].casing;
@@ -1667,28 +1667,19 @@ async function loadTripRoute(phase) {
 }
 
 function initMap() {
-  map = L.map('map', { zoomControl: false, maxBounds: BAHIA_BLANCA_BOUNDS, maxBoundsViscosity: 0.85 })
-          .setView([-38.718, -62.266], 14);
-  // El mapa queda limpio: no se montan paneles, leyendas ni controles
-  // flotantes adicionales durante el viaje.
-  updateMapFollowButton();
-  map.on('dragstart', () => { followOwnLocation = false; updateMapFollowButton(); });
-  L.control.zoom({ position: 'topright' }).addTo(map);
+  map = L.map('map', { zoomControl: false }).setView([-38.7183, -62.2663], 12);
   const conductorTileLayer = L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-    {
-      attribution: '&copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
-      maxZoom: 19,
-    },
+    'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    { attribution: '© Esri, HERE, Garmin, © OpenStreetMap contributors', maxZoom: 19 },
   ).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, pane: 'overlayPane' }).addTo(map);
   let conductorTileFallbackUsed = false;
   conductorTileLayer.on('tileerror', () => {
     if (conductorTileFallbackUsed || !map) return;
     conductorTileFallbackUsed = true;
-    conductorTileLayer.setUrl(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-    );
+    conductorTileLayer.setUrl('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}');
   });
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
   loadOtherDrivers();
   void loadTripTrace();
   otherDriversTimer = setInterval(loadOtherDrivers, 15000);
