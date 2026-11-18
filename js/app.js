@@ -1770,16 +1770,15 @@ function setMapMarker(lat, lng, accuracy = null) {
   const pos = [lat, lng];
   const heading = lastMapPosition ? driverHeading(lastMapPosition, pos) : 0;
   lastMapPosition = pos;
+  const vehicleIcon = L.divIcon({ className: 'livre-driver-vehicle-marker', html: '<span>🚗</span>', iconSize: [42, 42], iconAnchor: [21, 21] });
   if (!marker) {
-    marker = L.circleMarker(pos, {
-      radius: 10,
-      fillColor: DRIVER_MARKER_COLORS[operationalStatus] || DRIVER_MARKER_COLORS.available,
-      fillOpacity: 1,
-      color: '#07080a',
-      weight: 3,
+    marker = L.marker(pos, {
+      icon: vehicleIcon,
+      keyboard: false,
     }).addTo(map);
   } else {
     marker.setLatLng(pos);
+    marker.setIcon(vehicleIcon);
   }
   if (!directionMarker) {
     directionMarker = L.marker(pos, {
@@ -1796,7 +1795,7 @@ function setMapMarker(lat, lng, accuracy = null) {
 
 function updateOwnMarkerStyle() {
   if (!marker) return;
-  marker.setStyle({ fillColor: DRIVER_MARKER_COLORS[operationalStatus] || DRIVER_MARKER_COLORS.available });
+  if (marker) marker.setIcon(L.divIcon({ className: 'livre-driver-vehicle-marker', html: '<span>🚗</span>', iconSize: [42, 42], iconAnchor: [21, 21] }));
 }
 
 function tokenUserId() {
