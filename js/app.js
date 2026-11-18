@@ -942,6 +942,11 @@ async function loadTrips() {
     receivedCount = operationalTrips.length;
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
     const visibleTrips = nextTrips.filter(t => DRIVER_CARD_STATUSES.includes(t.status) && !rejectedTripIds.has(String(t.id)));
+    const selectedStillPresent = selected && visibleTrips.some(t => String(t.id) === String(selected.id));
+    if (selected && !selectedStillPresent && selected.status !== 'cancelled') {
+      selected = null;
+      emptyTripsReads = 0;
+    }
     if (visibleTrips.length) {
       emptyTripsReads = 0;
       trips = orderTripsNewestFirst(visibleTrips);
