@@ -2409,6 +2409,8 @@ async function playMessageNotification() {
 let passengerMessageCount = 0;
 let passengerMessageInitialized = false;
 let passengerUnreadMessageCount = 0;
+let passengerMessageTripId = '';
+let seenPassengerMessageIds = new Set();
 function updatePassengerMessageBadge() {
   const button = $('passengerChatButton');
   if (!button) return;
@@ -2434,16 +2436,23 @@ async function loadPassengerMessages() {
   const response = await fetch(`${API}/mobility/driver/trips/${encodeURIComponent(tripId)}/messages`, { headers: h() });
   if (!response.ok) return;
   const items = await response.json();
-  const previous = passengerMessageCount;
+  if (passengerMessageTripId !== tripId) {
+    passengerMessageTripId = tripId;
+    passengerMessageCount = 0;
+    passengerMessageInitialized = false;
+    seenPassengerMessageIds = new Set();
+  }
   const passengerItems = items.filter(item => item.sender_role === 'passenger');
-  const previousPassengerItems = previous;
-  const newPassengerMessage = passengerMessageInitialized && passengerItems.length > previousPassengerItems;
+  const newPassengerItems = passengerItems.filter(item => !seenPassengerMessageIds.has(String(item.id)));
+  const newPassengerMessage = passengerMessageInitialized && newPassengerItems.length > 0;
+  passengerItems.forEach(item => seenPassengerMessageIds.add(String(item.id)));
   passengerMessageCount = passengerItems.length;
   passengerMessageInitialized = true;
   renderCommsMessages('passengerMessages', items);
   if (newPassengerMessage) {
-    passengerUnreadMessageCount += passengerItems.length - previousPassengerItems;
+    passengerUnreadMessageCount += newPassengerItems.length;
     updatePassengerMessageBadge();
+    showNotice(newPassengerItems.length === 1 ? 'Nuevo mensaje del pasajero.' : `${newPassengerItems.length} mensajes nuevos del pasajero.`);
     void playMessageNotification();
     if (document.visibilityState === 'visible' && navigator.vibrate) navigator.vibrate([120, 80, 120]);
   }
@@ -2559,7 +2568,7 @@ async function startHandieConversation() {
   } finally { handieStarting = false; }
 }
 function initComms() {
-  $('passengerChatButton').onclick = async () => { if (!commsTripId()) return; passengerUnreadMessageCount = 0; passengerMessageInitialized = false; passengerMessageCount = 0; updatePassengerMessageBadge(); $('passengerChatModal').classList.remove('hidden'); $('passengerChatButton').setAttribute('aria-label', 'Chat con pasajero'); await loadPassengerMessages(); };
+  $('passengerChatButton').onclick = async () => { if (!commsTripId()) return; passengerUnreadMessageCount = 0; updatePassengerMessageBadge(); $('passengerChatModal').classList.remove('hidden'); $('passengerChatButton').setAttribute('aria-label', 'Chat con pasajero'); await loadPassengerMessages(); };
   $('passengerChatClose').onclick = () => closeCommsModal('passengerChatModal');
   $('passengerMessageForm').onsubmit = sendPassengerMessage;
   $('handieButton').onclick = () => { if (handieConversation) void endHandieConversation(); else void startHandieConversation(); };
