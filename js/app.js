@@ -2479,8 +2479,6 @@ async function loadPassengerMessages() {
   passengerMessageInitialized = true;
   renderCommsMessages('passengerMessages', items);
   if (newPassengerMessage) {
-    passengerUnreadMessageCount += newPassengerItems.length;
-    updatePassengerMessageBadge();
     showNotice(newPassengerItems.length === 1 ? 'Nuevo mensaje del pasajero.' : `${newPassengerItems.length} mensajes nuevos del pasajero.`);
     void playMessageNotification();
     if (document.visibilityState === 'visible' && navigator.vibrate) navigator.vibrate([120, 80, 120]);
