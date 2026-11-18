@@ -2468,13 +2468,17 @@ async function loadPassengerMessages() {
     acknowledgedPassengerMessageIds = new Set(acknowledged[tripId] || []);
   }
   const passengerItems = items.filter(item => item.sender_role === 'passenger');
+  const firstLoadForTrip = !passengerMessageInitialized;
   const newPassengerItems = passengerItems.filter(item => !seenPassengerMessageIds.has(String(item.id)));
-  const newPassengerMessage = passengerMessageInitialized && newPassengerItems.length > 0;
+  const newPassengerMessage = !firstLoadForTrip && newPassengerItems.length > 0;
   passengerItems.forEach(item => seenPassengerMessageIds.add(String(item.id)));
   passengerMessageCount = passengerItems.length;
-  passengerUnreadMessageCount = passengerMessageInitialized
-    ? passengerItems.filter(item => !acknowledgedPassengerMessageIds.has(String(item.id))).length
-    : 0;
+  if (firstLoadForTrip) {
+    acknowledgePassengerMessages(tripId, passengerItems.map(item => String(item.id)));
+    passengerUnreadMessageCount = 0;
+  } else {
+    passengerUnreadMessageCount = passengerItems.filter(item => !acknowledgedPassengerMessageIds.has(String(item.id))).length;
+  }
   updatePassengerMessageBadge();
   passengerMessageInitialized = true;
   renderCommsMessages('passengerMessages', items);
