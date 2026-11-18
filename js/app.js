@@ -2384,8 +2384,50 @@ async function requestMessageWithRetry(url, options, attempts = 2) {
   }
   throw lastError || Error('No se pudo enviar');
 }
+const MESSAGE_TONE_SOURCES = ['assets/audio/message-notification.mp3', 'assets/audio/message-notification.ogg'];
+
+function createMessageNotificationAudio() {
+  const source = MESSAGE_TONE_SOURCES.find(path => {
+    const probe = document.createElement('audio');
+    const extension = path.split('.').pop();
+    return !probe.canPlayType || probe.canPlayType(extension === 'mp3' ? 'audio/mpeg' : 'audio/ogg; codecs="vorbis"') !== '';
+  }) || MESSAGE_TONE_SOURCES[0];
+  const audio = new Audio(source);
+  audio.preload = 'auto';
+  audio.volume = Math.max(0, Math.min(1, Number(preferences.volume) / 100));
+  return audio;
+}
+
+async function playMessageNotification() {
+  try {
+    const audio = createMessageNotificationAudio();
+    await audio.play();
+  } catch (_) {
+    diagLog('message_audio_play_failed');
+  }
+}
 let passengerMessageCount = 0;
 let passengerMessageInitialized = false;
+let passengerUnreadMessageCount = 0;
+function updatePassengerMessageBadge() {
+  const button = $('passengerChatButton');
+  if (!button) return;
+  let badge = button.querySelector('.message-unread-badge');
+  if (!passengerUnreadMessageCount) {
+    badge?.remove();
+    button.classList.remove('has-unread');
+    return;
+  }
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.className = 'message-unread-badge';
+    button.appendChild(badge);
+  }
+  badge.textContent = passengerUnreadMessageCount > 99 ? '99+' : String(passengerUnreadMessageCount);
+  button.classList.add('has-unread');
+  button.setAttribute('aria-label', `${passengerUnreadMessageCount} mensaje${passengerUnreadMessageCount === 1 ? '' : 's'} nuevo${passengerUnreadMessageCount === 1 ? '' : 's'}`);
+}
+
 async function loadPassengerMessages() {
   const tripId = commsTripId();
   if (!tripId || DEMO) return;
@@ -2399,9 +2441,9 @@ async function loadPassengerMessages() {
   passengerMessageInitialized = true;
   renderCommsMessages('passengerMessages', items);
   if (newPassengerMessage) {
-    $('passengerChatButton')?.classList.add('has-unread');
-    $('passengerChatButton')?.setAttribute('aria-label', 'Chat con pasajero: nuevo mensaje');
-    void beep();
+    passengerUnreadMessageCount += items.slice(previous).filter(item => item.sender_role === 'passenger').length;
+    updatePassengerMessageBadge();
+    void playMessageNotification();
     if (document.visibilityState === 'visible' && navigator.vibrate) navigator.vibrate([120, 80, 120]);
   }
 }
@@ -2516,7 +2558,7 @@ async function startHandieConversation() {
   } finally { handieStarting = false; }
 }
 function initComms() {
-  $('passengerChatButton').onclick = async () => { if (!commsTripId()) return; $('passengerChatModal').classList.remove('hidden'); $('passengerChatButton').classList.remove('has-unread'); $('passengerChatButton').setAttribute('aria-label', 'Chat con pasajero'); await loadPassengerMessages(); };
+  $('passengerChatButton').onclick = async () => { if (!commsTripId()) return; passengerUnreadMessageCount = 0; updatePassengerMessageBadge(); $('passengerChatModal').classList.remove('hidden'); $('passengerChatButton').setAttribute('aria-label', 'Chat con pasajero'); await loadPassengerMessages(); };
   $('passengerChatClose').onclick = () => closeCommsModal('passengerChatModal');
   $('passengerMessageForm').onsubmit = sendPassengerMessage;
   $('handieButton').onclick = () => { if (handieConversation) void endHandieConversation(); else void startHandieConversation(); };
