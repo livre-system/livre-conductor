@@ -483,13 +483,13 @@ button, input, select { touch-action: manipulation; }
 
 
 /* Comunicaciones compactas: no compiten con el mapa ni con la hoja. */
-.driver-comms { position: fixed; z-index: 45; top: 50%; right: max(12px, env(safe-area-inset-right)); transform: translateY(-50%); display: grid; gap: 8px; justify-items: center; }
-.comms-fab { width: 46px; height: 46px; border-radius: 50%; background: rgba(18, 21, 29, .94); border: 1px solid #ffffff2b; box-shadow: 0 8px 24px #0008; font-size: 21px; display: grid; place-items: center; }
+.driver-comms { position: fixed; z-index: 45; top: 50%; right: max(12px, env(safe-area-inset-right)); transform: translateY(-50%); display: grid; gap: 10px; justify-items: center; }
+.comms-fab { width: 54px; height: 54px; border-radius: 50%; background: rgba(18, 21, 29, .94); border: 1px solid #ffffff2b; box-shadow: 0 8px 24px #0008; font-size: 25px; display: grid; place-items: center; }
 .comms-fab.has-unread::after { content: ""; position: absolute; top: 2px; right: 2px; width: 10px; height: 10px; border-radius: 50%; background: #e90046; box-shadow: 0 0 0 2px var(--panel); }
 .comms-fab:disabled { opacity: .35; filter: grayscale(1); }
-.handie-fab { border-color: #35d0b0aa; }
+.handie-fab { width: 64px; height: 64px; border-color: #35d0b0aa; font-size: 30px; }
 .handie-fab.voice-active { background: #20b486; border-color: #9dffe5; color: #06271e; box-shadow: 0 0 0 5px #35d0b044, 0 8px 24px #0008; }
-.comms-voice-status { display: block; width: 100%; max-width: 150px; color: var(--white); font-size: 10px; line-height: 1.2; text-align: center; text-shadow: 0 1px 4px #000; }
+.comms-voice-status { display: block; width: 100%; max-width: 180px; color: #fff; font-size: 14px; font-weight: 800; line-height: 1.25; text-align: center; text-shadow: 0 2px 6px #000; }
 
 /* En la pantalla vacía los estados quedan sueltos sobre el mapa, sin una
    bandeja que tape la vista ni compita con las comunicaciones. */
