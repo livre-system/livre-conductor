@@ -2577,6 +2577,9 @@ async function startHandieConversation() {
       handiePermissionStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       handiePermissionStream.getTracks().forEach(track => track.stop());
       handiePermissionStream = null;
+      // Android WebView necesita un pequeño margen para liberar el primer
+      // capturador antes de que ElevenLabs abra el micrófono real.
+      await new Promise(resolve => setTimeout(resolve, 350));
     }
     setHandieState(false, 'Conectando con Livi…');
     const sessionId = await ensureHandieSession();
