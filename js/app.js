@@ -2447,6 +2447,8 @@ async function loadPassengerMessages() {
   const newPassengerMessage = passengerMessageInitialized && newPassengerItems.length > 0;
   passengerItems.forEach(item => seenPassengerMessageIds.add(String(item.id)));
   passengerMessageCount = passengerItems.length;
+  passengerUnreadMessageCount = passengerItems.length;
+  updatePassengerMessageBadge();
   passengerMessageInitialized = true;
   renderCommsMessages('passengerMessages', items);
   if (newPassengerMessage) {
@@ -2568,7 +2570,7 @@ async function startHandieConversation() {
   } finally { handieStarting = false; }
 }
 function initComms() {
-  $('passengerChatButton').onclick = async () => { if (!commsTripId()) return; passengerUnreadMessageCount = 0; updatePassengerMessageBadge(); $('passengerChatModal').classList.remove('hidden'); $('passengerChatButton').setAttribute('aria-label', 'Chat con pasajero'); await loadPassengerMessages(); };
+  $('passengerChatButton').onclick = async () => { if (!commsTripId()) return; $('passengerChatModal').classList.remove('hidden'); $('passengerChatButton').setAttribute('aria-label', 'Chat con pasajero'); await loadPassengerMessages(); };
   $('passengerChatClose').onclick = () => closeCommsModal('passengerChatModal');
   $('passengerMessageForm').onsubmit = sendPassengerMessage;
   $('handieButton').onclick = () => { if (handieConversation) void endHandieConversation(); else void startHandieConversation(); };
