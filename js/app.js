@@ -1156,6 +1156,7 @@ async function sendLocation(lat, lng, accuracy = null, sessionEpoch = authEpoch)
     if (sessionEpoch !== authEpoch || !token) return;
     diagLog('gps_send_response', { endpoint: 'driver', httpStatus: liveResponse.status });
     if (!liveResponse.ok) throw Error(`driver-location:${liveResponse.status}`);
+    diagLog('gps_driver_location_confirmed');
 
     const gpsTrip = activeTripId
       ? trips.find(t => String(t.id) === activeTripId) || (selected && String(selected.id) === activeTripId ? selected : null)
@@ -2524,10 +2525,11 @@ async function ensureHandieSession() {
 async function saveHandieVoiceEvent(role, body, conversationId) {
   if (!handieSessionId || DEMO || !body?.trim()) return;
   try {
-    await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(handieSessionId)}/voice-events`, {
+    const response = await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(handieSessionId)}/voice-events`, {
       method: 'POST', headers: h(),
       body: JSON.stringify({ role, body: body.trim().slice(0, 2000), conversation_id: conversationId || null, event_id: newClientMessageId() }),
     });
+    if (!response.ok) diagLog('handie_voice_event_failed', { role, httpStatus: response.status });
   } catch (_) { diagLog('handie_voice_event_failed', { role }); }
 }
 async function closeHandieSession(sessionId) {
