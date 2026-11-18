@@ -2412,6 +2412,22 @@ let passengerUnreadMessageCount = 0;
 let passengerMessageTripId = '';
 let seenPassengerMessageIds = new Set();
 let acknowledgedPassengerMessageIds = new Set();
+const ACKNOWLEDGED_MESSAGES_KEY = 'livre_driver_acknowledged_messages';
+function loadAcknowledgedPassengerMessages() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ACKNOWLEDGED_MESSAGES_KEY) || '{}');
+    return saved && typeof saved === 'object' ? saved : {};
+  } catch (_) { return {}; }
+}
+function saveAcknowledgedPassengerMessages(data) {
+  try { localStorage.setItem(ACKNOWLEDGED_MESSAGES_KEY, JSON.stringify(data)); } catch (_) {}
+}
+function acknowledgePassengerMessages(tripId, ids) {
+  const data = loadAcknowledgedPassengerMessages();
+  data[String(tripId)] = [...new Set(ids)].slice(-500);
+  saveAcknowledgedPassengerMessages(data);
+  acknowledgedPassengerMessageIds = new Set(data[String(tripId)]);
+}
 function updatePassengerMessageBadge() {
   const button = $('passengerChatButton');
   if (!button) return;
@@ -2443,7 +2459,8 @@ async function loadPassengerMessages() {
     passengerMessageInitialized = false;
     passengerUnreadMessageCount = 0;
     seenPassengerMessageIds = new Set();
-    acknowledgedPassengerMessageIds = new Set();
+    const acknowledged = loadAcknowledgedPassengerMessages();
+    acknowledgedPassengerMessageIds = new Set(acknowledged[tripId] || []);
   }
   const passengerItems = items.filter(item => item.sender_role === 'passenger');
   const newPassengerItems = passengerItems.filter(item => !seenPassengerMessageIds.has(String(item.id)));
@@ -2576,7 +2593,7 @@ function initComms() {
   $('passengerChatButton').onclick = async () => {
     if (!commsTripId()) return;
     const items = [...seenPassengerMessageIds];
-    items.forEach(id => acknowledgedPassengerMessageIds.add(id));
+    acknowledgePassengerMessages(commsTripId(), items);
     passengerUnreadMessageCount = 0;
     updatePassengerMessageBadge();
     $('passengerChatModal').classList.remove('hidden');
