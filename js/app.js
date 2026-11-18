@@ -946,6 +946,7 @@ async function loadTrips() {
     if (selected && !selectedStillPresent && selected.status !== 'cancelled') {
       selected = null;
       emptyTripsReads = 0;
+      clearTripRoute();
     }
     if (visibleTrips.length) {
       emptyTripsReads = 0;
