@@ -1793,13 +1793,32 @@ function applyCloudTripLocation(trip) {
   return true;
 }
 
+function vehicleColorForStatus(status) {
+  if (status === 'out_of_service') return '#e8003d';
+  if (status === 'unavailable') return '#8f98a3';
+  return '#087f83';
+}
+
+function passengerCarSvgForStatus(status = operationalStatus) {
+  const color = vehicleColorForStatus(status);
+  return passengerCarSvg.replace(/fill="#087f83"/g, `fill="${color}"`);
+}
+
+function vehicleIconForStatus(status = operationalStatus) {
+  return L.divIcon({
+    className: 'passenger-car-icon',
+    html: passengerCarSvgForStatus(status),
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+  });
+}
+
 function setMapMarker(lat, lng, accuracy = null) {
-  if (!map) return;
   updateRouteDeviation(lat, lng, accuracy);
   const pos = [lat, lng];
   const heading = lastMapPosition ? driverHeading(lastMapPosition, pos) : 0;
   lastMapPosition = pos;
-  const vehicleIcon = L.divIcon({ className: 'passenger-car-icon', html: passengerCarSvg, iconSize: [44, 44], iconAnchor: [22, 22] });
+  const vehicleIcon = vehicleIconForStatus();
   if (!marker) {
     marker = L.marker(pos, {
       icon: vehicleIcon,
@@ -1817,7 +1836,7 @@ function setMapMarker(lat, lng, accuracy = null) {
 const passengerCarSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="20" fill="#101820" stroke="#fff" stroke-width="2.5"/><g transform="translate(22,22) rotate(0)"><path d="M0,-12 L-7,4 L-5,4 L-5,8 L5,8 L5,4 L7,4 Z" fill="#fff" opacity="0.95"/><rect x="-7" y="-13" width="14" height="5" rx="2" fill="#087f83" opacity="0.9"/><rect x="-5" y="4" width="4" height="3" rx="1" fill="#555"/><rect x="1" y="4" width="4" height="3" rx="1" fill="#555"/><rect x="-6" y="-10" width="5" height="3" rx="1" fill="#101820" opacity="0.6"/><rect x="1" y="-10" width="5" height="3" rx="1" fill="#101820" opacity="0.6"/></g></svg>';
 function updateOwnMarkerStyle() {
   if (!marker) return;
-  if (marker) marker.setIcon(L.divIcon({ className: 'passenger-car-icon', html: passengerCarSvg, iconSize: [44, 44], iconAnchor: [22, 22] }));
+  marker.setIcon(vehicleIconForStatus());
 }
 
 function tokenUserId() {
