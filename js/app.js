@@ -2507,6 +2507,7 @@ async function sendPassengerMessage(event) {
 let handieSessionId = null;
 let handieConversation = null;
 let handieStarting = false;
+let handieClosingPromise = null;
 let handiePermissionStream = null;
 function setHandieState(active, text) {
   const button = $('handieButton');
@@ -2537,19 +2538,26 @@ async function closeHandieSession(sessionId) {
   try { await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/close`, { method: 'POST', headers: h() }); } catch (_) {}
 }
 async function endHandieConversation() {
+  if (handieClosingPromise) return handieClosingPromise;
   const conversation = handieConversation;
   const sessionId = handieSessionId;
   handieConversation = null;
   handieSessionId = null;
-  if (conversation) {
-    try { await conversation.endSession(); } catch (_) {}
-  }
-  handiePermissionStream?.getTracks().forEach(track => track.stop());
-  handiePermissionStream = null;
-  await closeHandieSession(sessionId);
-  setHandieState(false, 'Livi inactiva');
+  setHandieState(false, 'Cerrando Livi…');
+  handieClosingPromise = (async () => {
+    if (conversation) {
+      try { await conversation.endSession(); } catch (_) {}
+    }
+    handiePermissionStream?.getTracks().forEach(track => track.stop());
+    handiePermissionStream = null;
+    await closeHandieSession(sessionId);
+    setHandieState(false, 'Livi inactiva');
+  })().finally(() => { handieClosingPromise = null; });
+  return handieClosingPromise;
 }
 async function startHandieConversation() {
+  if (handieStarting || handieConversation) return;
+  if (handieClosingPromise) await handieClosingPromise;
   if (handieStarting || handieConversation) return;
   handieStarting = true;
   setHandieState(false, 'Solicitando micrófono…');
