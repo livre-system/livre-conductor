@@ -2385,6 +2385,7 @@ async function requestMessageWithRetry(url, options, attempts = 2) {
   throw lastError || Error('No se pudo enviar');
 }
 let passengerMessageCount = 0;
+let passengerMessageInitialized = false;
 async function loadPassengerMessages() {
   const tripId = commsTripId();
   if (!tripId || DEMO) return;
@@ -2392,12 +2393,16 @@ async function loadPassengerMessages() {
   if (!response.ok) return;
   const items = await response.json();
   const previous = passengerMessageCount;
+  const newPassengerMessage = passengerMessageInitialized && items.length > previous
+    && items.slice(previous).some(item => item.sender_role === 'passenger');
   passengerMessageCount = items.length;
+  passengerMessageInitialized = true;
   renderCommsMessages('passengerMessages', items);
-  const unread = items.slice(previous).some(item => item.sender_role === 'passenger');
-  if (unread && $('passengerChatModal').classList.contains('hidden')) {
-    $('passengerChatButton').classList.add('has-unread');
-    $('passengerChatButton').setAttribute('aria-label', 'Chat con pasajero: nuevo mensaje');
+  if (newPassengerMessage) {
+    $('passengerChatButton')?.classList.add('has-unread');
+    $('passengerChatButton')?.setAttribute('aria-label', 'Chat con pasajero: nuevo mensaje');
+    void beep();
+    if (document.visibilityState === 'visible' && navigator.vibrate) navigator.vibrate([120, 80, 120]);
   }
 }
 async function sendPassengerMessage(event) {
