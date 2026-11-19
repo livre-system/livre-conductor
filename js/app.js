@@ -949,12 +949,26 @@ async function loadTrips() {
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
     const visibleTrips = nextTrips.filter(t => DRIVER_CARD_STATUSES.includes(t.status) && !rejectedTripIds.has(String(t.id)));
     const selectedStillPresent = selected && visibleTrips.some(t => String(t.id) === String(selected.id));
-    if (selected && !selectedStillPresent && selected.status !== 'cancelled') {
+    const selectedCancelled = selected && nextTrips.some(t => String(t.id) === String(selected.id) && t.status === 'cancelled');
+    if (selectedCancelled) {
+      addDriverNotification('Viaje cancelado', 'El pasajero canceló el viaje.');
       selected = null;
       emptyTripsReads = 0;
       clearTripRoute();
       void loadOtherDrivers();
-    }
+    } else if (selected && !selectedStillPresent && selected.status !== 'cancelled') {
+        selected = null;
+        emptyTripsReads = 0;
+        clearTripRoute();
+        void loadOtherDrivers();
+      }
+      if (selected && selected.status !== 'cancelled' && !selectedStillPresent && nextTrips.some(t => String(t.id) === String(selected.id) && t.status === 'cancelled')) {
+        addDriverNotification('Viaje cancelado', 'El pasajero canceló el viaje.');
+        selected = null;
+        emptyTripsReads = 0;
+        clearTripRoute();
+        void loadOtherDrivers();
+      }
     if (visibleTrips.length) {
       emptyTripsReads = 0;
       trips = orderTripsNewestFirst(visibleTrips);
@@ -1659,7 +1673,7 @@ async function loadTripRoute(phase) {
       const active = routePhase === phase;
       layer.casing = L.polyline(layer.points, {
         color: active ? (routePhase === 'pickup' ? '#055e61' : '#9d1237') : '#b0bec5',
-        weight: active ? 10 : 4,
+        weight: active ? 8 : 4,
         opacity: active ? 0.15 : 0.55,
         lineCap: 'round',
         lineJoin: 'round',
@@ -1668,7 +1682,7 @@ async function loadTripRoute(phase) {
       }).addTo(map);
       layer.line = L.polyline(layer.points, {
         color: routePhase === 'pickup' ? '#087f83' : '#e8003d',
-        weight: active ? 6 : 4,
+        weight: active ? 5 : 4,
         opacity: active ? 1 : 0.55,
         lineCap: 'round',
         lineJoin: 'round',
@@ -2449,6 +2463,7 @@ function addDriverNotification(title, body) {
   driverNotifications.push({ title, body, time: new Date().toLocaleString('es-AR') });
   driverUnreadNotificationCount += 1;
   saveDriverNotifications(); renderDriverNotifications(); updateDriverNotificationBadge();
+  showNotice(body);
 }
 function openDriverNotifications() { driverUnreadNotificationCount = 0; renderDriverNotifications(); updateDriverNotificationBadge(); setModalOpen('driverNotificationsModal', true); }
 
