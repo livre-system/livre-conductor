@@ -2389,7 +2389,11 @@ async function logout() {
 }
 
 function closeCommsModal(id) { $(id)?.classList.add('hidden'); }
-function commsTripId() { return activeTripId || (isActiveTrip(selected) ? String(selected.id) : ''); }
+function commsTripId() {
+  if (activeTripId) return String(activeTripId);
+  if (selected && ['assigned', 'arriving', 'in_progress'].includes(String(selected.status))) return String(selected.id);
+  return '';
+}
 function renderCommsMessages(targetId, items) {
   const target = $(targetId);
   if (!target) return;
@@ -2644,6 +2648,10 @@ async function startHandieConversation() {
       connectionType: 'websocket',
       dynamicVariables: token.dynamic_variables || {},
       clientTools: {
+        get_current_trip: async () => {
+          const trip = selected && ['assigned', 'arriving', 'in_progress'].includes(String(selected.status)) ? selected : null;
+          return trip ? { has_trip: true, trip_id: trip.id, status: trip.status, origin: trip.origin, destination: trip.destination, fare: trip.fare ?? null } : { has_trip: false, message: 'No hay un viaje asignado en este momento.' };
+        },
         reassign_trip: async ({ reason, confirmed }) => {
           const response = await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/reassign`, {
             method: 'POST', headers: h(), body: JSON.stringify({ reason: String(reason || '').trim(), confirmed: confirmed === true }),
