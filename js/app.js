@@ -1712,7 +1712,7 @@ function initMap() {
     conductorTileFallbackUsed = true;
     conductorTileLayer.setUrl('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}');
   });
-  L.control.zoom({ position: 'bottomright' }).addTo(map);
+  L.control.zoom({ position: 'topright' }).addTo(map);
   loadOtherDrivers();
   void loadTripTrace();
   otherDriversTimer = setInterval(loadOtherDrivers, 15000);

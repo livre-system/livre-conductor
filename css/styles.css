@@ -1837,6 +1837,9 @@ body.trip-active .topbar .header-icon-button { display: grid; place-items: cente
   .topbar-right { gap: 8px; }
   .header-icon-button { width: 46px; min-width: 46px; height: 46px; font-size: 22px; border-radius: 14px; }
   .btn-logout { min-height: 46px; padding: 0 15px; font-size: 14px; border-radius: 14px; }
+  .leaflet-top.leaflet-right { top: 92px; right: 12px; }
+  .leaflet-control-zoom a { width: 44px !important; height: 44px !important; line-height: 44px !important; font-size: 22px !important; }
+  .sheet.empty-state .operational-panel-button { min-height: 54px; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .01em; }
 }
 
 /* En móvil el selector debe mostrar completo el estado, sin ser recortado por la cabecera. */
