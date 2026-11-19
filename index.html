@@ -55,6 +55,7 @@
     </div>
     <div class="topbar-right">
       <button id="settingsButton" class="header-icon-button" type="button" aria-label="Abrir configuración" title="Configuración">⚙</button>
+      <button id="driverNotificationsButton" class="header-icon-button notification-header-button" type="button" aria-label="Notificaciones" title="Notificaciones">🔔</button>
       <button id="logoutBtn" class="btn-logout">Salir</button>
     </div>
   </header>
@@ -76,6 +77,13 @@
     <button id="passengerChatButton" class="comms-fab" type="button" aria-label="Chat con pasajero" title="Chat con pasajero">💬</button>
     <button id="handieButton" class="comms-fab handie-fab" type="button" aria-label="Hablar con Livi" title="Hablar con Livi">🎙️</button>
     <span id="handieState" class="comms-voice-status" role="status" aria-live="polite">Livi inactiva</span>
+  </div>
+
+  <div id="driverNotificationsModal" class="comms-modal hidden" role="dialog" aria-modal="true" aria-labelledby="driverNotificationsTitle">
+    <div class="comms-card">
+      <div class="comms-heading"><h2 id="driverNotificationsTitle">Notificaciones</h2><button id="driverNotificationsClose" type="button" aria-label="Cerrar">×</button></div>
+      <div id="driverNotificationsList" class="comms-messages" aria-live="polite"><p class="comms-notice">No hay notificaciones nuevas.</p></div>
+    </div>
   </div>
 
   <div id="passengerChatModal" class="comms-modal hidden" role="dialog" aria-modal="true" aria-labelledby="passengerChatTitle">
@@ -125,6 +133,6 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="js/app.js?v=conductor-passenger-suite-20261118-01"></script>
+  <script src="js/app.js?v=conductor-notifications-20261119-01"></script>
 </body>
 </html>

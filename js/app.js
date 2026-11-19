@@ -2424,7 +2424,35 @@ async function playMessageNotification() {
     diagLog('message_audio_play_failed');
   }
 }
-let passengerMessageCount = 0;
+let driverNotifications = [];
+let driverUnreadNotificationCount = 0;
+const DRIVER_NOTIFICATIONS_KEY = 'livre_driver_notifications';
+function loadDriverNotifications() {
+  try { return JSON.parse(localStorage.getItem(DRIVER_NOTIFICATIONS_KEY) || '[]'); } catch (_) { return []; }
+}
+function saveDriverNotifications() { try { localStorage.setItem(DRIVER_NOTIFICATIONS_KEY, JSON.stringify(driverNotifications.slice(-50))); } catch (_) {} }
+function renderDriverNotifications() {
+  const list = $('driverNotificationsList');
+  if (!list) return;
+  list.innerHTML = driverNotifications.length ? driverNotifications.slice().reverse().map(item => `<div class="comms-message"><strong>${esc(item.title)}</strong><br><span>${esc(item.body)}</span><br><small>${esc(item.time)}</small></div>`).join('') : '<p class="comms-notice">No hay notificaciones nuevas.</p>';
+}
+function updateDriverNotificationBadge() {
+  const button = $('driverNotificationsButton');
+  if (!button) return;
+  let badge = button.querySelector('.message-unread-badge');
+  if (!driverUnreadNotificationCount) { badge?.remove(); return; }
+  if (!badge) { badge = document.createElement('span'); badge.className = 'message-unread-badge'; button.appendChild(badge); }
+  badge.textContent = driverUnreadNotificationCount > 99 ? '99+' : String(driverUnreadNotificationCount);
+  button.setAttribute('aria-label', `${driverUnreadNotificationCount} notificación${driverUnreadNotificationCount === 1 ? '' : 'es'} sin leer`);
+}
+function addDriverNotification(title, body) {
+  driverNotifications.push({ title, body, time: new Date().toLocaleString('es-AR') });
+  driverUnreadNotificationCount += 1;
+  saveDriverNotifications(); renderDriverNotifications(); updateDriverNotificationBadge();
+}
+function openDriverNotifications() { driverUnreadNotificationCount = 0; renderDriverNotifications(); updateDriverNotificationBadge(); setModalOpen('driverNotificationsModal', true); }
+
+
 let passengerMessageInitialized = false;
 let passengerUnreadMessageCount = 0;
 let passengerMessageTripId = '';
@@ -2502,6 +2530,7 @@ async function loadPassengerMessages() {
   renderCommsMessages('passengerMessages', items);
   if (newPassengerMessage) {
     showNotice(newPassengerItems.length === 1 ? 'Nuevo mensaje del pasajero.' : `${newPassengerItems.length} mensajes nuevos del pasajero.`);
+    addDriverNotification('Nuevo mensaje del pasajero', newPassengerItems.length === 1 ? 'Recibiste un mensaje nuevo.' : `Recibiste ${newPassengerItems.length} mensajes nuevos.`);
     void playMessageNotification();
     if (document.visibilityState === 'visible' && navigator.vibrate) navigator.vibrate([120, 80, 120]);
   }
@@ -2662,6 +2691,9 @@ function initComms() {
 
 /* ── Bootstrap ──────────────────────────────────────────────── */
 loadPreferences();
+driverNotifications = loadDriverNotifications();
+renderDriverNotifications();
+updateDriverNotificationBadge();
 installAudioGestureUnlock();
 initComms();
 $('loginForm').onsubmit = login;
@@ -2669,6 +2701,9 @@ $('toggleAuth').onclick = () => setAuthMode(authMode === 'login' ? 'register' : 
 $('logoutBtn').onclick = logout;
 $('themeSelect').onchange = e => { preferences.theme = e.target.value; savePreferences(); loadPreferences(); };
 $('settingsButton').onclick = () => setModalOpen('settingsModal', true);
+$('driverNotificationsButton').onclick = openDriverNotifications;
+$('driverNotificationsClose').onclick = () => setModalOpen('driverNotificationsModal', false);
+$('driverNotificationsModal').onclick = e => { if (e.target.id === 'driverNotificationsModal') setModalOpen('driverNotificationsModal', false); };
 $('historyClose').onclick = () => setModalOpen('historyModal', false);
 $('historyRefresh').onclick = loadDriverHistory;
 $('historyModal').onclick = e => { if (e.target.id === 'historyModal') setModalOpen('historyModal', false); };
