@@ -2650,6 +2650,7 @@ async function startHandieConversation() {
           });
           const result = await response.json();
           if (!response.ok) return { success: false, message: result.detail || 'No se pudo reasignar el viaje.' };
+          addDriverNotification('Viaje reasignado correctamente', `${selected?.origin || 'Origen'} → ${selected?.destination || 'Destino'}`);
           return { success: true, message: 'El viaje volvió a la búsqueda de conductores.', trip_id: result.trip_id, status: result.status };
         },
       },
