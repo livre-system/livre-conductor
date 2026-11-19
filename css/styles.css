@@ -1270,6 +1270,11 @@ body[data-theme="light"] .leaflet-control-attribution { color: #596575 !importan
 }
 .header-icon-button:hover { background: var(--accent-dim); border-color: var(--accent-glow); transform: translateY(-1px); }
 .btn-logout { color: #b5bac5; padding-left: 11px; padding-right: 0; }
+.topbar { min-height: 84px; padding-top: max(14px, env(safe-area-inset-top)); padding-bottom: 14px; }
+.topbar-logo-image { height: 42px; max-width: 150px; filter: drop-shadow(0 4px 14px rgba(232, 0, 61, .28)); }
+.header-icon-button, .btn-logout { font-family: var(--suite-font); font-weight: 800; }
+.header-icon-button { width: 46px; min-width: 46px; height: 46px; border-radius: 14px; font-size: 22px; background: #171b22; color: #f5f7fa; border-color: #3b444f; box-shadow: 0 6px 18px rgba(0,0,0,.22); }
+.btn-logout { min-height: 46px; padding: 0 16px; border-radius: 14px; color: #fff; background: var(--red); font-size: 14px; box-shadow: 0 6px 18px var(--red-dim); }
 
 .sheet {
   border-top-color: rgba(232, 0, 61, .35);
@@ -1826,6 +1831,13 @@ body.trip-active .sheet.active-mode .btn-primary {
 }
 
 body.trip-active .topbar .header-icon-button { display: grid; place-items: center; }
+@media (max-width: 760px) {
+  .topbar { min-height: 82px; padding: calc(14px + env(safe-area-inset-top)) 14px 14px; }
+  .topbar-logo-image { height: 40px; max-width: 142px; }
+  .topbar-right { gap: 8px; }
+  .header-icon-button { width: 46px; min-width: 46px; height: 46px; font-size: 22px; border-radius: 14px; }
+  .btn-logout { min-height: 46px; padding: 0 15px; font-size: 14px; border-radius: 14px; }
+}
 
 /* En móvil el selector debe mostrar completo el estado, sin ser recortado por la cabecera. */
 @media (max-width: 599px) {
