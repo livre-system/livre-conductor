@@ -1095,8 +1095,8 @@ body { font-size: var(--font-size-base); }
 #appView, #loginView { zoom: var(--ui-scale); }
 .settings-modal .settings-card { zoom: 1; }
 .topbar-logo-image { display: block; width: auto; height: 30px; max-width: 112px; object-fit: contain; }
-.livi-fab { overflow: hidden; padding: 5px; }
-.livi-fab img { width: 34px; height: 34px; display: block; object-fit: contain; }
+.livi-fab { overflow: hidden; padding: 2px; width: 62px; min-width: 62px; height: 62px; border-radius: 50%; }
+.livi-fab img { width: 56px; height: 56px; display: block; object-fit: contain; }
 .livi-fab.voice-active img { content: url('../assets/livi/livi-hablando.svg'); }
 .notification-header-button { position: relative; }
 .notification-header-button .message-unread-badge { top: -5px; right: -5px; }
