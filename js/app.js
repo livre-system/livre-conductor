@@ -167,7 +167,7 @@ let authMode    = 'login';
 let operationalStatus = 'available';
 let currentDriverSnapshot = null;
 const PREFS_KEY = 'livre_driver_preferences';
-const DEFAULT_PREFS = { theme: 'dark', tone: 'car_horn', volume: 70, fontScale: '16' };
+const DEFAULT_PREFS = { theme: 'dark', tone: 'car_horn', volume: 70, fontScale: '16', voiceSpeed: '1' };
 let preferences = { ...DEFAULT_PREFS };
 
 const OPERATIONAL_STATUS_LABELS = {
@@ -2653,7 +2653,7 @@ async function startHandieConversation() {
     handieConversation = await Conversation.startSession({
       signedUrl: token.signed_url,
       connectionType: 'websocket',
-      dynamicVariables: token.dynamic_variables || {},
+      dynamicVariables: { ...(token.dynamic_variables || {}), livi_voice_speed: String(preferences.voiceSpeed || '1') },
       clientTools: {
         get_current_trip: async () => {
           const trip = selected && ['assigned', 'arriving', 'in_progress'].includes(String(selected.status)) ? selected : null;
@@ -2733,7 +2733,9 @@ initComms();
 $('loginForm').onsubmit = login;
 $('toggleAuth').onclick = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
 $('logoutBtn').onclick = logout;
-$('themeSelect').onchange = e => { preferences.theme = e.target.value; savePreferences(); loadPreferences(); };
+$('voiceSpeed').value = String(preferences.voiceSpeed || '1');
+$('voiceSpeed').onchange = e => { preferences.voiceSpeed = ['1','1.15','1.25','1.5'].includes(e.target.value) ? e.target.value : '1'; savePreferences(); };
+
 $('settingsButton').onclick = () => setModalOpen('settingsModal', true);
 $('driverNotificationsButton').onclick = openDriverNotifications;
 $('driverNotificationsClose').onclick = () => setModalOpen('driverNotificationsModal', false);
