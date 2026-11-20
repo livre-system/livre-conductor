@@ -2671,8 +2671,10 @@ async function startHandieConversation() {
       },
       onMessage: message => {
         const text = String(message?.message || message?.text || '').trim();
+        if (!text || handieSessionId !== sessionId) return;
         const source = message?.source === 'user' || message?.role === 'user' ? 'driver' : 'assistant';
-        if (text && handieSessionId === sessionId) void saveHandieVoiceEvent(source, text, message?.conversation_id);
+        window.clearTimeout(window._handieEventDelay);
+        window._handieEventDelay = window.setTimeout(() => void saveHandieVoiceEvent(source, text, message?.conversation_id), 350);
       },
       onError: error => {
         if (handieSessionId !== sessionId) return;
