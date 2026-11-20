@@ -2736,7 +2736,7 @@ $('loginForm').onsubmit = login;
 $('toggleAuth').onclick = () => setAuthMode(authMode === 'login' ? 'register' : 'login');
 $('logoutBtn').onclick = logout;
 $('voiceSpeed').value = String(preferences.voiceSpeed || '1');
-$('voiceSpeed').onchange = e => { preferences.voiceSpeed = ['1','1.15','1.25','1.5'].includes(e.target.value) ? e.target.value : '1'; savePreferences(); };
+$('voiceSpeed').onchange = e => { preferences.voiceSpeed = ['1','1.15','1.2'].includes(e.target.value) ? e.target.value : '1'; savePreferences(); };
 
 $('settingsButton').onclick = () => setModalOpen('settingsModal', true);
 $('driverNotificationsButton').onclick = openDriverNotifications;
