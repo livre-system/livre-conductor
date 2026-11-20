@@ -2654,6 +2654,7 @@ async function startHandieConversation() {
       signedUrl: token.signed_url,
       connectionType: 'websocket',
       dynamicVariables: { ...(token.dynamic_variables || {}), livi_voice_speed: String(preferences.voiceSpeed || '1') },
+      overrides: { tts: { speed: Number(['1','1.15','1.2'].includes(String(preferences.voiceSpeed)) ? preferences.voiceSpeed : '1') } },
       clientTools: {
         get_current_trip: async () => {
           const trip = selected && ['assigned', 'arriving', 'in_progress'].includes(String(selected.status)) ? selected : null;
