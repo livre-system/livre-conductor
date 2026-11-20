@@ -2658,7 +2658,7 @@ async function startHandieConversation() {
       clientTools: {
         get_current_trip: async () => {
           const trip = selected && ['assigned', 'arriving', 'in_progress'].includes(String(selected.status)) ? selected : null;
-          return trip ? { has_trip: true, trip_id: trip.id, status: trip.status, origin: trip.origin, destination: trip.destination, fare: trip.fare ?? null } : { has_trip: false, message: 'No hay un viaje asignado en este momento.' };
+          return trip ? { has_trip: true, trip_id: trip.id, status: trip.status, origin: trip.origin, destination: trip.destination, fare: trip.driver_fare ?? trip.final_fare ?? trip.fare ?? null } : { has_trip: false, message: 'No hay un viaje asignado en este momento.' };
         },
         reassign_trip: async ({ reason, confirmed }) => {
           const response = await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/reassign`, {
@@ -2668,6 +2668,16 @@ async function startHandieConversation() {
           if (!response.ok) return { success: false, message: result.detail || 'No se pudo reasignar el viaje.' };
           addDriverNotification('Viaje reasignado correctamente', `${selected?.origin || 'Origen'} → ${selected?.destination || 'Destino'}`);
           return { success: true, message: 'El viaje volvió a la búsqueda de conductores.', trip_id: result.trip_id, status: result.status };
+        },
+        handle_in_progress_incident: async ({ reason, can_continue, replace_driver, confirmed }) => {
+          const response = await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/incident`, {
+            method: 'POST', headers: h(),
+            body: JSON.stringify({ reason: String(reason || '').trim(), current_location: 'Última ubicación GPS registrada', can_continue: can_continue === true, replace_driver: replace_driver === true, confirmed: confirmed === true }),
+          });
+          const result = await response.json();
+          if (!response.ok) return { success: false, message: result.detail || 'No se pudo resolver el incidente.' };
+          if (result.status === 'replacement_requested') addDriverNotification('Reemplazo solicitado', `${selected?.origin || 'Origen'} → ${selected?.destination || 'Destino'}`);
+          return { success: true, ...result };
         },
       },
       onMessage: message => {

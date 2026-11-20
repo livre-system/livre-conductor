@@ -532,7 +532,7 @@ button, input, select { touch-action: manipulation; }
 .comms-fab:disabled { opacity: .35; filter: grayscale(1); }
 .handie-fab { width: 64px; height: 64px; border-color: #35d0b0aa; font-size: 30px; }
 .handie-fab.voice-active { background: #20b486; border-color: #9dffe5; color: #06271e; box-shadow: 0 0 0 5px #35d0b044, 0 8px 24px #0008; }
-.comms-voice-status { display: block; width: max-content; max-width: 180px; padding: 3px 7px; border-radius: 7px; background: rgba(8, 12, 18, .92); color: #fff; font-size: 12px; font-weight: 800; line-height: 1.2; text-align: center; white-space: nowrap; text-shadow: none; box-shadow: 0 3px 12px #0009; }
+.comms-voice-status { position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); display: block; width: max-content; max-width: 180px; padding: 3px 7px; border-radius: 7px; background: rgba(8, 12, 18, .92); color: #fff; font-size: 12px; font-weight: 800; line-height: 1.2; text-align: center; white-space: nowrap; text-shadow: none; box-shadow: 0 3px 12px #0009; }
 
 /* En la pantalla vacía los estados quedan sueltos sobre el mapa, sin una
    bandeja que tape la vista ni compita con las comunicaciones. */
