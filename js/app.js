@@ -2445,10 +2445,12 @@ async function playMessageNotification() {
 let driverNotifications = [];
 let driverUnreadNotificationCount = 0;
 const DRIVER_NOTIFICATIONS_KEY = 'livre_driver_notifications';
+const DRIVER_NOTIFICATION_READ_KEY = 'livre_driver_notification_read';
 function loadDriverNotifications() {
   try { return JSON.parse(localStorage.getItem(DRIVER_NOTIFICATIONS_KEY) || '[]'); } catch (_) { return []; }
 }
 function saveDriverNotifications() { try { localStorage.setItem(DRIVER_NOTIFICATIONS_KEY, JSON.stringify(driverNotifications.slice(-50))); } catch (_) {} }
+function loadDriverNotificationReadId() { try { return localStorage.getItem(DRIVER_NOTIFICATION_READ_KEY) || ''; } catch (_) { return ''; } }
 function renderDriverNotifications() {
   const list = $('driverNotificationsList');
   if (!list) return;
@@ -2464,12 +2466,17 @@ function updateDriverNotificationBadge() {
   button.setAttribute('aria-label', `${driverUnreadNotificationCount} notificación${driverUnreadNotificationCount === 1 ? '' : 'es'} sin leer`);
 }
 function addDriverNotification(title, body) {
-  driverNotifications.push({ title, body, time: new Date().toLocaleString('es-AR') });
+  driverNotifications.push({ id: `${Date.now()}-${Math.random()}`, title, body, time: new Date().toLocaleString('es-AR') });
   driverUnreadNotificationCount += 1;
   saveDriverNotifications(); renderDriverNotifications(); updateDriverNotificationBadge();
   showNotice(body);
 }
-function openDriverNotifications() { driverUnreadNotificationCount = 0; renderDriverNotifications(); updateDriverNotificationBadge(); setModalOpen('driverNotificationsModal', true); }
+function openDriverNotifications() {
+  driverUnreadNotificationCount = 0;
+  const last = driverNotifications[driverNotifications.length - 1];
+  if (last?.id) { try { localStorage.setItem(DRIVER_NOTIFICATION_READ_KEY, last.id); } catch (_) {} }
+  renderDriverNotifications(); updateDriverNotificationBadge(); setModalOpen('driverNotificationsModal', true);
+}
 
 
 let passengerMessageInitialized = false;
@@ -2716,6 +2723,9 @@ function initComms() {
 /* ── Bootstrap ──────────────────────────────────────────────── */
 loadPreferences();
 driverNotifications = loadDriverNotifications();
+const readNotificationId = loadDriverNotificationReadId();
+const readIndex = driverNotifications.findIndex(item => item.id === readNotificationId);
+driverUnreadNotificationCount = readIndex >= 0 ? driverNotifications.length - readIndex - 1 : driverNotifications.length;
 renderDriverNotifications();
 updateDriverNotificationBadge();
 installAudioGestureUnlock();
