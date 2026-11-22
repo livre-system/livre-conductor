@@ -51,8 +51,11 @@ const deviceId = stableDeviceId();
 /* ── Estado global ──────────────────────────────────────────── */
 let token       = localStorage.getItem('livre_driver_token');
 let authEpoch   = 0;
+let authRefreshTimer = null;
+let authRefreshInFlight = null;
 let trips       = [];
 let selected    = null;
+let lastCompletedTrip = null;
 let watchId     = null;
 let wakeLock    = null;
 let gpsRecoveryTimer = null;
@@ -63,14 +66,18 @@ let otherDriversRequestInFlight = false;
 let otherDriversTimer = null;
 let currentDriverUserId = '';
 let lastAlerted = null;
+let activeTripAlertId = null;
+let activeTripAlertTimer = null;
+let activeTripAlertAttempts = 0;
 let initialTripsLoaded = false;
 let tripsRequestInFlight = false;
+let tripRefreshPending = false;
 let pendingNativeTripId = null;
 let authMode    = 'login';
 let operationalStatus = 'available';
 let currentDriverSnapshot = null;
 const PREFS_KEY = 'livre_driver_preferences';
-const DEFAULT_PREFS = { theme: 'dark', tone: 'classic', volume: 70, fontScale: '1' };
+const DEFAULT_PREFS = { theme: 'dark', tone: 'car_horn', volume: 70, fontScale: '1' };
 let preferences = { ...DEFAULT_PREFS };
 
 const OPERATIONAL_STATUS_LABELS = {
@@ -152,6 +159,13 @@ function showNotice(msg) {
   el.textContent = msg;
   el.classList.remove('hidden');
 }
+function showGpsNotice(msg) {
+  const el = $('gpsNotice');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+function clearGpsNotice() { $('gpsNotice')?.classList.add('hidden'); }
 function clearNotice() { $('notice')?.classList.add('hidden'); }
 
 function speak(text) {
@@ -162,19 +176,39 @@ function speak(text) {
   speechSynthesis.speak(u);
 }
 
+const TONE_SOURCES = {
+  car_horn: 'audio/car-horn.ogg', bus_horn: 'audio/bus-horn.ogg', truck_horn: 'audio/truck-horn.mp3',
+};
+
+const DRIVER_MARKER_COLORS = {
+  available: '#2de08b',
+  unavailable: '#9aa0aa',
+  out_of_service: '#e8003d',
+};
+
+let activeAlertAudio = null;
+
+function stopAlertSound() {
+  if (activeAlertAudio) {
+    activeAlertAudio.pause();
+    activeAlertAudio.currentTime = 0;
+    activeAlertAudio = null;
+  }
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
+
 function beep() {
+  stopAlertSound();
   try {
-    const ctx = new AudioContext(); const now = ctx.currentTime;
-    const gain = ctx.createGain(); const osc = ctx.createOscillator();
-    const frequencies = { classic: [260, 170], double: [360, 240], high: [620, 440], soft: [220, 180], pulse: [300, 300] }[preferences.tone] || [260, 170];
-    osc.type = preferences.tone === 'soft' ? 'sine' : 'sawtooth';
-    osc.frequency.setValueAtTime(frequencies[0], now);
-    osc.frequency.exponentialRampToValueAtTime(frequencies[1], now + .28);
-    gain.gain.setValueAtTime(.001, now);
-    gain.gain.exponentialRampToValueAtTime(.42 * Number(preferences.volume) / 100, now + .015);
-    gain.gain.exponentialRampToValueAtTime(.001, now + .3);
-    osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + .31);
-    osc.addEventListener('ended', () => ctx.close(), { once: true });
+    const audio = new Audio(TONE_SOURCES[preferences.tone] || TONE_SOURCES.car_horn);
+    activeAlertAudio = audio;
+    audio.volume = Math.max(0, Math.min(1, Number(preferences.volume) / 100));
+    audio.addEventListener('ended', () => {
+      if (activeAlertAudio === audio) activeAlertAudio = null;
+    }, { once: true });
+    audio.play().catch(() => {
+      if (activeAlertAudio === audio) activeAlertAudio = null;
+    });
   } catch(e) {}
 }
 
@@ -183,11 +217,15 @@ function loadPreferences() {
   document.documentElement.style.setProperty('--font-scale', preferences.fontScale);
   document.body.dataset.theme = preferences.theme;
   if ($('themeToggle')) $('themeToggle').textContent = preferences.theme === 'light' ? '☾' : '☼';
+  window.AndroidGps?.setTripTone?.(preferences.tone);
   if ($('arrivalTone')) $('arrivalTone').value = preferences.tone;
   if ($('volumeRange')) { $('volumeRange').value = preferences.volume; $('volumeValue').textContent = `${preferences.volume}%`; }
-  if ($('fontSizeSelect')) $('fontSizeSelect').value = preferences.fontScale;
+  if ($('fontScaleRange')) { $('fontScaleRange').value = preferences.fontScale; $('fontScaleValue').textContent = `${Math.round(Number(preferences.fontScale) * 100)}%`; }
 }
-function savePreferences() { localStorage.setItem(PREFS_KEY, JSON.stringify(preferences)); }
+function savePreferences() {
+  localStorage.setItem(PREFS_KEY, JSON.stringify(preferences));
+  window.AndroidGps?.setTripTone?.(preferences.tone);
+}
 function toggleTheme() { preferences.theme = preferences.theme === 'light' ? 'dark' : 'light'; savePreferences(); loadPreferences(); }
 function operationalControlsHtml() {
   return `<div class="operational-panel" aria-label="Estado operativo"><div class="operational-panel-title">Estado operativo</div><div class="operational-panel-buttons">
@@ -227,14 +265,31 @@ const ACTION_LABEL = {
 
 function render() {
   clearNotice();
-
-  // Resolvemos qué viaje mostrar
-  const t = (selected?.status === 'cancelled' || selected?.status === 'completed')
-            ? null
-            : selected || trips.find(x => x.status === 'assigned');
-
   const sheet  = $('sheet');
   const inner  = $('sheetInner');
+
+  if (selected?.status === 'completed') {
+    const completed = selected;
+    const gross = completed.fare;
+    const commission = completed.commission_amount ?? null;
+    const net = completed.driver_net_amount ?? null;
+    sheet.className = 'sheet active-mode';
+    inner.innerHTML = `
+      <div class="active-trip completion-summary">
+        <div class="active-status"><span class="active-status-dot" style="background:#2de08b"></span><span class="active-status-text">Viaje finalizado</span></div>
+        <div class="trip-summary"><div class="trip-row"><span class="trip-row-text"><small>Origen → Destino</small>${esc(completed.origin)} → ${esc(completed.destination)}</span></div></div>
+        <div class="fare-row"><span class="fare-label">COBRAR AL PASAJERO</span><strong class="fare-value">${gross == null ? 'Importe no informado' : money(gross)}</strong></div>
+        <div class="fare-row"><span class="fare-label">Comisión de Livre (15%)</span><strong class="fare-value">${commission == null ? 'No calculada' : money(commission)}</strong></div>
+        <div class="fare-row"><span class="fare-label">Tu ganancia neta (85%)</span><strong class="fare-value">${net == null ? 'No calculada' : money(net)}</strong></div>
+        <div class="notice">El pasajero abona la tarifa bruta completa.</div>
+      </div>
+      ${operationalControlsHtml()}
+      <div id="notice" class="notice hidden"></div>`;
+    renderOperationalStatus();
+    return;
+  }
+
+  const t = selected || trips.find(x => x.status === 'assigned');
 
   // ── Sin viaje ────────────────────────────────────────────── */
   if (!t) {
@@ -242,8 +297,7 @@ function render() {
     inner.innerHTML = `
       ${operationalControlsHtml()}
       <div class="idle-state compact-idle">
-        <div class="idle-sub">GPS activo · Buscando viajes asignados</div>
-        ${DEMO ? `<button class="btn-refresh" onclick="demoReset()">↩ Reiniciar demo</button>` : `<button class="btn-refresh" onclick="loadTrips()">Actualizar viajes</button>`}
+        <div class="idle-sub"></div>
       </div>
       <div id="notice" class="notice hidden"></div>`;
     renderOperationalStatus();
@@ -375,6 +429,7 @@ function render() {
    ACCIONES DE VIAJE
 ══════════════════════════════════════════════════════════════ */
 async function acceptTrip() {
+  stopTripAlert();
   const changed = await changeStatus('arriving');
   if (!changed) return;
   startGps();
@@ -383,6 +438,7 @@ async function acceptTrip() {
 
 async function rejectTrip() {
   if (!confirm('¿Rechazar este viaje?')) return;
+  stopTripAlert();
   await changeStatus('cancelled');
 }
 
@@ -399,6 +455,7 @@ function demoReset() {
   selected = { ...DEMO_TRIP };
   trips = [selected];
   lastAlerted = null;
+  stopTripAlert();
   announceNewTrip(selected);
   render();
 }
@@ -409,13 +466,19 @@ function demoReset() {
 ══════════════════════════════════════════════════════════════ */
 
 /** Carga los viajes asignados al conductor */
-async function loadTrips() {
+async function loadTrips(force = false) {
   // Nunca consultar viajes desde el login: sin token el API responde 401,
   // y logout() recarga la página, generando un ciclo de recargas.
   // DEMO no tiene JWT, pero debe renderizar el sheet igual que una sesión real.
-  if ((!token && !DEMO) || $('appView')?.classList.contains('hidden')) return false;
-  if (NATIVE_SHELL && document.visibilityState !== 'visible') return false;
-  if (tripsRequestInFlight) return false;
+  if ((!token && !DEMO) || (!$('appView') && !force) || ($('appView')?.classList.contains('hidden') && !force)) return false;
+  if (NATIVE_SHELL && document.visibilityState !== 'visible' && !force) return false;
+  if (tripsRequestInFlight) {
+    if (force) {
+      tripRefreshPending = true;
+      console.info('[trip-flow] consulta en curso; refresh pendiente', { pendingId: pendingNativeTripId });
+    }
+    return false;
+  }
   const requestEpoch = authEpoch;
   const requestToken = token;
   tripsRequestInFlight = true;
@@ -438,17 +501,54 @@ async function loadTrips() {
       cache: 'no-store',
       signal: controller.signal,
     });
-    if (r.status === 401) { logout(); return false; }
+    if (r.status === 401) {
+      if (await refreshAuthToken()) return true;
+      logout();
+      return false;
+    }
     if (!r.ok) throw Error(r.status);
-    const nextTrips = await r.json();
+    const rawTrips = await r.json();
+    const nextTrips = Array.isArray(rawTrips) ? rawTrips : (Array.isArray(rawTrips?.items) ? rawTrips.items : []);
+    const normalizedTrips = nextTrips.map(trip => {
+      const normalizedStatus = String(trip?.status || '').toLowerCase();
+      return {
+        ...trip,
+        // La oferta nunca puede arrancar sola: sólo se cambia a arriving al tocar ACEPTAR.
+        status: normalizedStatus === 'arriving' && trip?.accepted_by_driver !== true
+          ? 'assigned'
+          : trip.status,
+      };
+    });
+    console.info('[trip-flow] respuesta de viajes', {
+      httpStatus: r.status,
+      count: normalizedTrips.length,
+      ids: normalizedTrips.map(t => String(t?.id ?? '')),
+      statuses: normalizedTrips.map(t => String(t?.status ?? '')),
+      pendingId: pendingNativeTripId,
+    });
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
-    trips = nextTrips;
-    if (selected) selected = trips.find(t => t.id === selected.id) || null;
+    trips = normalizedTrips;
+    if (pendingNativeTripId) {
+      const pending = trips.find(t => String(t.id) === String(pendingNativeTripId));
+      console.info('[trip-flow] coincidencia push/lista', {
+        pendingId: String(pendingNativeTripId),
+        matched: Boolean(pending),
+        matchedId: pending ? String(pending.id) : null,
+      });
+      if (pending) selected = pending;
+    }
+    if (selected) selected = trips.find(t => String(t.id) === String(selected.id)) || null;
     if (!selected && trips.length)
       selected = trips.find(t => t.status === 'assigned') || trips[0];
     render();
+    console.info('[trip-flow] render completado', {
+      selectedId: selected ? String(selected.id) : null,
+      selectedStatus: selected?.status || null,
+      cardVisible: Boolean(selected && selected.status === 'assigned'),
+    });
     const fresh = trips.find(t => t.status === 'assigned');
-    if (initialTripsLoaded && fresh) announceNewTrip(fresh);
+    if (fresh) announceNewTrip(fresh);
+    else if (activeTripAlertId) stopTripAlert();
     initialTripsLoaded = true;
     resolvePendingNativeTrip();
     return true;
@@ -458,11 +558,15 @@ async function loadTrips() {
   } finally {
     clearTimeout(timeoutId);
     tripsRequestInFlight = false;
+    if (tripRefreshPending) {
+      tripRefreshPending = false;
+      setTimeout(() => { if (token) loadTrips(true); }, 0);
+    }
   }
 }
 
 /** Cambia el estado de un viaje */
-async function changeStatus(status) {
+async function changeStatus(status, finance = {}) {
   // ── DEMO ────────────────────────────────────────────────────
   if (DEMO) {
     demoChangeStatus(status);
@@ -474,7 +578,7 @@ async function changeStatus(status) {
     const r = await fetch(`${API}/mobility/driver/trips/${selected.id}/status`, {
       method: 'POST',
       headers: h(),
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, ...finance }),
     });
     const statusCode = r.status;
     if (!r.ok) {
@@ -557,12 +661,12 @@ function restartGpsAfterBackground() {
 function startGps() {
   // ── DEMO ────────────────────────────────────────────────────
   if (DEMO) { demoStartGps(); return; }
-  if (NATIVE_SHELL) { updateGpsPill(true); return; }
+  if (NATIVE_SHELL) { updateGpsPill('pending'); return; }
   // ── REAL ────────────────────────────────────────────────────
   if (watchId !== null) return;
   updateGpsPill(null);
   if (!navigator.geolocation) {
-    showNotice('Este navegador no permite GPS. Habilitá la ubicación del navegador.');
+    showGpsNotice('GPS no disponible. Habilitá la ubicación.');
     return;
   }
   requestGpsWakeLock();
@@ -572,7 +676,7 @@ function startGps() {
     if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     watchId = null;
     updateGpsPill(false);
-    showNotice(e.code === 1
+    showGpsNotice(e.code === 1
       ? 'Permiso de GPS denegado. Habilitalo en el navegador y recargá.'
       : 'No se pudo obtener GPS. Verificá la señal.');
   };
@@ -601,15 +705,29 @@ function updateGpsPill(active) {
   if (!pill || !label) return;
   if (active === null) {
     pill.className = 'gps-pill inactive';
-    label.textContent = 'Solicitando GPS…';
+    label.textContent = 'GPS SIN SEÑAL';
+  } else if (active === 'pending') {
+    pill.className = 'gps-pill inactive';
+    label.textContent = 'GPS SIN SEÑAL';
   } else if (active) {
     pill.className = 'gps-pill';
-    label.textContent = DEMO ? 'GPS demo' : 'GPS activo';
+    label.textContent = 'GPS ACTIVADO';
   } else {
     pill.className = 'gps-pill inactive';
-    label.textContent = 'GPS inactivo';
+    label.textContent = 'GPS SIN SEÑAL';
   }
 }
+
+window.onNativeLocationStatus = (status, latitude, longitude) => {
+  if (!NATIVE_SHELL || !token) return;
+  if (status === 'updated' && Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    setMapMarker(latitude, longitude);
+    clearGpsNotice();
+  } else if (status === 'error') {
+    showGpsNotice('No se pudo actualizar el GPS.');
+  }
+  updateGpsPill(status === 'updated');
+};
 
 /* ══════════════════════════════════════════════════════════════
    MAPA
@@ -633,7 +751,7 @@ function setMapMarker(lat, lng) {
   if (!marker) {
     marker = L.circleMarker(pos, {
       radius: 10,
-      fillColor: '#2de08b',
+      fillColor: DRIVER_MARKER_COLORS[operationalStatus] || DRIVER_MARKER_COLORS.available,
       fillOpacity: 1,
       color: '#07080a',
       weight: 3,
@@ -641,7 +759,13 @@ function setMapMarker(lat, lng) {
   } else {
     marker.setLatLng(pos);
   }
+  updateOwnMarkerStyle();
   map.setView(pos, Math.max(map.getZoom(), 15));
+}
+
+function updateOwnMarkerStyle() {
+  if (!marker) return;
+  marker.setStyle({ fillColor: DRIVER_MARKER_COLORS[operationalStatus] || DRIVER_MARKER_COLORS.available });
 }
 
 function tokenUserId() {
@@ -718,11 +842,34 @@ async function loadOtherDrivers() {
 /* ══════════════════════════════════════════════════════════════
    NOTIFICACIÓN DE VIAJE NUEVO
 ══════════════════════════════════════════════════════════════ */
-function announceNewTrip(t) {
-  if (operationalStatus === 'out_of_service' || !t || lastAlerted === t.id) return;
+function stopTripAlert() {
+  const tripId = activeTripAlertId;
+  if (activeTripAlertTimer) clearTimeout(activeTripAlertTimer);
+  activeTripAlertTimer = null;
+  activeTripAlertId = null;
+  activeTripAlertAttempts = 0;
+  if (tripId) window.AndroidGps?.cancelTripNotification?.(String(tripId));
+  stopAlertSound();
+}
+
+function playTripAlert(t) {
+  if (!t || String(t.id) !== activeTripAlertId || t.status !== 'assigned') return;
+  activeTripAlertAttempts += 1;
   lastAlerted = t.id;
   beep();
   speak(`Nuevo viaje disponible. Origen: ${t.origin}. Destino: ${t.destination}.`);
+  if (activeTripAlertAttempts < 3) {
+    activeTripAlertTimer = setTimeout(() => playTripAlert(t), 60_000);
+  }
+}
+
+function announceNewTrip(t) {
+  if (operationalStatus === 'out_of_service' || !t || t.status !== 'assigned') return;
+  const tripId = String(t.id);
+  if (activeTripAlertId === tripId) return;
+  stopTripAlert();
+  activeTripAlertId = tripId;
+  playTripAlert(t);
 }
 
 function renderOperationalStatus() {
@@ -744,6 +891,7 @@ async function loadOperationalStatus() {
     if (requestEpoch !== authEpoch || requestToken !== token) return false;
     if (!OPERATIONAL_STATUS_LABELS[data.status]) throw Error('invalid-status');
     operationalStatus = data.status;
+    updateOwnMarkerStyle();
     renderOperationalStatus();
     return true;
   } catch (e) {
@@ -754,7 +902,8 @@ async function loadOperationalStatus() {
 
 async function changeOperationalStatus(status) {
   if (!OPERATIONAL_STATUS_LABELS[status]) return false;
-  if (DEMO) { operationalStatus = status; renderOperationalStatus(); return true; }
+  stopTripAlert();
+  if (DEMO) { operationalStatus = status; updateOwnMarkerStyle(); renderOperationalStatus(); return true; }
   try {
     const r = await fetch(`${API}/mobility/driver/operational-status`, {
       method: 'PUT', headers: h(), body: JSON.stringify({ status }),
@@ -764,6 +913,7 @@ async function changeOperationalStatus(status) {
     const data = await r.json();
     if (!OPERATIONAL_STATUS_LABELS[data.status]) throw Error('invalid-status');
     operationalStatus = data.status;
+    updateOwnMarkerStyle();
     renderOperationalStatus();
     await loadTrips();
     return true;
@@ -776,20 +926,40 @@ async function changeOperationalStatus(status) {
 /* ══════════════════════════════════════════════════════════════
    HISTORIAL, RECAUDACIÓN Y CIERRE DIARIO
 ══════════════════════════════════════════════════════════════ */
-const money = value => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(value || 0));
+const money = value => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0));
 function localDateInput() { return new Date().toLocaleDateString('en-CA'); }
+function localDateTimeInput() {
+  const d = new Date();
+  const pad = value => String(value).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function historyQueryValue(id) {
+  const value = $(id)?.value;
+  if (!value) return '';
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
+}
 function historyNotice(message) {
   const el = $('historyNotice');
   if (!el) return;
   el.textContent = message;
   el.classList.toggle('hidden', !message);
 }
+function displayTripAmount(item) {
+  const net = item?.driver_net_amount;
+  if (item?.payment_confirmed && net != null) return `${money(net)} (neto)`;
+  return item?.fare == null ? 'Importe no confirmado' : `${money(item.fare)} (bruto)`;
+}
 function renderHistory(data) {
+  const commissionTotal = (data.items || []).reduce((sum, item) => sum + Number(item.commission_amount || 0), 0);
   $('historySummary').innerHTML = `
+    <div class="history-stat"><small>Período</small><strong>${esc(data.date_from || '')} → ${esc(data.date_to || '')}</strong></div>
     <div class="history-stat"><small>Viajes</small><strong>${Number(data.total || 0)}</strong></div>
-    <div class="history-stat"><small>Total recaudado</small><strong>${money(data.total_revenue)}</strong></div>`;
+    <div class="history-stat"><small>Total bruto</small><strong>${money((data.items || []).reduce((sum, item) => sum + Number(item.fare || 0), 0))}</strong></div>
+    <div class="history-stat"><small>Comisión Livre</small><strong>${money(commissionTotal)}</strong></div>
+    <div class="history-stat"><small>Total neto</small><strong>${money(data.total_revenue)}</strong></div>`;
   $('historyList').innerHTML = data.items?.length
-    ? data.items.map(item => `<div class="history-item"><strong>${esc(item.origin)} → ${esc(item.destination)}</strong><br><span>${esc(item.status)} · ${esc(item.completed_at ? new Date(item.completed_at).toLocaleString('es-AR') : 'Sin fecha')}</span><br><b>${money(item.fare)}</b></div>`).join('')
+    ? data.items.map(item => `<div class="history-item"><strong>${esc(item.origin)} → ${esc(item.destination)}</strong><br><span>${esc(item.status)} · ${esc(item.completed_at ? new Date(item.completed_at).toLocaleString('es-AR') : 'Sin fecha')}</span><br><b>${displayTripAmount(item)}</b></div>`).join('')
     : '<div class="history-item"><span>No hay viajes finalizados en el período.</span></div>';
   $('historyClosure').innerHTML = `<button id="closeShiftButton" class="settings-preview" type="button">Finalizar turno y guardar cierre</button>`;
   $('closeShiftButton').onclick = closeDriverShift;
@@ -799,19 +969,26 @@ async function loadDriverHistory() {
     renderHistory({ total: DEMO ? 1 : 0, total_revenue: DEMO ? DEMO_TRIP.fare : 0, items: DEMO ? [{ ...DEMO_TRIP, origin: DEMO_TRIP.origin, destination: DEMO_TRIP.destination, completed_at: new Date().toISOString(), status: 'completed' }] : [] });
     return true;
   }
-  const from = $('historyFrom').value;
-  const to = $('historyTo').value;
+  const from = historyQueryValue('historyFrom');
+  const to = historyQueryValue('historyTo');
+  if (!from || !to || new Date(from) >= new Date(to)) {
+    historyNotice('El inicio debe ser anterior al fin del período.');
+    return false;
+  }
   historyNotice('Cargando…');
   try {
     const r = await fetch(`${API}/mobility/driver/history?date_from=${encodeURIComponent(from)}&date_to=${encodeURIComponent(to)}`, { headers: h(), cache: 'no-store' });
     if (r.status === 401) { logout(); return false; }
-    if (!r.ok) throw Error(r.status);
+    if (!r.ok) { const error = new Error(`history:${r.status}`); error.status = r.status; throw error; }
     renderHistory(await r.json());
     historyNotice('');
     await loadDriverClosures();
     return true;
-  } catch (_) {
-    historyNotice('No se pudo cargar el historial. Revisá la conexión.');
+  } catch (error) {
+    if (error?.status === 401) historyNotice('Sesión vencida. Volvé a ingresar.');
+    else if (error?.status === 403) historyNotice('No tenés permiso para consultar el historial.');
+    else if (error?.status === 404) historyNotice('El historial no está disponible en este servidor.');
+    else historyNotice('No se pudo conectar con el historial. Revisá la conexión.');
     return false;
   }
 }
@@ -826,8 +1003,36 @@ async function loadDriverClosures() {
     document.querySelectorAll('[data-pdf-id]').forEach(button => { button.onclick = () => downloadShiftPdf(button.dataset.pdfId); });
   } catch (_) {}
 }
+async function exportHistoryPdf() {
+  if (!token || DEMO) { historyNotice('La exportación demo no está persistida.'); return false; }
+  const from = historyQueryValue('historyFrom');
+  const to = historyQueryValue('historyTo');
+  if (!from || !to || new Date(from) >= new Date(to)) {
+    historyNotice('El inicio debe ser anterior al fin del período.');
+    return false;
+  }
+  try {
+    const r = await fetch(`${API}/mobility/driver/history/pdf?date_from=${encodeURIComponent(from)}&date_to=${encodeURIComponent(to)}`, { headers: h(), cache: 'no-store' });
+    if (!r.ok) throw Error(r.status);
+    const blob = await r.blob();
+    if (blob.type !== 'application/pdf') throw Error('invalid-pdf');
+    const file = new File([blob], 'livre-historial-filtrado.pdf', { type: 'application/pdf' });
+    if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+      await navigator.share({ title: 'Historial filtrado Livre', files: [file] });
+      return true;
+    }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = file.name; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return true;
+  } catch (_) {
+    historyNotice('No se pudo generar o compartir el PDF del historial.');
+    return false;
+  }
+}
 async function closeDriverShift() {
-  const closureDate = $('historyTo').value || localDateInput();
+  const closureDate = ($('historyTo').value || localDateTimeInput()).slice(0, 10);
   if (!confirm(`¿Confirmar el cierre del turno del ${closureDate}?`)) return false;
   if (DEMO) { historyNotice('Cierre demo no persistido.'); return false; }
   try {
@@ -867,18 +1072,20 @@ async function downloadShiftPdf(closureId) {
 }
 function openHistory() {
   $('historyModal').classList.remove('hidden');
-  const today = localDateInput();
-  if (!$('historyFrom').value) $('historyFrom').value = today;
-  if (!$('historyTo').value) $('historyTo').value = today;
+  const now = localDateTimeInput();
+  const today = now.slice(0, 10);
+  if (!$('historyFrom').value) $('historyFrom').value = `${today}T00:00`;
+  if (!$('historyTo').value) $('historyTo').value = now;
   loadDriverHistory();
 }
 
 function onNativeTripNotification(tripId) {
   if (!tripId) return false;
   const id = String(tripId);
+  console.info('[trip-flow] notificación nativa recibida', { tripId: id, tripsLoaded: trips.length, visible: document.visibilityState });
   if (applyNativeTrip(id)) return true;
   pendingNativeTripId = id;
-  loadTrips();
+  loadTrips(true);
   return false;
 }
 
@@ -900,15 +1107,24 @@ function applyNativeTrip(tripId) {
 function resolvePendingNativeTrip() {
   if (!pendingNativeTripId) return;
   const id = pendingNativeTripId;
-  pendingNativeTripId = null;
-  if (applyNativeTrip(id)) return;
-  showNotice('Ese viaje ya fue tomado por otro conductor.');
-  window.AndroidGps?.confirmTripUnavailable?.(id);
+  if (applyNativeTrip(id)) {
+    pendingNativeTripId = null;
+    return;
+  }
+  // No confirmar como unavailable todavía: puede ser una respuesta anterior a la oferta.
+  setTimeout(() => { if (pendingNativeTripId === id) loadTrips(true); }, 1000);
 }
 
-function onNativeSessionExpired() {
+async function onNativeSessionExpired() {
+  if (await refreshAuthToken()) return true;
+  if (token) {
+    console.warn('[auth-flow] servicio nativo informó 401; se conserva la sesión mientras se reintenta');
+    scheduleAuthRefresh();
+    loadTrips(true);
+    return true;
+  }
   logout();
-  return true;
+  return false;
 }
 
 function onNativePermissionState(state) {
@@ -922,9 +1138,47 @@ function onNativePermissionState(state) {
   return true;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   AUTH
-══════════════════════════════════════════════════════════════ */
+function scheduleAuthRefresh() {
+  if (authRefreshTimer) clearTimeout(authRefreshTimer);
+  authRefreshTimer = null;
+  const exp = Number(tokenClaims().exp || 0) * 1000;
+  if (!token || !exp) return;
+  const delay = Math.max(30_000, exp - Date.now() - 120_000);
+  authRefreshTimer = setTimeout(refreshAuthToken, delay);
+}
+
+function refreshAuthToken() {
+  if (!token || DEMO) return Promise.resolve(false);
+  if (authRefreshInFlight) return authRefreshInFlight;
+  const previousToken = token;
+  const previousEpoch = authEpoch;
+  authRefreshInFlight = (async () => {
+    try {
+      const r = await fetch(`${API}/auth/driver/refresh`, { method: 'POST', headers: h(), cache: 'no-store' });
+      if (r.status === 401) { logout(); return false; }
+      if (!r.ok) throw Error(r.status);
+      const data = await r.json();
+      if (previousEpoch !== authEpoch || previousToken !== token || !data.token) return false;
+      token = data.token;
+      authEpoch += 1;
+      localStorage.setItem('livre_driver_token', token);
+      scheduleAuthRefresh();
+      startNativeBackgroundLocation();
+      console.info('[auth-flow] token renovado');
+      loadTrips(true);
+      return true;
+    } catch (error) {
+      console.warn('[auth-flow] renovación pendiente por red', error?.message || 'network');
+      scheduleAuthRefresh();
+      return false;
+    } finally {
+      authRefreshInFlight = null;
+    }
+  })();
+  return authRefreshInFlight;
+}
+
+
 function setAuthMode(mode) {
   // Las cuentas las crea Livre a partir del padrón de choferes.
   authMode = 'login';
@@ -963,6 +1217,7 @@ async function login(e) {
     authEpoch += 1;
 
     localStorage.setItem('livre_driver_token', token);
+    scheduleAuthRefresh();
     openApp();
   } catch(err) {
     $('loginError').textContent = err.message || 'Error de conexión';
@@ -987,6 +1242,7 @@ function setNativeAppVisible(visible) {
 }
 
 function openApp() {
+  scheduleAuthRefresh();
   const claims = tokenClaims();
   currentDriverUserId = String(claims.sub || '');
 
@@ -995,11 +1251,14 @@ function openApp() {
   initMap();
   startNativeBackgroundLocation();
   if (!NATIVE_SHELL) startGps();
-  else updateGpsPill(true);
+  else startGps();
   loadOperationalStatus().then(() => loadTrips());
 }
 
 function clearWebSession() {
+  if (authRefreshTimer) clearTimeout(authRefreshTimer);
+  authRefreshTimer = null;
+  authRefreshInFlight = null;
   // El JWT es la única credencial web persistida. También limpiamos la sesión
   // de la pestaña para no dejar estado de autenticación en un WebView.
   token = null;
@@ -1046,6 +1305,7 @@ $('themeToggle').onclick = toggleTheme;
 $('historyButton').onclick = openHistory;
 $('historyClose').onclick = () => $('historyModal').classList.add('hidden');
 $('historyRefresh').onclick = loadDriverHistory;
+$('historyExport').onclick = exportHistoryPdf;
 $('historyModal').onclick = e => { if (e.target.id === 'historyModal') $('historyModal').classList.add('hidden'); };
 $('settingsButton').onclick = () => $('settingsModal').classList.remove('hidden');
 $('settingsClose').onclick = () => $('settingsModal').classList.add('hidden');
@@ -1053,7 +1313,7 @@ $('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') setting
 $('tonePreview').onclick = beep;
 $('arrivalTone').onchange = e => { preferences.tone = e.target.value; savePreferences(); };
 $('volumeRange').oninput = e => { preferences.volume = Number(e.target.value); $('volumeValue').textContent = `${preferences.volume}%`; savePreferences(); };
-$('fontSizeSelect').onchange = e => { preferences.fontScale = e.target.value; savePreferences(); loadPreferences(); };
+$('fontScaleRange').oninput = e => { preferences.fontScale = e.target.value; savePreferences(); loadPreferences(); };
 
 document.addEventListener('visibilitychange', () => {
   setNativeAppVisible(document.visibilityState === 'visible');
