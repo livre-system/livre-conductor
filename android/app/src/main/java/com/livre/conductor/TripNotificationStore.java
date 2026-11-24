@@ -48,6 +48,21 @@ public final class TripNotificationStore {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY).commit();
     }
 
+    public static synchronized void remove(Context context, String tripId) {
+        if (tripId == null || tripId.trim().isEmpty()) return;
+        JSONObject entries = read(context);
+        entries.remove(tripId);
+        write(context, entries);
+    }
+
+    public static synchronized java.util.Set<String> ids(Context context) {
+        JSONObject entries = read(context);
+        java.util.Set<String> result = new java.util.HashSet<>();
+        Iterator<String> keys = entries.keys();
+        while (keys.hasNext()) result.add(keys.next());
+        return result;
+    }
+
     private static JSONObject read(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String raw = prefs.getString(KEY, null);

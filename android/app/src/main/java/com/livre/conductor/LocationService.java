@@ -425,25 +425,29 @@ public class LocationService extends Service {
     private void notifyNewAssignedTrips(JSONArray trips) {
         if (!tripNotificationsEnabled()) return;
         long now = System.currentTimeMillis();
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        java.util.HashSet<String> openOfferIds = new java.util.HashSet<>();
         for (int i = 0; i < trips.length(); i++) {
             JSONObject trip = trips.optJSONObject(i);
-            // Open requests are returned as `searching` to every eligible
-            // driver; once claimed, the same contract becomes `assigned`.
-            // Both states are new-trip offers and must alert in background.
             String status = trip == null ? "" : trip.optString("status");
-            if (!"searching".equals(status) && !"assigned".equals(status)) continue;
-            String id = trip.optString("id", "");
-            android.util.Log.i(TAG, "Trip offer status=" + status + " id_present=" + !id.isEmpty());
-            if (id.isEmpty() || !TripNotificationStore.reserve(this, id, now)) {
-                android.util.Log.i(TAG, "Trip offer skipped empty_or_reserved=" + id.isEmpty());
-                continue;
+            String id = trip == null ? "" : trip.optString("id", "");
+            if (id.isEmpty()) continue;
+            if ("searching".equals(status) || "assigned".equals(status)) {
+                openOfferIds.add(id);
+                if (TripNotificationStore.reserve(this, id, now)) {
+                    try { notifyTrip(id, trip); TripNotificationStore.markNotified(this, id, now); }
+                    catch (RuntimeException e) { android.util.Log.e(TAG, "Trip notification error=" + e.getClass().getSimpleName(), e); }
+                }
+            } else if (manager != null) {
+                manager.cancel(id.hashCode());
+                TripNotificationStore.remove(this, id);
             }
-            try {
-                notifyTrip(id, trip);
-                TripNotificationStore.markNotified(this, id, System.currentTimeMillis());
-            } catch (RuntimeException e) {
-                android.util.Log.e(TAG, "Trip notification error=" + e.getClass().getSimpleName(), e);
-                // Leave the reservation pending so the normal poll can retry it.
+        }
+        // Cancelar ofertas locales que ya no aparecen como searching/assigned.
+        for (String staleId : TripNotificationStore.ids(this)) {
+            if (!openOfferIds.contains(staleId)) {
+                if (manager != null) manager.cancel(staleId.hashCode());
+                TripNotificationStore.remove(this, staleId);
             }
         }
     }
