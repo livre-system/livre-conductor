@@ -263,7 +263,7 @@ function showTripNotice(msg) {
   overlay.innerHTML = `<div class="trip-notice-card"><span>${esc(msg)}</span><button type="button" aria-label="Cerrar">×</button></div>`;
   overlay.querySelector('button').onclick = () => overlay.remove();
   document.body.appendChild(overlay);
-  window.setTimeout(() => overlay.remove(), 3000);
+  window.setTimeout(() => overlay.remove(), 60000);
 }
 
 function speak(text) {
@@ -1971,6 +1971,7 @@ async function loadOtherDrivers() {
    NOTIFICACIÓN DE VIAJE NUEVO
 ══════════════════════════════════════════════════════════════ */
 function announceNewTrip(t) {
+  document.getElementById("tripNoticeOverlay")?.remove();
   if (operationalStatus === 'out_of_service' || !t) {
     diagLog('trip_announce_skipped', { reason: !t ? 'empty' : 'out_of_service' });
     return;
