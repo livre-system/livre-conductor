@@ -2662,8 +2662,8 @@ async function startHandieConversation() {
         get_current_trip: async () => {
           const trip = selected && ['assigned', 'arriving', 'in_progress'].includes(String(selected.status)) ? selected : null;
           if (trip) return { has_trip: true, trip_id: trip.id, status: trip.status, origin: trip.origin, destination: trip.destination, fare: trip.driver_fare ?? trip.final_fare ?? trip.fare ?? null };
-          if (lastCancelledTrip) return { has_trip: false, last_trip_status: 'cancelled', trip_id: lastCancelledTrip.id, origin: lastCancelledTrip.origin, destination: lastCancelledTrip.destination, message: 'El último viaje desapareció porque fue cancelado por el pasajero o retirado de la búsqueda. Explicale al conductor que la cancelación fue detectada en la última actualización.' };
-          return { has_trip: false, message: 'No hay un viaje asignado en este momento.' };
+          const notifications = await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/notifications`, { headers: h() }).then(r => r.ok ? r.json() : ({ notifications: [] }));
+          return { has_trip: false, last_trip_status: lastCancelledTrip ? 'cancelled' : null, last_cancelled_trip: lastCancelledTrip, notifications: notifications.notifications || [], message: 'Consultá las notificaciones para informar el historial reciente.' };
         },
         reassign_trip: async ({ reason, confirmed }) => {
           const response = await fetch(`${API}/mobility/driver/handie/${encodeURIComponent(sessionId)}/reassign`, {
