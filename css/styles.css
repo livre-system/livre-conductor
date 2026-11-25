@@ -545,6 +545,12 @@ button, input, select { touch-action: manipulation; }
 .sheet.empty-state .operational-panel-button { min-height: 44px; background: rgba(18, 21, 29, .94); box-shadow: 0 6px 18px #0008; }
 .comms-modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 18px; background: #0009; }
 .comms-modal.hidden { display: none; }
+.driver-cancellation-popup { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 22px; background: rgba(0,0,0,.62); }
+.driver-cancellation-popup__card { width: min(520px, 100%); display: flex; align-items: flex-start; gap: 14px; padding: 22px; border: 2px solid #e8003d; border-radius: 18px; background: #17191d; color: #fff; box-shadow: 0 18px 60px rgba(0,0,0,.5); }
+.driver-cancellation-popup__icon { flex: 0 0 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: #e8003d; color: #fff; font-weight: 800; }
+.driver-cancellation-popup__card strong { display: block; font-size: 1.05rem; }
+.driver-cancellation-popup__card p { margin: 6px 28px 0 0; color: #d8dce2; line-height: 1.45; }
+.driver-cancellation-popup__card button { margin-left: auto; border: 0; background: transparent; color: #fff; font-size: 1.5rem; cursor: pointer; }
 .comms-card { width: min(420px, 100%); max-height: min(620px, 82dvh); display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 22px 70px #000b; }
 .comms-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .comms-heading h2 { margin: 0; font-size: 17px; }

@@ -2473,6 +2473,18 @@ function addDriverNotification(title, body) {
   driverUnreadNotificationCount += 1;
   saveDriverNotifications(); renderDriverNotifications(); updateDriverNotificationBadge();
   showNotice(body);
+  if (title === 'Viaje cancelado') openCancellationPopup(title, body);
+}
+function openCancellationPopup(title, body) {
+  document.getElementById('driverCancellationPopup')?.remove();
+  const popup = document.createElement('div');
+  popup.id = 'driverCancellationPopup';
+  popup.className = 'driver-cancellation-popup';
+  popup.setAttribute('role', 'alertdialog');
+  popup.innerHTML = `<div class="driver-cancellation-popup__card"><div class="driver-cancellation-popup__icon">!</div><div><strong>${esc(title)}</strong><p>${esc(body)}</p></div><button type="button" aria-label="Cerrar">×</button></div>`;
+  popup.querySelector('button').onclick = () => popup.remove();
+  document.body.appendChild(popup);
+  window.setTimeout(() => popup.remove(), 12000);
 }
 function openDriverNotifications() {
   driverUnreadNotificationCount = 0;
