@@ -545,6 +545,10 @@ button, input, select { touch-action: manipulation; }
 .sheet.empty-state .operational-panel-button { min-height: 44px; background: rgba(18, 21, 29, .94); box-shadow: 0 6px 18px #0008; }
 .comms-modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 18px; background: #0009; }
 .comms-modal.hidden { display: none; }
+.trip-notice-overlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 22px; background: rgba(0,0,0,.62); }
+.trip-notice-card { width: min(520px, 100%); display: flex; align-items: center; gap: 14px; padding: 22px; border: 2px solid #e8003d; border-radius: 18px; background: #17191d; color: #fff; box-shadow: 0 18px 60px rgba(0,0,0,.5); }
+.trip-notice-card span { flex: 1; font-weight: 700; line-height: 1.45; }
+.trip-notice-card button { margin-left: auto; border: 0; background: transparent; color: #fff; font-size: 1.5rem; cursor: pointer; }
 .driver-cancellation-popup { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 22px; background: rgba(0,0,0,.62); }
 .driver-cancellation-popup__card { width: min(520px, 100%); display: flex; align-items: flex-start; gap: 14px; padding: 22px; border: 2px solid #e8003d; border-radius: 18px; background: #17191d; color: #fff; box-shadow: 0 18px 60px rgba(0,0,0,.5); }
 .driver-cancellation-popup__icon { flex: 0 0 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: #e8003d; color: #fff; font-weight: 800; }

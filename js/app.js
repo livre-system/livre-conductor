@@ -254,6 +254,18 @@ function showNotice(msg) {
 }
 function clearNotice() { $('notice')?.classList.add('hidden'); }
 
+function showTripNotice(msg) {
+  const existing = $('tripNoticeOverlay');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'tripNoticeOverlay';
+  overlay.className = 'trip-notice-overlay';
+  overlay.innerHTML = `<div class="trip-notice-card"><span>${esc(msg)}</span><button type="button" aria-label="Cerrar">×</button></div>`;
+  overlay.querySelector('button').onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
+  window.setTimeout(() => overlay.remove(), 9000);
+}
+
 function speak(text) {
   if (!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
@@ -2472,8 +2484,7 @@ function addDriverNotification(title, body) {
   driverNotifications.push({ id: `${Date.now()}-${Math.random()}`, title, body, time: new Date().toLocaleString('es-AR') });
   driverUnreadNotificationCount += 1;
   saveDriverNotifications(); renderDriverNotifications(); updateDriverNotificationBadge();
-  showNotice(body);
-  if (title === 'Viaje cancelado') openCancellationPopup(title, body);
+  showTripNotice(body);
 }
 function openCancellationPopup(title, body) {
   document.getElementById('driverCancellationPopup')?.remove();
