@@ -1972,6 +1972,7 @@ async function loadOtherDrivers() {
 ══════════════════════════════════════════════════════════════ */
 function announceNewTrip(t) {
   document.getElementById("tripNoticeOverlay")?.remove();
+  document.getElementById('driverCancellationPopup')?.remove();
   if (operationalStatus === 'out_of_service' || !t) {
     diagLog('trip_announce_skipped', { reason: !t ? 'empty' : 'out_of_service' });
     return;
