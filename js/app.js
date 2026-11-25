@@ -263,7 +263,7 @@ function showTripNotice(msg) {
   overlay.innerHTML = `<div class="trip-notice-card"><span>${esc(msg)}</span><button type="button" aria-label="Cerrar">×</button></div>`;
   overlay.querySelector('button').onclick = () => overlay.remove();
   document.body.appendChild(overlay);
-  window.setTimeout(() => overlay.remove(), 9000);
+  window.setTimeout(() => overlay.remove(), 3000);
 }
 
 function speak(text) {
