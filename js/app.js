@@ -2779,6 +2779,16 @@ $('logoutBtn').onclick = logout;
 $('voiceSpeed').value = String(preferences.voiceSpeed || '1');
 $('voiceSpeed').onchange = e => { preferences.voiceSpeed = ['1','1.15','1.2'].includes(e.target.value) ? e.target.value : '1'; savePreferences(); };
 
+$('refreshAppButton').onclick = async () => {
+  const button = $('refreshAppButton');
+  button.disabled = true;
+  try {
+    await requestImmediateGpsSync();
+    await loadOperationalStatus();
+    await loadTrips();
+    showNotice('Aplicación y ubicación actualizadas.');
+  } finally { button.disabled = false; }
+};
 $('settingsButton').onclick = () => setModalOpen('settingsModal', true);
 $('driverNotificationsButton').onclick = openDriverNotifications;
 $('driverNotificationsClose').onclick = () => setModalOpen('driverNotificationsModal', false);
