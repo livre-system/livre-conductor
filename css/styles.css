@@ -1077,7 +1077,7 @@ button, input, select { touch-action: manipulation; }
 /* ── Modo viaje activo: una sola jerarquía visual ────────────── */
 body.trip-active .topbar .header-icon-button.is-refreshing { animation: livre-spin .8s linear infinite; }
 @keyframes livre-spin { to { transform: rotate(360deg); } }
-.header-icon-button { display: none; }
+body.trip-active .header-icon-button { display: grid; }
 body.trip-active .map-toolbar { display: none; }
 body.trip-active .route-guidance {
   top: 12px;
