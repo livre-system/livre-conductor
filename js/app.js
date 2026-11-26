@@ -1325,6 +1325,7 @@ function startGps() {
     diagLog('gps_provider_lost', { code, error: String(e?.message || '').slice(0, 80) });
     gpsState.provider = 'LOST';
     updateGpsPill();
+    gpsProviderErrorMessage(e);
     if (code === 1) {
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
       watchId = null;
@@ -1368,9 +1369,18 @@ function stopGps() {
   updateGpsPill();
 }
 
+function gpsProviderErrorMessage(error) {
+  const code = Number(error?.code);
+  const text = code === 1 ? 'Brave bloqueó el permiso de ubicación.'
+    : code === 2 ? 'Brave no pudo obtener una posición GPS.'
+    : code === 3 ? 'Brave agotó el tiempo buscando GPS.'
+    : 'Brave no entregó una posición GPS.';
+  diagLog('gps_provider_error_visible', { code, message: String(error?.message || '').slice(0, 120) });
+  showNotice(`${text} Código GPS: ${Number.isFinite(code) ? code : 'sin código'}`);
+}
+
 function updateGpsPill() {
-  // El estado se conserva para diagnóstico y sincronización; la luz visual
-  // fue retirada del encabezado para liberar espacio operativo.
+  // Estado conservado para diagnóstico.
 }
 
 /* ══════════════════════════════════════════════════════════════
