@@ -2779,20 +2779,7 @@ $('logoutBtn').onclick = logout;
 $('voiceSpeed').value = String(preferences.voiceSpeed || '1');
 $('voiceSpeed').onchange = e => { preferences.voiceSpeed = ['1','1.15','1.2'].includes(e.target.value) ? e.target.value : '1'; savePreferences(); };
 
-$('refreshAppButton').onclick = async () => {
-  const button = $('refreshAppButton');
-  button.disabled = true;
-  button.classList.add('is-refreshing');
-  try {
-    await requestImmediateGpsSync();
-    await loadOperationalStatus();
-    await loadTrips();
-    location.reload();
-  } finally {
-    button.disabled = false;
-    button.classList.remove('is-refreshing');
-  }
-};
+$('refreshAppButton').onclick = () => window.location.reload();
 $('settingsButton').onclick = () => setModalOpen('settingsModal', true);
 $('driverNotificationsButton').onclick = openDriverNotifications;
 $('driverNotificationsClose').onclick = () => setModalOpen('driverNotificationsModal', false);
