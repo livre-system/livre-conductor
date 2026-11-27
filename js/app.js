@@ -627,6 +627,7 @@ function render() {
         <div class="alert-title">${scheduledAccepted ? 'Viaje programado aceptado' : isScheduled ? '¿Aceptás este viaje programado?' : '¿Aceptás este viaje?'}</div>
         ${isScheduled ? `<div class="scheduled-trip-highlight"><small>HORA EXACTA DEL VIAJE</small><strong>${esc(scheduledTripLabel(t.scheduled_at))}</strong></div>` : ''}
 
+        <div class="passenger-card"><strong>Pasajero: ${esc(t.passenger_name || "No informado")}</strong>${t.passenger_phone ? `<small>Tel: ${esc(t.passenger_phone)}</small>` : ""}</div>
         <div class="route-card">
           <div class="route-stop">
             <div class="stop-marker">
@@ -701,6 +702,8 @@ function render() {
         <span class="active-compact-destination"><small>${activeAddressLabel}</small>${esc(activeAddress || 'No informado')}</span>
         ${!isCompleted ? driverFareHtml(t).replace('class="fare-row"', 'class="active-compact-fare"') : ''}
       </div>
+
+      <div class="passenger-card"><strong>Pasajero: ${esc(t.passenger_name || "No informado")}</strong>${t.passenger_phone ? `<small>Tel: ${esc(t.passenger_phone)}</small>` : ""}</div>
 
       <div class="trip-summary">
         <div class="trip-row">

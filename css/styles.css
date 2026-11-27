@@ -21,6 +21,9 @@ body { font-family: var(--suite-font); }
 .operational-panel { border-radius: 16px; background: rgba(255,255,255,.06); }
 .operational-panel-button { border-radius: 12px; }
 .alert-card, .trip-card { border-radius: 20px; }
+.passenger-card { display: grid; gap: 4px; margin: 12px 0; padding: 12px 14px; border-radius: 12px; background: rgba(8, 127, 131, .12); }
+.passenger-card small { opacity: .8; }
+
 .route-card { border-radius: 16px; }
 .btn-accept, .btn-primary, .btn-danger { border-radius: 14px; }
 .leaflet-control-zoom {
